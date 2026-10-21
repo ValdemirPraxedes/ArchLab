@@ -107,7 +107,8 @@ public final class SimulationTransport {
         private final String requestId, source, target;
         private final MessageIntent intent;
         private boolean requestArrived, responseSent, responseArrived;
-        private Exchange(String source, String target, MessageIntent intent) {
+        private Exchange(String requestId, String source, String target, MessageIntent intent) {
+            this.requestId = requestId;
             this.source = source; this.target = target; this.intent = intent;
         }
     }
