@@ -145,7 +145,10 @@ public final class SimulationContext {
     }
 
     SimulationResult result() {
+        TimelineProjector projector = new TimelineProjector();
+        List<TimelineActivity> timeline = projector.project(architecture, trace, transport.trace());
+        SimulationMetrics metrics = projector.metrics(timeline, apiWaitingDurationMs);
         return new SimulationResult(nowMs(), trace, transport.trace(), initialState,
-                state.snapshot(), state.trace(), apiWaitingDurationMs);
+                state.snapshot(), state.trace(), apiWaitingDurationMs, timeline, metrics);
     }
 }
