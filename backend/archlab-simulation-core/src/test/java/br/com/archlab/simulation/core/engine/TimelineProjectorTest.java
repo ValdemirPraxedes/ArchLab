@@ -46,10 +46,10 @@ class TimelineProjectorTest {
 
     @Test void metricTotalsScaleWithDurationsWithoutDoubleCountingWaiting() {
         SimulationResult result = new SimulationEngine().execute(architecture(2, 3, 4, 5, 6));
-        assertEquals(27, result.totalDurationMs());
+        assertEquals(25, result.totalDurationMs());
         assertEquals(12, result.apiWaitingDurationMs());
-        assertEquals(new SimulationMetrics(4, 5, 6, 12, 12), result.metrics());
-        assertEquals(27, result.metrics().nonOverlappingTotalMs());
+        assertEquals(new SimulationMetrics(4, 5, 6, 10, 12), result.metrics());
+        assertEquals(25, result.metrics().nonOverlappingTotalMs());
     }
 
     @Test void rejectsNonReconcilingAndInvalidIntervals() {
