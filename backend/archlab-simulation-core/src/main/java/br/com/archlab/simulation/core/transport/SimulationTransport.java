@@ -34,7 +34,7 @@ public final class SimulationTransport {
         SimulationMessage message = message(requestId, exchangeId, sourceId, targetId, MessageDirection.REQUEST, intent);
         RequestArrived arrival = new RequestArrived(requestId, sourceId, targetId);
         queue.scheduleAt(clock.after(connection.latencyMs()), arrival);
-        exchanges.put(exchangeId, new Exchange(sourceId, targetId, intent));
+        exchanges.put(exchangeId, new Exchange(requestId, sourceId, targetId, intent));
         inFlight.put(arrival, message);
         record(clock.nowMs(), MessageTraceEntry.Action.SENT, connection.id(), message);
     }
@@ -44,7 +44,7 @@ public final class SimulationTransport {
         String exchangeId = intent == MessageIntent.API_REQUEST ? "exchange-api-1" : "exchange-db-1";
         Exchange exchange = exchanges.get(exchangeId);
         if (exchange == null || !exchange.requestArrived || exchange.responseSent
-                || !exchange.source.equals(targetId) || !exchange.target.equals(sourceId)
+                || !exchange.requestId.equals(requestId) || !exchange.source.equals(targetId) || !exchange.target.equals(sourceId)
                 || exchange.intent != intent) {
             throw new IllegalStateException("Unexpected or duplicate response: " + exchangeId);
         }
@@ -104,7 +104,7 @@ public final class SimulationTransport {
     }
 
     private static final class Exchange {
-        private final String source, target;
+        private final String requestId, source, target;
         private final MessageIntent intent;
         private boolean requestArrived, responseSent, responseArrived;
         private Exchange(String source, String target, MessageIntent intent) {
