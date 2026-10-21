@@ -48,6 +48,8 @@ class SimulationTransportTest {
                 transport.sendResponse("request-1", "db", "api", MessageIntent.DATABASE_QUERY, clock, queue));
         SimulationEvent arriving = queue.pollNext().orElseThrow().event();
         transport.arrive(arriving, clock.nowMs());
+        assertThrows(IllegalStateException.class, () ->
+                transport.sendResponse("another-request", "db", "api", MessageIntent.DATABASE_QUERY, clock, queue));
         transport.sendResponse("request-1", "db", "api", MessageIntent.DATABASE_QUERY, clock, queue);
         assertThrows(IllegalStateException.class, () ->
                 transport.sendResponse("request-1", "db", "api", MessageIntent.DATABASE_QUERY, clock, queue));
