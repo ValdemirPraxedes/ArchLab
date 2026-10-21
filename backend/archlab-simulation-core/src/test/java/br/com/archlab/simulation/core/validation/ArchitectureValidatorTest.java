@@ -24,7 +24,8 @@ class ArchitectureValidatorTest {
 
     @Test void acceptsValidScenarioAndZeroDurations() {
         assertTrue(validator.validate(architecture()).valid());
-        assertSame(architecture(), validator.requireValid(architecture()));
+        Architecture valid = architecture();
+        assertSame(valid, validator.requireValid(valid));
         Architecture zero = new Architecture(
                 List.of(new ClientComponent("c"), new ApiComponent("a", 0, 0), new DatabaseComponent("d", 0)),
                 List.of(new Connection("1", "c", "a", Protocol.SOAP, 0), new Connection("2", "a", "d", Protocol.TCP, 0)));
