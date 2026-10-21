@@ -65,8 +65,9 @@ public class ArchitectureRequestMapper {
 
     private static void object(JsonNode node, Set<String> keys) {
         if (node == null || !node.isObject()) throw bad("Expected JSON object");
-        Iterator<String> names = node.fieldNames();
-        while (names.hasNext()) if (!keys.contains(names.next())) throw bad("Unexpected property");
+        for (String name : node.propertyNames()) {
+            if (!keys.contains(name)) throw bad("Unexpected property");
+        }
     }
 
     private static JsonNode array(JsonNode node, String field) {
