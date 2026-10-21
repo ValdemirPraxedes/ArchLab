@@ -5,7 +5,7 @@ import br.com.archlab.api.simulation.SimulationResponseMapper;
 import br.com.archlab.simulation.core.domain.Architecture;
 import br.com.archlab.simulation.core.engine.SimulationEngine;
 import br.com.archlab.simulation.core.validation.ArchitectureValidator;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
 import java.util.Map;
