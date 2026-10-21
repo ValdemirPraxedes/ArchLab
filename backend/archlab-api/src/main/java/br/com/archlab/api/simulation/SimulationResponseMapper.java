@@ -80,10 +80,14 @@ public class SimulationResponseMapper {
     }
 
     private List<Map<String, Object>> timeline(SimulationResult result) {
-        Map<Long, MessageTraceEntry> arrivalsByTime = new HashMap<>();
-        for (MessageTraceEntry t : result.messageTrace())
-            if (t.action() == MessageTraceEntry.Action.ARRIVED)
-                arrivalsByTime.put(t.timestampMs(), t);
+        Map<String, MessageTraceEntry> sent = new LinkedHashMap<>();
+        Map<String, MessageTraceEntry> arrived = new HashMap<>();
+        for (MessageTraceEntry entry : result.messageTrace()) {
+            String id = entry.message().id();
+            if (entry.action() == MessageTraceEntry.Action.SENT) sent.put(id, entry);
+            else arrived.put(id, entry);
+        }
+        Set<String> projected = new HashSet<>();
         List<Map<String, Object>> output = new ArrayList<>();
         for (TimelineActivity a : result.timeline()) {
             Map<String, Object> row = new LinkedHashMap<>();
@@ -94,14 +98,17 @@ public class SimulationResponseMapper {
                 row.put("requestId", "request-1");
                 row.put("phase", a.phase());
             } else {
-                MessageTraceEntry arrived = result.messageTrace().stream()
-                        .filter(t -> t.action() == MessageTraceEntry.Action.ARRIVED
+                MessageTraceEntry send = sent.values().stream()
+                        .filter(t -> !projected.contains(t.message().id())
                                 && t.connectionId().equals(a.entityId())
-                                && t.timestampMs() == a.endMs())
-                        .findFirst().orElseThrow();
-                SimulationMessage m = arrived.message();
+                                && t.timestampMs() == a.startMs()
+                                && arrived.containsKey(t.message().id())
+                                && arrived.get(t.message().id()).timestampMs() == a.endMs())
+                        .findFirst().orElseThrow(() -> new IllegalStateException("No matching communication interval"));
+                SimulationMessage m = send.message();
+                projected.add(m.id());
                 row.put("messageId", m.id());
-                row.put("connectionId", arrived.connectionId());
+                row.put("connectionId", send.connectionId());
                 row.put("sourceId", m.sourceId());
                 row.put("targetId", m.targetId());
             }
