@@ -10,6 +10,7 @@ public final class SimulationContext {
     private final VirtualClock clock = new VirtualClock();
     private final EventQueue events = new EventQueue(clock);
     private final List<SimulationTraceEntry> trace = new ArrayList<>();
+    private long traceSequence;
     private final Map<String, Component> components = new HashMap<>();
     private final Map<String, Connection> connections = new HashMap<>();
     private boolean completed;
@@ -39,7 +40,7 @@ public final class SimulationContext {
     }
 
     void record(ScheduledEvent event) {
-        trace.add(new SimulationTraceEntry(event.timestampMs(), event.sequence(), event.event()));
+        trace.add(new SimulationTraceEntry(event.timestampMs(), traceSequence++, event.event()));
     }
 
     ScheduledEvent next() { return events.pollNext().orElse(null); }
@@ -67,6 +68,6 @@ public final class SimulationContext {
         return connection;
     }
 
-    private static String key(String sourceId, String targetId) { return sourceId + "\u0000" + targetId; }
+    private static String key(String sourceId, String targetId) { return sourceId.length() + ":" + sourceId + targetId; }
     SimulationResult result() { return new SimulationResult(nowMs(), trace); }
 }
