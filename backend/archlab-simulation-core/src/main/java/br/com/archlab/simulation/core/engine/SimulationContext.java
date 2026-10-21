@@ -2,6 +2,7 @@ package br.com.archlab.simulation.core.engine;
 
 import br.com.archlab.simulation.core.domain.*;
 import br.com.archlab.simulation.core.event.*;
+import br.com.archlab.simulation.core.transport.*;
 import java.util.*;
 
 /** Mutable state belonging exclusively to one execution. */
@@ -9,19 +10,18 @@ public final class SimulationContext {
     private final Architecture architecture;
     private final VirtualClock clock = new VirtualClock();
     private final EventQueue events = new EventQueue(clock);
+    private final SimulationTransport transport;
     private final List<SimulationTraceEntry> trace = new ArrayList<>();
     private long traceSequence;
     private final Map<String, Component> components = new HashMap<>();
-    private final Map<String, Connection> connections = new HashMap<>();
     private boolean completed;
     private String requestId;
+    private boolean apiWaiting;
 
     SimulationContext(Architecture architecture) {
         this.architecture = architecture;
+        transport = new SimulationTransport(architecture);
         for (Component component : architecture.components()) components.put(component.id(), component);
-        for (Connection connection : architecture.connections()) {
-            connections.put(key(connection.sourceId(), connection.targetId()), connection);
-        }
     }
 
     public long nowMs() { return clock.nowMs(); }
@@ -29,6 +29,7 @@ public final class SimulationContext {
     public Component component(String id) { return Objects.requireNonNull(components.get(id), "Unknown component: " + id); }
     public String requestId() { return requestId; }
     public boolean completed() { return completed; }
+    public boolean apiWaiting() { return apiWaiting; }
 
     void start(String id) {
         if (requestId != null) throw new IllegalStateException("Execution already started");
@@ -47,27 +48,58 @@ public final class SimulationContext {
     boolean hasEvents() { return !events.isEmpty(); }
 
     public void complete(String id) {
-        if (completed || !Objects.equals(requestId, id)) throw new IllegalStateException("Unexpected terminal event");
+        if (completed || !Objects.equals(requestId, id) || !transport.completed(MessageIntent.API_REQUEST)
+                || !transport.completed(MessageIntent.DATABASE_QUERY) || apiWaiting) {
+            throw new IllegalStateException("Unexpected terminal event");
+        }
         completed = true;
     }
 
-    /** Temporary logical hop scheduling until the dedicated transport implementation (MVP 05). */
     public void sendRequest(String sourceId, String targetId) {
-        Connection connection = link(sourceId, targetId);
-        scheduleAfter(connection.latencyMs(), new RequestArrived(requestId, sourceId, targetId));
+        ensureActive();
+        Component source = component(sourceId);
+        Component target = component(targetId);
+        MessageIntent intent;
+        if (source instanceof ClientComponent && target instanceof ApiComponent) {
+            intent = MessageIntent.API_REQUEST;
+        } else if (source instanceof ApiComponent && target instanceof DatabaseComponent) {
+            if (apiWaiting) throw new IllegalStateException("API is already waiting");
+            intent = MessageIntent.DATABASE_QUERY;
+            apiWaiting = true;
+        } else {
+            throw new IllegalStateException("Unsupported request direction");
+        }
+        transport.sendRequest(requestId, sourceId, targetId, intent, clock, events);
     }
 
     public void sendResponse(String sourceId, String targetId) {
-        Connection connection = link(targetId, sourceId);
-        scheduleAfter(connection.latencyMs(), new ResponseArrived(requestId, sourceId, targetId));
+        ensureActive();
+        Component source = component(sourceId);
+        Component target = component(targetId);
+        MessageIntent intent;
+        if (source instanceof DatabaseComponent && target instanceof ApiComponent) {
+            intent = MessageIntent.DATABASE_QUERY;
+        } else if (source instanceof ApiComponent && target instanceof ClientComponent) {
+            if (apiWaiting) throw new IllegalStateException("Cannot return while API is waiting for DB");
+            intent = MessageIntent.API_REQUEST;
+        } else {
+            throw new IllegalStateException("Unsupported response direction");
+        }
+        transport.sendResponse(requestId, sourceId, targetId, intent, clock, events);
     }
 
-    private Connection link(String sourceId, String targetId) {
-        Connection connection = connections.get(key(sourceId, targetId));
-        if (connection == null) throw new IllegalStateException("Missing link: " + sourceId + " -> " + targetId);
-        return connection;
+    void onArrival(SimulationEvent event) {
+        SimulationMessage message = transport.arrive(event, nowMs());
+        if (!requestId.equals(message.requestId())) throw new IllegalStateException("Mismatched request");
+        if (message.direction() == MessageDirection.RESPONSE && message.intent() == MessageIntent.DATABASE_QUERY) {
+            if (!apiWaiting) throw new IllegalStateException("Unexpected DB response");
+            apiWaiting = false;
+        }
     }
 
-    private static String key(String sourceId, String targetId) { return sourceId.length() + ":" + sourceId + targetId; }
-    SimulationResult result() { return new SimulationResult(nowMs(), trace); }
+    private void ensureActive() {
+        if (requestId == null || completed) throw new IllegalStateException("Execution not active");
+    }
+
+    SimulationResult result() { return new SimulationResult(nowMs(), trace, transport.trace()); }
 }

@@ -28,6 +28,9 @@ public final class SimulationEngine {
             if (!requestId.equals(requestIdOf(scheduled.event()))) {
                 throw new IllegalStateException("Unrelated request in execution");
             }
+            if (scheduled.event() instanceof RequestArrived || scheduled.event() instanceof ResponseArrived) {
+                context.onArrival(scheduled.event());
+            }
             context.record(scheduled);
             if (scheduled.event() instanceof SimulationCompleted terminal) {
                 context.complete(terminal.requestId());
