@@ -1,7 +1,7 @@
 package br.com.archlab.api.architecture;
 
 import br.com.archlab.simulation.core.domain.*;
-import com.fasterxml.jackson.databind.JsonNode;
+import tools.jackson.databind.JsonNode;
 import org.springframework.stereotype.Component;
 import java.util.*;
 
