@@ -88,6 +88,39 @@ Backend: Maven multi-module, monólito modular. Nenhum banco, broker ou WebSocke
 
 **Exemplo de métricas do cenário base:** total 260 ms; API pré 30, API pós 20, DB 150, comunicação 60, espera bloqueante API 170 (sobreposta, não somar novamente).
 
+
+## ADR-008 — Contratos HTTP, validação e execução
+
+**Status: aprovado em 2026-10-20.**
+
+**Decisão:** disponibilizar dois endpoints REST com `Content-Type: application/json`, ambos recebendo o mesmo `ArchitectureRequest`:
+
+- `POST /api/v1/architectures/validate`: verifica entrada e regras de domínio, **sem iniciar o motor**.
+- `POST /api/v1/simulations`: valida novamente a arquitetura, cria snapshot imutável, executa o motor e devolve o resultado completo.
+
+**Entrada compartilhada:** lista de `components` e `connections`. Os tipos de componente são `CLIENT`, `API` e `DATABASE`; Client requer ID e tipo; API possui `preProcessingMs` e `postProcessingMs`; Database possui `processingMs`. Conexão possui `id`, `sourceId`, `targetId`, `protocol` e `latencyMs`. Protocolos aceitos: REST/SOAP em Client→API e TCP simplificado em API→Database. Durações em milissegundos inteiros, sem valores negativos. IDs não vazios e únicos. Coordenadas do canvas não integram o contrato. A API recebe tempos explicitamente; o valor padrão zero pode ser aplicado pelo editor.
+
+**Validação:** entrada HTTP e formato JSON são responsabilidade da camada web/DTO. Regras de topologia, contagem de componentes, unicidade, compatibilidade de conexões e durações pertencem ao core. O frontend pode executar verificações imediatas para UX, mas o core é a autoridade.
+
+**Respostas:**
+
+| Operação | Situação | HTTP | Corpo |
+|---|---|---|---|
+| Validar | Domínio válido | 200 | `{ "valid": true, "violations": [] }` |
+| Validar | Domínio inválido | 200 | `{ "valid": false, "violations": [...] }` |
+| Simular | Execução concluída | 200 | `SimulationResult` completo |
+| Simular | Domínio inválido | 422 | Problem Details com `violations` |
+| Ambas | JSON inválido ou tipos/formato ilegíveis | 400 | Problem Details |
+| Ambas | Tipo de mídia não suportado | 415 | Problem Details |
+| Ambas | Corpo além do limite configurado | 413 | Problem Details |
+| Simular | Falha inesperada do motor | 500 | Problem Details sem dados sensíveis |
+
+**Erros:** adotar Problem Details (RFC 9457) com `type`, `title`, `status`, `detail`, `instance`, código estável em `code` e, quando aplicável, lista `violations` com `code`, `path`, `message` e detalhes opcionais. Não depender de domínio público não registrado para URIs de tipo de problema.
+
+**Resultado completo:** conforme ADR-007, conterá `execution`, `initialState`, `trace`, `timeline` e `metrics`. A API usa DTOs separados dos records internos do core, incluindo discriminadores de tipo nos componentes e nas variantes de trace. Não há persistência nem `GET /simulations/{id}` no MVP. Pausa, velocidade, navegação, inspeção e reinício da reprodução são locais ao frontend, sem endpoints adicionais.
+
+**Consequências:** controle de erros e contratos versionados sob `/api/v1`; possibilidade de documentar a superfície com OpenAPI 3.1 e executar testes de integração/contrato. Endpoints definidos; detalhes finos de DTO, limites numéricos, schema exato de trace e estrutura de violações serão consolidados na especificação OpenAPI.
+
 ## Organização do repositório proposta
 
 ```text
