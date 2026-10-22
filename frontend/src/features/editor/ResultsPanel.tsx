@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { SimulationResponse } from '../../api/archlabClient';
 import { reconstructState } from './traceState';
 
@@ -14,6 +14,26 @@ export default function ResultsPanel({ result, playbackTimeMs, playbackSequence,
   const [height, setHeight] = useState(260);
   const [tab, setTab] = useState<Tab>('times');
   const [inspectedSequence, setInspectedSequence] = useState<number | null>(null);
+  const [following, setFollowing] = useState(true);
+  const eventListRef = useRef<HTMLOListElement>(null);
+  const automaticScrollRef = useRef(false);
+  const sortedTrace = useMemo(() => [...result.trace].sort((a,b) => a.timestampMs - b.timestampMs || a.sequence - b.sequence), [result.trace]);
+  const currentEvent = [...sortedTrace].reverse().find((entry) =>
+    entry.timestampMs < playbackTimeMs || (entry.timestampMs === playbackTimeMs && entry.sequence <= playbackSequence));
+  const currentSequence = currentEvent?.sequence ?? null;
+  useEffect(() => {
+    if (!following || tab !== 'events' || !expanded) return;
+    const list = eventListRef.current;
+    const target = list?.querySelector<HTMLButtonElement>(`[data-sequence="${currentSequence}"]`);
+    if (!target || !list) return;
+    automaticScrollRef.current = true;
+    target.scrollIntoView?.({ block: 'nearest' });
+    automaticScrollRef.current = false;
+  }, [following, tab, expanded, currentSequence]);
+  const inspect = (sequence: number) => {
+    setInspectedSequence(sequence);
+    setFollowing(false);
+  };
   const metrics = result.metrics;
   const state = reconstructState(result.initialState, result.trace, playbackTimeMs, playbackSequence);
   const inspectedEvent = result.trace.find((event) => event.sequence === inspectedSequence);
@@ -47,8 +67,11 @@ export default function ResultsPanel({ result, playbackTimeMs, playbackSequence,
         </>}
         {tab === 'events' && <>
           <p>Eventos do trace: {result.trace.length}. Selecionar um evento não altera a reprodução.</p>
-          <ol className="results-events">{[...result.trace].sort((a,b) => a.timestampMs - b.timestampMs || a.sequence - b.sequence).map((entry) =>
-            <li key={entry.sequence}><button type="button" aria-pressed={inspectedSequence === entry.sequence} onClick={() => setInspectedSequence(entry.sequence)}>
+          <div className="results-follow"><span>{following ? 'Acompanhamento automático ativo' : 'Acompanhamento suspenso para inspeção'}</span>
+            {!following && <button type="button" onClick={() => { setInspectedSequence(null); setFollowing(true); }}>Acompanhar execução</button>}
+          </div>
+          <ol className="results-events" ref={eventListRef} onScroll={() => { if (!automaticScrollRef.current) setFollowing(false); }}>{sortedTrace.map((entry) =>
+            <li key={entry.sequence}><button type="button" data-sequence={entry.sequence} aria-current={following && currentSequence === entry.sequence ? 'step' : undefined} aria-pressed={inspectedSequence === entry.sequence} onClick={() => inspect(entry.sequence)}>
               #{entry.sequence} — {entry.timestampMs} ms — {entry.type}
             </button></li>)}</ol>
           {inspectedEvent && <div aria-label="Evento selecionado"><strong>Evento #{inspectedEvent.sequence}</strong><pre>{JSON.stringify(inspectedEvent, null, 2)}</pre></div>}
