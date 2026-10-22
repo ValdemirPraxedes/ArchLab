@@ -83,7 +83,7 @@ describe('Editor visual', () => {
   it('não inicia execução quando faltam componentes', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
-    expect(screen.getByRole('status')).toHaveTextContent('ERROR');
+    expect(screen.getByText(/Execução:/)).toHaveTextContent('ERROR');
     expect(screen.getByText(/Arquitetura inválida/)).toBeInTheDocument();
   });
 
@@ -99,8 +99,8 @@ describe('Editor visual', () => {
     fireEvent.change(apiDestination, { target: { value: (screen.getByRole('option', { name: /Database/ }) as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
-    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('COMPLETED'));
-    expect(screen.getByRole('status')).toHaveTextContent('260 ms');
+    await waitFor(() => expect(screen.getByText(/Execução:/)).toHaveTextContent('COMPLETED'));
+    expect(screen.getByText(/Execução:/)).toHaveTextContent('260 ms');
     expect(screen.getByRole('button', { name: 'Client' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Reiniciar' }));
     expect(screen.getByRole('button', { name: 'Client' })).toBeEnabled();
