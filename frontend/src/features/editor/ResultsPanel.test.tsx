@@ -32,4 +32,18 @@ describe('painel de resultados', () => {
   fireEvent.click(screen.getByRole('button',{name:'Expandir painel'}));
   expect(screen.getByRole('tab',{name:'Eventos'})).toBeInTheDocument();
  });
+ it('acompanha evento corrente e suspende no clique sem mudar relógio', () => {
+  const { rerender } = render(<ResultsPanel result={fixture} playbackTimeMs={0} playbackSequence={0} />);
+  fireEvent.click(screen.getByRole('tab',{name:'Eventos'}));
+  expect(screen.getByText('Acompanhamento automático ativo')).toBeInTheDocument();
+  rerender(<ResultsPanel result={fixture} playbackTimeMs={50} playbackSequence={1} />);
+  const entry = screen.getByRole('button',{name:/#1 — 50 ms/});
+  expect(entry).toHaveAttribute('aria-current','step');
+  fireEvent.click(entry);
+  expect(screen.getByText('Acompanhamento suspenso para inspeção')).toBeInTheDocument();
+  expect(entry).not.toHaveAttribute('aria-current');
+  fireEvent.click(screen.getByRole('button',{name:'Acompanhar execução'}));
+  expect(entry).toHaveAttribute('aria-current','step');
+ });
+
 });
