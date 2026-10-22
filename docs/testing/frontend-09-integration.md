@@ -18,7 +18,7 @@ npm run test:integration
 
 `npm run test:integration` usa `http://localhost:8080`; para alterar: `$env:ARCHLAB_API_URL='http://localhost:8080'; npm run test:integration`.
 
-O comando envia requisições HTTP reais para os dois endpoints. Confere 260 ms no cenário de referência, 170 ms de espera da API, 7 atividades, 32 eventos, transições da API em 50/220 ms, rejeição de arquitetura incompleta, conexão duplicada e cenário de latência/processamento zero. Nenhum desses testes usa MSW.
+O comando envia requisições HTTP reais para os dois endpoints. Confere 260 ms no cenário de referência, 170 ms de espera da API, 7 atividades, trace cronológico com sequências consecutivas, transições da API em 50/220 ms, rejeição de arquitetura incompleta, conexão duplicada e cenário de latência/processamento zero. Nenhum desses testes usa MSW.
 
 ## Checklist manual — navegador conectado ao backend real
 
