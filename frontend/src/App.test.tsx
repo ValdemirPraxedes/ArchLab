@@ -61,6 +61,14 @@ describe('Editor visual', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
     expect(screen.getByText(/1 conexão\(ões\)/)).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'Conexão: TCP' }));
+    const editLatency = screen.getByRole('spinbutton', { name: 'Editar latência (ms)' });
+    fireEvent.change(editLatency, { target: { value: '25' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Cancelar alterações' }));
+    expect(editLatency).toHaveValue(0);
+    fireEvent.change(editLatency, { target: { value: '10' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar alterações' }));
+    expect(editLatency).toHaveValue(10);
+
     fireEvent.click(screen.getByRole('button', { name: 'Remover selecionado' }));
     expect(screen.getByText(/0 conexão\(ões\)/)).toBeInTheDocument();
     expect(screen.getByText(/2 componente\(s\)/)).toBeInTheDocument();
