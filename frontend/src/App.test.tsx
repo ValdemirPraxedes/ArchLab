@@ -1,4 +1,4 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import App from './App';
 
@@ -79,5 +79,33 @@ describe('Editor visual', () => {
     expect(await screen.findByText(/Arquitetura inválida/)).toBeInTheDocument();
     expect(screen.getAllByText(/MISSING_COMPONENT/).length).toBeGreaterThan(0);
   });
+
+  it('não inicia execução quando faltam componentes', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
+    expect(screen.getByRole('status')).toHaveTextContent('ERROR');
+    expect(screen.getByText(/Arquitetura inválida/)).toBeInTheDocument();
+  });
+
+  it('simula e bloqueia edição até reiniciar', async () => {
+    render(<App />);
+    for (const type of ['Client', 'API', 'Database']) fireEvent.click(screen.getByRole('button', { name: type }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client' }));
+    const clientDestination = screen.getByRole('combobox', { name: 'Destino' });
+    fireEvent.change(clientDestination, { target: { value: (screen.getByRole('option', { name: /API/ }) as HTMLOptionElement).value } });
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: API' }));
+    const apiDestination = screen.getByRole('combobox', { name: 'Destino' });
+    fireEvent.change(apiDestination, { target: { value: (screen.getByRole('option', { name: /Database/ }) as HTMLOptionElement).value } });
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('COMPLETED'));
+    expect(screen.getByRole('status')).toHaveTextContent('260 ms');
+    expect(screen.getByRole('button', { name: 'Client' })).toBeDisabled();
+    fireEvent.click(screen.getByRole('button', { name: 'Reiniciar' }));
+    expect(screen.getByRole('button', { name: 'Client' })).toBeEnabled();
+    expect(screen.getByText(/3 componente\\(s\\)/)).toBeInTheDocument();
+  });
+
 
 });
