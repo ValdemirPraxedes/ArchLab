@@ -206,7 +206,7 @@ function EditorCanvas() {
             onPaneClick={() => select(null)}
             deleteKeyCode={null} nodesDraggable={!executionLocked} edgesReconnectable={false} nodesConnectable={false}
             nodeExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} translateExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} fitView>
-            <Background /><Controls /><MiniMap pannable zoomable />
+            <Background /><Controls /><MiniMap pannable zoomable nodeColor={(n) => n.data?.componentType === "CLIENT" ? "#1d9eaf" : n.data?.componentType === "API" ? "#6963d4" : "#cc9440"} nodeStrokeColor="#37506a" nodeStrokeWidth={2} maskColor="rgba(95,126,160,0.18)" />
           </ReactFlow>
         </div>
         {simulationResult && <ResultsPanel result={simulationResult} playbackTimeMs={playbackTimeMs} playbackSequence={playbackSequence} selectedId={selection?.id} />}
