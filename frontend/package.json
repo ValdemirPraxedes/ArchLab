@@ -10,6 +10,7 @@
     "build": "tsc -b && vite build",
     "pretest": "npm run typegen",
     "test": "vitest run",
+    "test:integration": "node scripts/integration.mjs",
     "test:watch": "vitest",
     "lint": "eslint ."
   },
