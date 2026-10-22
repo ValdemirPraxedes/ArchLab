@@ -23,7 +23,7 @@ describe('painel de resultados', () => {
   fireEvent.click(screen.getByRole('button',{name:/#1 — 50 ms/}));
   expect(screen.getByLabelText('Evento selecionado')).toHaveTextContent('DATABASE_QUERY_SENT');
   fireEvent.click(screen.getByRole('tab',{name:'Estados'}));
-  expect(screen.getByText(/api-1/)).toHaveTextContent('WAITING');
+  expect(screen.getByText('api-1').closest('li')).toHaveTextContent('WAITING');
  });
  it('recolhe e expande sem descartar dados', () => {
   render(<ResultsPanel result={fixture} playbackTimeMs={0} playbackSequence={0} />);
