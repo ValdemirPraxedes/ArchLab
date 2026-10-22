@@ -14,7 +14,7 @@ export function nextBoundary(activities: Activity[], time: number): number {
 export function previousBoundary(activities: Activity[], time: number): number {
   return activities.map((a) => a.startMs).filter((t) => t < time).reduce((last, t) => t, 0);
 }
-export default function Playback({ result, onRestart }: { result: SimulationResponse; onRestart: () => void }) {
+export default function Playback({ result, onTimeChange }: { result: SimulationResponse; onTimeChange: (time: number) => void }) {
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [stepMode, setStepMode] = useState(false);
@@ -39,6 +39,7 @@ export default function Playback({ result, onRestart }: { result: SimulationResp
     frame = requestAnimationFrame(tick);
     return () => { cancelAnimationFrame(frame); lastFrame.current = null; };
   }, [playing, speed, stepMode, total]);
+  useEffect(() => { onTimeChange(time); }, [time, onTimeChange]);
   const current = activityAt(timeline, time);
   return <section className="playback" aria-label="Reprodução da simulação">
     <strong>Reprodução</strong>
@@ -48,7 +49,6 @@ export default function Playback({ result, onRestart }: { result: SimulationResp
     <button type="button" onClick={() => { setPlaying(false); setStepMode(true); }}>Passo a passo</button>
     <button type="button" disabled={!stepMode || time <= 0} onClick={() => setTime((t) => previousBoundary(timeline,t))}>Anterior</button>
     <button type="button" disabled={!stepMode || time >= total} onClick={() => setTime((t) => nextBoundary(timeline,t))}>Próximo</button>
-    <button type="button" onClick={onRestart}>Reiniciar</button>
     <p aria-live="polite">Atividade: {current < 0 ? 'Pronta' : `${current + 1} de ${timeline.length}`}</p>
     <progress value={time} max={total || 1} aria-label="Progresso virtual" />
   </section>;
