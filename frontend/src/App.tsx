@@ -8,7 +8,7 @@ export default function App() {
           <p className="eyebrow">ArchLab · MVP v0.1</p>
           <h1>Laboratório de arquiteturas</h1>
         </div>
-        <span className="workspace-status">Editor visual · primeira entrega</span>
+        <span className="workspace-status">Editor visual · MVP v0.1</span>
       </header>
       <ArchitectureEditor />
     </main>
