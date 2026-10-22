@@ -6,6 +6,7 @@ export type Protocol = 'REST' | 'SOAP' | 'TCP';
 export type ArchitectureNode = Node<{
   componentType: ComponentType;
   label: string;
+  stateLabel?: 'IDLE' | 'PROCESSING' | 'WAITING' | 'COMPLETED';
   preProcessingMs?: number;
   postProcessingMs?: number;
   processingMs?: number;
