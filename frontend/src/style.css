@@ -24,3 +24,5 @@
 .results-panel__content li{margin:4px 0}
 .results-events button[aria-pressed="true"]{border-color:#a6d0ff;background:#315c89}
 .results-panel__content pre{white-space:pre-wrap;overflow-wrap:anywhere}
+
+.results-follow{display:flex;align-items:center;gap:12px;margin:8px 0;color:#a9c5e2}.results-events{overflow-y:auto;max-height:180px;scrollbar-gutter:stable}.results-events button[aria-current="step"]{border-color:#78c6ef;background:#205279;box-shadow:inset 3px 0 #6ae2ff}
