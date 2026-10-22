@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activityAt, nextBoundary, previousBoundary } from './Playback';
+import { activityAt, nextBoundary, previousBoundary } from './playbackTimeline';
 import type { SimulationResponse } from '../../api/archlabClient';
 
 const activities = [
