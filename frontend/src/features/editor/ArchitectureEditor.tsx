@@ -23,6 +23,7 @@ function EditorCanvas() {
   const [protocol, setProtocol] = useState<Protocol>('REST');
   const [latencyMs, setLatencyMs] = useState('0');
   const [error, setError] = useState('');
+  const [edgeDraft, setEdgeDraft] = useState<{ protocol: Protocol; latencyMs: string } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
   const nodeTypes = useMemo(() => ({ architecture: ArchitectureNode }), []);
@@ -39,6 +40,8 @@ function EditorCanvas() {
   }, [setNodes]);
   const select = (next: { kind: 'node' | 'edge'; id: string } | null) => {
     setSelection(next); setTargetId(''); setError('');
+    const selectedEdge = next?.kind === 'edge' ? edges.find((item) => item.id === next.id) : undefined;
+    setEdgeDraft(selectedEdge ? { protocol: selectedEdge.data!.protocol, latencyMs: String(selectedEdge.data!.latencyMs) } : null);
   };
   const onPaletteDragStart = (event: DragEvent<HTMLButtonElement>, type: ComponentType) => {
     event.dataTransfer.setData(DRAG_MIME, type); event.dataTransfer.effectAllowed = 'copy';
@@ -71,15 +74,20 @@ function EditorCanvas() {
     setEdges((current) => [...current, createArchitectureEdge(node.id, destination.id, chosenProtocol, duration)]);
     setError(''); setTargetId('');
   };
-  const updateEdge = (nextProtocol: Protocol, nextLatency: string) => {
-    if (!edge) return;
-    const ms = Number(nextLatency);
+  const confirmEdge = () => {
+    if (!edge || !edgeDraft) return;
+    const ms = Number(edgeDraft.latencyMs);
     const source = nodes.find((n) => n.id === edge.source);
     const target = nodes.find((n) => n.id === edge.target);
-    if (!source || !target || !allowedProtocols(source.data.componentType, target.data.componentType).includes(nextProtocol) || !nextLatency.trim() || !validDuration(ms)) {
+    if (!source || !target || !allowedProtocols(source.data.componentType, target.data.componentType).includes(edgeDraft.protocol) || !edgeDraft.latencyMs.trim() || !validDuration(ms)) {
       setError('Protocolo incompatível ou latência inválida.'); return;
     }
-    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: nextProtocol, data: { protocol: nextProtocol, latencyMs: ms } } : item));
+    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { protocol: edgeDraft.protocol, latencyMs: ms } } : item));
+    setError('');
+  };
+  const cancelEdge = () => {
+    if (!edge) return;
+    setEdgeDraft({ protocol: edge.data!.protocol, latencyMs: String(edge.data!.latencyMs) });
     setError('');
   };
   const removeSelected = () => {
@@ -142,11 +150,12 @@ function EditorCanvas() {
         {edge && <>
           <p>Conexão: {edge.source.slice(0, 8)} → {edge.target.slice(0, 8)}</p>
           <label>Protocolo
-            <select aria-label="Editar protocolo" value={edge.data?.protocol} onChange={(e) => updateEdge(e.target.value as Protocol, String(edge.data?.latencyMs ?? 0))}>
+            <select aria-label="Editar protocolo" value={edgeDraft?.protocol ?? edge.data?.protocol} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, protocol: e.target.value as Protocol } : null)}>
               {(allowedProtocols(nodes.find((n) => n.id === edge.source)!.data.componentType, nodes.find((n) => n.id === edge.target)!.data.componentType)).map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </label>
-          <label>Latência (ms)<input aria-label="Editar latência (ms)" type="number" min="0" step="1" value={edge.data?.latencyMs ?? 0} onChange={(e) => updateEdge(edge.data!.protocol, e.target.value)} /></label>
+          <label>Latência (ms)<input aria-label="Editar latência (ms)" type="number" min="0" step="1" value={edgeDraft?.latencyMs ?? String(edge.data?.latencyMs ?? 0)} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, latencyMs: e.target.value } : null)} /></label>
+          <div className="property-actions"><button type="button" onClick={confirmEdge}>Confirmar alterações</button><button type="button" onClick={cancelEdge}>Cancelar alterações</button></div>
         </>}
         {error && <p className="editor-error" role="alert">{error}</p>}
         {selection && <button type="button" className="danger" onClick={removeSelected}>Remover selecionado</button>}
