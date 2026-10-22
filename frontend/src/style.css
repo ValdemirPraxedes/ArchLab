@@ -3,3 +3,5 @@
 .validation-result{padding:10px 18px;background:#23354b;border-bottom:1px solid #536987;font-size:.8rem}.validation-result ul{margin:8px 0;padding-left:20px}.validation-result li{margin:5px 0}.editor-toolbar button{background:#235ca6;color:white;border:1px solid #568ad5;border-radius:6px;padding:5px 12px;cursor:pointer}.editor-toolbar button:disabled{opacity:.55;cursor:wait}
 
 .execution-status{padding:7px 18px;font-size:.78rem;background:#142337;color:#cde0ff;border-bottom:1px solid #34455a}.palette button:disabled,.properties button:disabled,.properties input:disabled,.properties select:disabled{opacity:.55;cursor:not-allowed}
+
+.playback{display:flex;align-items:center;flex-wrap:wrap;gap:10px;padding:10px 18px;background:#1a2c45;border-bottom:1px solid #34455a;font-size:.8rem}.playback button,.playback select{background:#29476a;border:1px solid #6185b3;border-radius:6px;color:#fff;padding:6px 10px}.playback button:disabled{opacity:.5}.playback progress{width:100%;height:6px}.playback p{margin:0;color:#cfe0f6}.playback-node-active .architecture-node{box-shadow:0 0 0 5px rgba(55,161,247,.32),0 0 22px rgba(55,161,247,.5)}

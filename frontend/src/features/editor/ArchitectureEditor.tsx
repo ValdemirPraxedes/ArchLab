@@ -5,6 +5,7 @@ import {
 import type { DragEvent } from 'react';
 import '@xyflow/react/dist/style.css';
 import { ArchitectureNode } from './ArchitectureNode';
+import Playback from './Playback';
 import { archlabClient, ArchlabHttpError } from '../../api/archlabClient';
 import type { SimulationResponse } from '../../api/archlabClient';
 import { toArchitectureRequest, validateArchitectureLocally } from './validation';
@@ -31,6 +32,7 @@ function EditorCanvas() {
   const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid' | 'error'>('idle');
   const [executionStatus, setExecutionStatus] = useState<'READY' | 'VALIDATING' | 'EXECUTING' | 'COMPLETED' | 'ERROR'>('READY');
   const [simulationResult, setSimulationResult] = useState<SimulationResponse | null>(null);
+  const [playbackTimeMs, setPlaybackTimeMs] = useState(0);
   const executionLocked = executionStatus === 'VALIDATING' || executionStatus === 'EXECUTING' || executionStatus === 'COMPLETED';
   const [edgeDraft, setEdgeDraft] = useState<{ protocol: Protocol; latencyMs: string } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -38,12 +40,22 @@ function EditorCanvas() {
   const nodeTypes = useMemo(() => ({ architecture: ArchitectureNode }), []);
   const node = selection?.kind === 'node' ? nodes.find((n) => n.id === selection.id) : undefined;
   const edge = selection?.kind === 'edge' ? edges.find((e) => e.id === selection.id) : undefined;
+  const activeActivity = simulationResult?.timeline.find((a) => a.startMs <= playbackTimeMs && playbackTimeMs < a.endMs);
+  const shownNodes = nodes.map((n) => ({
+    ...n, className: activeActivity?.kind === 'PROCESSING' && activeActivity.componentId === n.id ? 'playback-node-active' : '',
+  }));
+  const shownEdges = edges.map((e) => ({
+    ...e, className: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ? 'playback-edge-active' : '',
+    animated: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id,
+    style: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ?
+      { stroke: activeActivity.sourceId === e.source ? '#329eff' : '#35d88c', strokeWidth: 3 } : undefined,
+  }));
   const destination = nodes.find((n) => n.id === targetId);
   const compatibleProtocols = node && destination ? allowedProtocols(node.data.componentType, destination.data.componentType) : [];
   const possibleTargets = node ? nodes.filter((n) => n.id !== node.id && allowedProtocols(node.data.componentType, n.data.componentType).length > 0) : [];
 
   const restart = () => {
-    setExecutionStatus('READY'); setSimulationResult(null);
+    setExecutionStatus('READY'); setSimulationResult(null); setPlaybackTimeMs(0);
     setIssues([]); setValidationStatus('idle'); setError('');
   };
   const simulate = async () => {
@@ -62,7 +74,7 @@ function EditorCanvas() {
       }
       setValidationStatus('valid'); setExecutionStatus('EXECUTING');
       const result = await archlabClient.simulate(architecture);
-      setSimulationResult(result); setExecutionStatus('COMPLETED');
+      setPlaybackTimeMs(0); setSimulationResult(result); setExecutionStatus('COMPLETED');
     } catch (cause) {
       setSimulationResult(null); setExecutionStatus('ERROR');
       if (cause instanceof ArchlabHttpError) {
@@ -181,8 +193,9 @@ function EditorCanvas() {
           {validationStatus === 'valid' && <p>Arquitetura válida para simulação.</p>}
           {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? 'Arquitetura inválida' : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
+        {simulationResult && <Playback result={simulationResult} onTimeChange={setPlaybackTimeMs} />}
         <div className="editor-canvas" ref={canvasRef} onDrop={(event) => { if (!executionLocked) onDrop(event); }} onDragOver={(event) => { if (!executionLocked) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} aria-label="Canvas da arquitetura">
-          <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
+          <ReactFlow nodes={shownNodes} edges={shownEdges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
             onNodeClick={(_, chosen) => select({ kind: 'node', id: chosen.id })}
             onEdgeClick={(_, chosen) => select({ kind: 'edge', id: chosen.id })}
             onPaneClick={() => select(null)}
