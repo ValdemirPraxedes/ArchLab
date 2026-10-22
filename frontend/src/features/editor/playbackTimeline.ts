@@ -11,5 +11,5 @@ export function nextBoundary(activities: Activity[], time: number): number {
   return activities.map((a) => a.endMs).find((t) => t > time) ?? time;
 }
 export function previousBoundary(activities: Activity[], time: number): number {
-  return activities.map((a) => a.startMs).filter((t) => t < time).reduce((last, t) => t, 0);
+  return activities.reduce((previous, activity) => activity.startMs < time ? Math.max(previous, activity.startMs) : previous, 0);
 }
