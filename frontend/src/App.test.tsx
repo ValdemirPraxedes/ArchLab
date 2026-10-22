@@ -104,7 +104,7 @@ describe('Editor visual', () => {
     expect(screen.getByRole('button', { name: 'Client' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Reiniciar' }));
     expect(screen.getByRole('button', { name: 'Client' })).toBeEnabled();
-    expect(screen.getByText(/3 componente\\(s\\)/)).toBeInTheDocument();
+    expect(screen.getByText(/3 componente\(s\)/)).toBeInTheDocument();
   });
 
 
