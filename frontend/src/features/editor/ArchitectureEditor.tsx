@@ -5,6 +5,9 @@ import {
 import type { DragEvent } from 'react';
 import '@xyflow/react/dist/style.css';
 import { ArchitectureNode } from './ArchitectureNode';
+import { archlabClient, ArchlabHttpError } from '../../api/archlabClient';
+import { toArchitectureRequest, validateArchitectureLocally } from './validation';
+import type { ValidationIssue } from './validation';
 import {
   COMPONENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
   isComponentType, allowedProtocols, validateConnection, validDuration, removeComponent,
@@ -23,6 +26,8 @@ function EditorCanvas() {
   const [protocol, setProtocol] = useState<Protocol>('REST');
   const [latencyMs, setLatencyMs] = useState('0');
   const [error, setError] = useState('');
+  const [issues, setIssues] = useState<ValidationIssue[]>([]);
+  const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid' | 'error'>('idle');
   const [edgeDraft, setEdgeDraft] = useState<{ protocol: Protocol; latencyMs: string } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
@@ -33,7 +38,24 @@ function EditorCanvas() {
   const compatibleProtocols = node && destination ? allowedProtocols(node.data.componentType, destination.data.componentType) : [];
   const possibleTargets = node ? nodes.filter((n) => n.id !== node.id && allowedProtocols(node.data.componentType, n.data.componentType).length > 0) : [];
 
+  const resetValidation = () => { setIssues([]); setValidationStatus('idle'); };
+  const validate = async () => {
+    const localIssues = validateArchitectureLocally(nodes, edges);
+    if (localIssues.length) { setIssues(localIssues); setValidationStatus('invalid'); return; }
+    setValidationStatus('checking');
+    setIssues([]);
+    try {
+      const result = await archlabClient.validate(toArchitectureRequest(nodes, edges));
+      setIssues(result.violations.map((v) => ({ code: v.code, path: v.path, message: v.message })));
+      setValidationStatus(result.valid ? 'valid' : 'invalid');
+    } catch (cause) {
+      const message = cause instanceof ArchlabHttpError ? `Erro HTTP ${cause.status} ao validar.` : 'Não foi possível consultar a API.';
+      setIssues([{ code: 'API_ERROR', path: '', message }]);
+      setValidationStatus('error');
+    }
+  };
   const addNode = useCallback((type: ComponentType, position: { x: number; y: number }) => {
+    resetValidation();
     const newNode = createArchitectureNode(type, position);
     setNodes((current) => [...current, newNode]);
     return newNode;
@@ -60,6 +82,7 @@ function EditorCanvas() {
     if (!node) return;
     const parsed = Number(value);
     if (!value.trim() || !validDuration(parsed)) { setError('Informe um tempo inteiro não negativo.'); return; }
+    resetValidation();
     setNodes((current) => current.map((item) => item.id === node.id ? { ...item, data: { ...item.data, [field]: parsed } } : item));
     setError('');
   };
@@ -71,6 +94,7 @@ function EditorCanvas() {
     const chosenProtocol = types.includes(protocol) ? protocol : types[0];
     const duration = Number(latencyMs);
     if (!latencyMs.trim() || !validDuration(duration)) { setError('Latência deve ser um inteiro não negativo.'); return; }
+    resetValidation();
     setEdges((current) => [...current, createArchitectureEdge(node.id, destination.id, chosenProtocol, duration)]);
     setError(''); setTargetId('');
   };
@@ -82,6 +106,7 @@ function EditorCanvas() {
     if (!source || !target || !allowedProtocols(source.data.componentType, target.data.componentType).includes(edgeDraft.protocol) || !edgeDraft.latencyMs.trim() || !validDuration(ms)) {
       setError('Protocolo incompatível ou latência inválida.'); return;
     }
+    resetValidation();
     setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { protocol: edgeDraft.protocol, latencyMs: ms } } : item));
     setError('');
   };
@@ -92,6 +117,7 @@ function EditorCanvas() {
   };
   const removeSelected = () => {
     if (!selection) return;
+    resetValidation();
     if (selection.kind === 'node') {
       const result = removeComponent(nodes, edges, selection.id);
       setNodes(result.nodes); setEdges(result.edges);
@@ -112,9 +138,14 @@ function EditorCanvas() {
         ))}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span></div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={validate} disabled={validationStatus === 'checking'}>Validar arquitetura</button></div>
+        {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
+          {validationStatus === 'checking' && <p>Validando arquitetura...</p>}
+          {validationStatus === 'valid' && <p>Arquitetura válida para simulação.</p>}
+          {(validationStatus === 'invalid' || validationStatus === 'error') && <><strong>{validationStatus === 'invalid' ? 'Arquitetura inválida' : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
+        </section>}
         <div className="editor-canvas" ref={canvasRef} onDrop={onDrop} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }} aria-label="Canvas da arquitetura">
-          <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={onNodesChange} onEdgesChange={onEdgesChange}
+          <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
             onNodeClick={(_, chosen) => select({ kind: 'node', id: chosen.id })}
             onEdgeClick={(_, chosen) => select({ kind: 'edge', id: chosen.id })}
             onPaneClick={() => select(null)}

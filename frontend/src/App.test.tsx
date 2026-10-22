@@ -73,4 +73,11 @@ describe('Editor visual', () => {
     expect(screen.getByText(/0 conexão\(ões\)/)).toBeInTheDocument();
     expect(screen.getByText(/2 componente\(s\)/)).toBeInTheDocument();
   });
+  it('exibe violações locais sem chamar a API', async () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Validar arquitetura' }));
+    expect(await screen.findByText(/Arquitetura inválida/)).toBeInTheDocument();
+    expect(screen.getAllByText(/MISSING_COMPONENT/).length).toBeGreaterThan(0);
+  });
+
 });
