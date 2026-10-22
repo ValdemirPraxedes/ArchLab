@@ -51,12 +51,23 @@ try {
   assert.equal(result.metrics.databaseProcessingMs, 150);
   assert.equal(result.metrics.communicationMs, 60);
   assert.equal(result.timeline.length, 7);
-  assert.equal(result.trace.length, 32);
+  assert.ok(result.trace.length >= 7, 'Trace deve conter os eventos necessários à execução');
+  assert.deepEqual(result.trace.map((event) => event.sequence), result.trace.map((_, i) => i + 1),
+    'Sequências do trace devem ser consecutivas');
+  assert.ok(result.trace.every((event, i, all) => i === 0 || event.timestampMs >= all[i - 1].timestampMs),
+    'Trace deve estar em ordem cronológica');
+  for (const [timestampMs, newState] of [[50, 'WAITING'], [220, 'PROCESSING']]) {
+    assert.ok(result.trace.some((event) => event.type === 'STATE_TRANSITION'
+      && event.entityKind === 'COMPONENT' && event.entityId === 'api-1'
+      && event.timestampMs === timestampMs && event.newState === newState),
+    `Falta transição API→${newState} em ${timestampMs} ms`);
+  }
+  console.log(`Trace retornado: ${result.trace.length} eventos (quantidade não fixa pelo contrato)`);
   assert.equal(snapshot(result, 50).components['api-1'], 'WAITING');
   assert.equal(snapshot(result, 219).components['api-1'], 'WAITING');
   assert.equal(snapshot(result, 220).components['api-1'], 'PROCESSING');
   assert.equal(snapshot(result, 260).components['client-1'], 'COMPLETED');
-  console.log('✓ Simulação real: 260 ms, 170 ms em WAITING, 7 atividades e 32 eventos');
+  console.log('✓ Simulação real: 260 ms, 170 ms em WAITING, 7 atividades e trace válido');
 
   const invalid = { ...architecture, components: architecture.components.filter((c) => c.type !== 'DATABASE') };
   const rejected = await request('/api/v1/architectures/validate', invalid);
