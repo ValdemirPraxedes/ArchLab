@@ -9,6 +9,7 @@ function ArchitectureNodeView({ data, selected }: NodeProps<ArchitectureNodeType
       <Handle type="target" position={Position.Left} isConnectable={false} />
       <strong>{data.label}</strong>
       <small>{data.componentType}</small>
+      {data.stateLabel && <small aria-label="Estado do componente">{data.stateLabel}</small>}
       <Handle type="source" position={Position.Right} isConnectable={false} />
     </div>
   );
