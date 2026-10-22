@@ -6,6 +6,7 @@ import type { DragEvent } from 'react';
 import '@xyflow/react/dist/style.css';
 import { ArchitectureNode } from './ArchitectureNode';
 import Playback from './Playback';
+import ResultsPanel from './ResultsPanel';
 import { reconstructState } from './traceState';
 import { archlabClient, ArchlabHttpError } from '../../api/archlabClient';
 import type { SimulationResponse } from '../../api/archlabClient';
@@ -208,6 +209,7 @@ function EditorCanvas() {
             <Background /><Controls /><MiniMap pannable zoomable />
           </ReactFlow>
         </div>
+        {simulationResult && <ResultsPanel result={simulationResult} playbackTimeMs={playbackTimeMs} playbackSequence={playbackSequence} selectedId={selection?.id} />}
       </section>
       <aside className="properties" aria-label="Propriedades">
         <h2>Propriedades</h2>
