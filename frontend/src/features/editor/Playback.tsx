@@ -6,13 +6,13 @@ type Activity = SimulationResponse['timeline'][number];
 export function activityAt(activities: Activity[], time: number): number {
   if (!activities.length) return -1;
   const index = activities.findIndex((a) => a.startMs <= time && time < a.endMs);
-  return index >= 0 ? index : activities.findLastIndex((a) => a.startMs <= time);
+  return index >= 0 ? index : activities.reduce((found, a, i) => a.startMs <= time ? i : found, -1);
 }
 export function nextBoundary(activities: Activity[], time: number): number {
   return activities.map((a) => a.endMs).find((t) => t > time) ?? time;
 }
 export function previousBoundary(activities: Activity[], time: number): number {
-  return activities.map((a) => a.startMs).filter((t) => t < time).at(-1) ?? 0;
+  return activities.map((a) => a.startMs).filter((t) => t < time).reduce((last, t) => t, 0);
 }
 export default function Playback({ result, onRestart }: { result: SimulationResponse; onRestart: () => void }) {
   const [time, setTime] = useState(0);
