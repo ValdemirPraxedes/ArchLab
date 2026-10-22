@@ -6,6 +6,7 @@ import type { DragEvent } from 'react';
 import '@xyflow/react/dist/style.css';
 import { ArchitectureNode } from './ArchitectureNode';
 import { archlabClient, ArchlabHttpError } from '../../api/archlabClient';
+import type { SimulationResponse } from '../../api/archlabClient';
 import { toArchitectureRequest, validateArchitectureLocally } from './validation';
 import type { ValidationIssue } from './validation';
 import {
@@ -28,6 +29,9 @@ function EditorCanvas() {
   const [error, setError] = useState('');
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid' | 'error'>('idle');
+  const [executionStatus, setExecutionStatus] = useState<'READY' | 'VALIDATING' | 'EXECUTING' | 'COMPLETED' | 'ERROR'>('READY');
+  const [simulationResult, setSimulationResult] = useState<SimulationResponse | null>(null);
+  const executionLocked = executionStatus === 'VALIDATING' || executionStatus === 'EXECUTING' || executionStatus === 'COMPLETED';
   const [edgeDraft, setEdgeDraft] = useState<{ protocol: Protocol; latencyMs: string } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const { screenToFlowPosition } = useReactFlow();
@@ -38,6 +42,36 @@ function EditorCanvas() {
   const compatibleProtocols = node && destination ? allowedProtocols(node.data.componentType, destination.data.componentType) : [];
   const possibleTargets = node ? nodes.filter((n) => n.id !== node.id && allowedProtocols(node.data.componentType, n.data.componentType).length > 0) : [];
 
+  const restart = () => {
+    setExecutionStatus('READY'); setSimulationResult(null);
+    setIssues([]); setValidationStatus('idle'); setError('');
+  };
+  const simulate = async () => {
+    if (executionStatus !== 'READY' && executionStatus !== 'ERROR') return;
+    const localIssues = validateArchitectureLocally(nodes, edges);
+    if (localIssues.length) {
+      setIssues(localIssues); setValidationStatus('invalid'); setExecutionStatus('ERROR'); return;
+    }
+    setExecutionStatus('VALIDATING'); setIssues([]);
+    try {
+      const architecture = toArchitectureRequest(nodes, edges);
+      const validated = await archlabClient.validate(architecture);
+      if (!validated.valid) {
+        setIssues(validated.violations.map((v) => ({ code: v.code, path: v.path, message: v.message })));
+        setValidationStatus('invalid'); setExecutionStatus('ERROR'); return;
+      }
+      setValidationStatus('valid'); setExecutionStatus('EXECUTING');
+      const result = await archlabClient.simulate(architecture);
+      setSimulationResult(result); setExecutionStatus('COMPLETED');
+    } catch (cause) {
+      setSimulationResult(null); setExecutionStatus('ERROR');
+      if (cause instanceof ArchlabHttpError) {
+        const problem = cause.problem as { detail?: string; violations?: { code: string; path: string; message: string }[] } | null;
+        setIssues(problem?.violations?.map((v) => ({ code: v.code, path: v.path, message: v.message })) ??
+          [{ code: 'HTTP_ERROR', path: '', message: problem?.detail ?? `Erro HTTP ${cause.status}` }]);
+      } else setIssues([{ code: 'NETWORK_ERROR', path: '', message: 'Falha de comunicação com a API.' }]);
+    }
+  };
   const resetValidation = () => { setIssues([]); setValidationStatus('idle'); };
   const validate = async () => {
     const localIssues = validateArchitectureLocally(nodes, edges);
@@ -55,11 +89,12 @@ function EditorCanvas() {
     }
   };
   const addNode = useCallback((type: ComponentType, position: { x: number; y: number }) => {
+    if (executionLocked) return null;
     resetValidation();
     const newNode = createArchitectureNode(type, position);
     setNodes((current) => [...current, newNode]);
     return newNode;
-  }, [setNodes]);
+  }, [setNodes, executionLocked]);
   const select = (next: { kind: 'node' | 'edge'; id: string } | null) => {
     setSelection(next); setTargetId(''); setError('');
     const selectedEdge = next?.kind === 'edge' ? edges.find((item) => item.id === next.id) : undefined;
@@ -79,7 +114,7 @@ function EditorCanvas() {
   }, [addNode, screenToFlowPosition]);
 
   const updateTime = (field: 'preProcessingMs' | 'postProcessingMs' | 'processingMs', value: string) => {
-    if (!node) return;
+    if (!node || executionLocked) return;
     const parsed = Number(value);
     if (!value.trim() || !validDuration(parsed)) { setError('Informe um tempo inteiro não negativo.'); return; }
     resetValidation();
@@ -87,6 +122,7 @@ function EditorCanvas() {
     setError('');
   };
   const connect = () => {
+    if (executionLocked) return;
     if (!node || !destination) { setError('Selecione o destino.'); return; }
     const issue = validateConnection(nodes, edges, node.id, destination.id);
     if (issue) { setError(issue); return; }
@@ -99,7 +135,7 @@ function EditorCanvas() {
     setError(''); setTargetId('');
   };
   const confirmEdge = () => {
-    if (!edge || !edgeDraft) return;
+    if (!edge || !edgeDraft || executionLocked) return;
     const ms = Number(edgeDraft.latencyMs);
     const source = nodes.find((n) => n.id === edge.source);
     const target = nodes.find((n) => n.id === edge.target);
@@ -116,7 +152,7 @@ function EditorCanvas() {
     setError('');
   };
   const removeSelected = () => {
-    if (!selection) return;
+    if (!selection || executionLocked) return;
     resetValidation();
     if (selection.kind === 'node') {
       const result = removeComponent(nodes, edges, selection.id);
@@ -130,26 +166,27 @@ function EditorCanvas() {
         <h2>Componentes</h2>
         <p>Arraste para o canvas ou clique para adicionar.</p>
         {COMPONENT_TYPES.map((type) => (
-          <button key={type} type="button" className="palette-item" draggable
-            onDragStart={(event) => onPaletteDragStart(event, type)}
+          <button key={type} type="button" className="palette-item" draggable={!executionLocked} disabled={executionLocked}
+            onDragStart={(event) => { if (!executionLocked) onPaletteDragStart(event, type); }}
             onClick={() => addNode(type, { x: 120 + (nodes.length % 4) * 210, y: 110 + Math.floor(nodes.length / 4) * 120 })}>
             {COMPONENT_LABELS[type]}
           </button>
         ))}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={validate} disabled={validationStatus === 'checking'}>Validar arquitetura</button></div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={validate} disabled={executionLocked || validationStatus === 'checking'}>Validar arquitetura</button><button type="button" onClick={simulate} disabled={executionLocked}>Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart}>Reiniciar</button>}</div>
+        <div className="execution-status" role="status">Execução: {executionStatus}{simulationResult && <span> · Tempo virtual total: {simulationResult.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
           {validationStatus === 'checking' && <p>Validando arquitetura...</p>}
           {validationStatus === 'valid' && <p>Arquitetura válida para simulação.</p>}
-          {(validationStatus === 'invalid' || validationStatus === 'error') && <><strong>{validationStatus === 'invalid' ? 'Arquitetura inválida' : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
+          {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? 'Arquitetura inválida' : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
-        <div className="editor-canvas" ref={canvasRef} onDrop={onDrop} onDragOver={(event) => { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; }} aria-label="Canvas da arquitetura">
-          <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
+        <div className="editor-canvas" ref={canvasRef} onDrop={(event) => { if (!executionLocked) onDrop(event); }} onDragOver={(event) => { if (!executionLocked) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} aria-label="Canvas da arquitetura">
+          <ReactFlow nodes={nodes} edges={edges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
             onNodeClick={(_, chosen) => select({ kind: 'node', id: chosen.id })}
             onEdgeClick={(_, chosen) => select({ kind: 'edge', id: chosen.id })}
             onPaneClick={() => select(null)}
-            deleteKeyCode={null} edgesReconnectable={false} nodesConnectable={false}
+            deleteKeyCode={null} nodesDraggable={!executionLocked} edgesReconnectable={false} nodesConnectable={false}
             nodeExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} translateExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} fitView>
             <Background /><Controls /><MiniMap pannable zoomable />
           </ReactFlow>
@@ -161,35 +198,35 @@ function EditorCanvas() {
         {node && <>
           <p><strong>{node.data.label}</strong> · {node.id.slice(0, 8)}</p>
           {node.data.componentType === 'API' && <>
-            <label>Pré-processamento (ms)<input aria-label="Pré-processamento (ms)" type="number" min="0" step="1" value={node.data.preProcessingMs ?? 0} onChange={(e) => updateTime('preProcessingMs', e.target.value)} /></label>
+            <label>Pré-processamento (ms)<input aria-label="Pré-processamento (ms)" type="number" min="0" step="1" value={node.data.preProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('preProcessingMs', e.target.value)} /></label>
             <label>Pós-processamento (ms)<input aria-label="Pós-processamento (ms)" type="number" min="0" step="1" value={node.data.postProcessingMs ?? 0} onChange={(e) => updateTime('postProcessingMs', e.target.value)} /></label>
           </>}
           {node.data.componentType === 'DATABASE' && <label>Processamento (ms)<input aria-label="Processamento (ms)" type="number" min="0" step="1" value={node.data.processingMs ?? 0} onChange={(e) => updateTime('processingMs', e.target.value)} /></label>}
           <h3>Conectar</h3>
           <label>Destino
-            <select aria-label="Destino" value={targetId} onChange={(e) => { setTargetId(e.target.value); const target = nodes.find((n) => n.id === e.target.value); const protocols = target ? allowedProtocols(node.data.componentType, target.data.componentType) : []; setProtocol(protocols[0] ?? 'REST'); setError(''); }}>
+            <select aria-label="Destino" value={targetId} disabled={executionLocked} onChange={(e) => { setTargetId(e.target.value); const target = nodes.find((n) => n.id === e.target.value); const protocols = target ? allowedProtocols(node.data.componentType, target.data.componentType) : []; setProtocol(protocols[0] ?? 'REST'); setError(''); }}>
               <option value="">Selecione...</option>
               {possibleTargets.map((n) => <option key={n.id} value={n.id}>{n.data.label} · {n.id.slice(0, 8)}</option>)}
             </select>
           </label>
           {compatibleProtocols.length > 0 && <>
-            <label>Protocolo<select aria-label="Protocolo" value={protocol} onChange={(e) => setProtocol(e.target.value as Protocol)}>{compatibleProtocols.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
-            <label>Latência (ms)<input aria-label="Latência (ms)" type="number" min="0" step="1" value={latencyMs} onChange={(e) => setLatencyMs(e.target.value)} /></label>
+            <label>Protocolo<select aria-label="Protocolo" value={protocol} disabled={executionLocked} onChange={(e) => setProtocol(e.target.value as Protocol)}>{compatibleProtocols.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
+            <label>Latência (ms)<input aria-label="Latência (ms)" type="number" min="0" step="1" value={latencyMs} disabled={executionLocked} onChange={(e) => setLatencyMs(e.target.value)} /></label>
           </>}
-          <button type="button" onClick={connect}>Conectar</button>
+          <button type="button" disabled={executionLocked} onClick={connect}>Conectar</button>
         </>}
         {edge && <>
           <p>Conexão: {edge.source.slice(0, 8)} → {edge.target.slice(0, 8)}</p>
           <label>Protocolo
-            <select aria-label="Editar protocolo" value={edgeDraft?.protocol ?? edge.data?.protocol} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, protocol: e.target.value as Protocol } : null)}>
+            <select aria-label="Editar protocolo" value={edgeDraft?.protocol ?? edge.data?.protocol} disabled={executionLocked} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, protocol: e.target.value as Protocol } : null)}>
               {(allowedProtocols(nodes.find((n) => n.id === edge.source)!.data.componentType, nodes.find((n) => n.id === edge.target)!.data.componentType)).map((p) => <option key={p} value={p}>{p}</option>)}
             </select>
           </label>
-          <label>Latência (ms)<input aria-label="Editar latência (ms)" type="number" min="0" step="1" value={edgeDraft?.latencyMs ?? String(edge.data?.latencyMs ?? 0)} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, latencyMs: e.target.value } : null)} /></label>
-          <div className="property-actions"><button type="button" onClick={confirmEdge}>Confirmar alterações</button><button type="button" onClick={cancelEdge}>Cancelar alterações</button></div>
+          <label>Latência (ms)<input aria-label="Editar latência (ms)" type="number" min="0" step="1" value={edgeDraft?.latencyMs ?? String(edge.data?.latencyMs ?? 0)} disabled={executionLocked} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, latencyMs: e.target.value } : null)} /></label>
+          <div className="property-actions"><button type="button" disabled={executionLocked} onClick={confirmEdge}>Confirmar alterações</button><button type="button" disabled={executionLocked} onClick={cancelEdge}>Cancelar alterações</button></div>
         </>}
         {error && <p className="editor-error" role="alert">{error}</p>}
-        {selection && <button type="button" className="danger" onClick={removeSelected}>Remover selecionado</button>}
+        {selection && <button type="button" className="danger" disabled={executionLocked} onClick={removeSelected}>Remover selecionado</button>}
       </aside>
     </div>
   );
