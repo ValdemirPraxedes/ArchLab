@@ -26,3 +26,75 @@
 .results-panel__content pre{white-space:pre-wrap;overflow-wrap:anywhere}
 
 .results-follow{display:flex;align-items:center;gap:12px;margin:8px 0;color:#a9c5e2}.results-events{overflow-y:auto;max-height:180px;scrollbar-gutter:stable}.results-events button[aria-current="step"]{border-color:#78c6ef;background:#205279;box-shadow:inset 3px 0 #6ae2ff}
+
+/* FRONT 08 — Visual system, editor sizing, accessibility */
+:root{font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;color:#233349;background:#f4f7fb}
+body{background:#f4f7fb}
+.workspace{min-height:620px;background:#f4f7fb}
+.workspace-header{background:#fff;border-bottom:1px solid #dce4ed;padding:16px 28px;min-height:76px}
+.workspace-header h1{color:#142a42;font-size:1.35rem;letter-spacing:-.025em}
+.eyebrow{color:#2979b8}
+.workspace-status{color:#607287}
+.editor-layout{min-height:0;background:#f4f7fb}
+.palette,.properties{background:#fff;border-color:#dce4ed}
+.palette{width:224px;padding:22px 16px}
+.properties{width:274px;padding:22px 18px}
+.palette h2,.properties h2,.properties h3{color:#1d344d}
+.palette p,.properties p,.properties label{color:#5e7188}
+.palette-item{background:#f6f9fc;border:1px solid #d7e2ed;color:#26435f;padding:13px 14px;box-shadow:0 1px 2px #2233440a}
+.palette-item:hover,.palette-item:focus-visible{background:#eaf4ff;border-color:#378bd0}
+.editor-main{min-width:0;min-height:0;overflow:hidden}
+.editor-toolbar{justify-content:flex-start;gap:16px;align-items:center;flex-wrap:wrap;background:#fff;border-bottom:1px solid #dce4ed;color:#60758b;padding:10px 16px}
+.editor-toolbar span:nth-child(2){margin-right:auto}
+.editor-toolbar button{background:#2473ba;border-color:#2473ba;color:#fff;font-weight:600;cursor:pointer}
+.editor-toolbar button:hover:not(:disabled){background:#175990}
+.editor-toolbar button:disabled{opacity:.48;cursor:not-allowed}
+.execution-status{background:#f8fbff;border-color:#e1eaf3;color:#3b5875;padding:8px 18px}
+.validation-result{background:#f0f8ff;border-color:#d3e5f4;color:#254767}
+.validation-result:has(.validation-error){background:#fff4f3}
+.playback{background:#fff;border-color:#dce4ed;color:#36536e}
+.playback button,.playback select{background:#f4f8fd;border-color:#bfcede;color:#294b6f}
+.playback button:hover:not(:disabled){background:#e8f3ff}
+.playback p{color:#47637b}
+.playback progress{accent-color:#2473ba}
+.editor-canvas{flex:1 1 0;min-height:180px;background:#f6f9fc}
+.react-flow__background{background:#f6f9fc}
+.architecture-node{background:#fff;color:#1d354c;border-width:2px;box-shadow:0 8px 24px #24466919}
+.architecture-node small{color:#627d95}
+.architecture-node--client{border-color:#16a3b6}
+.architecture-node--api{border-color:#736de0}
+.architecture-node--database{border-color:#d8a147}
+.architecture-node--selected{outline-color:#2a6fb7}
+.react-flow__controls button{background:#fff;color:#385773}
+.react-flow__minimap{background:#eaf0f6}
+.properties input,.properties select{background:#fff;color:#243e5b;border-color:#cbd8e5;padding:10px 11px}
+.properties button{background:#e8f2fc;color:#205386;border-color:#b5cfe9}
+.properties .danger{background:#fff0f0;color:#ad3644;border-color:#f0c1c7}
+.results-panel{background:#fff;border-color:#dce4ed;max-height:min(45vh,400px);color:#29415b}
+.results-panel__header{background:#f8fbff;border-bottom:1px solid #e3ebf3;padding:9px 16px}
+.results-panel button{background:#f4f8fc;border-color:#ccdae8;color:#284a6b}
+.results-panel button:hover:not(:disabled){background:#e7f2ff}
+.results-panel__body{max-height:calc(min(45vh,400px) - 43px);min-height:130px}
+.results-resize{color:#4c667d}
+.results-tabs button[aria-selected="true"]{background:#2377bf;color:#fff;border-color:#2377bf}
+.results-panel__content td,.results-panel__content th{border-color:#e0e8f0}
+.results-events button[aria-current="step"]{background:#e5f5ff;border-color:#3b90cc;box-shadow:inset 3px 0 #348bcb}
+.results-events button[aria-pressed="true"]{background:#dcefff;border-color:#4b95ce}
+.results-follow{color:#56748d}
+.trace-node--processing .architecture-node{box-shadow:0 0 0 4px #3b92f63d}
+.trace-node--waiting .architecture-node{box-shadow:0 0 0 4px #e9a93d55}
+.trace-node--completed .architecture-node{box-shadow:0 0 0 4px #37ae7950}
+button:focus-visible,input:focus-visible,select:focus-visible,[role="tab"]:focus-visible{outline:3px solid #1684d4;outline-offset:2px}
+@media(max-width:1100px){.palette{width:178px}.properties{width:220px}.workspace-header{padding:13px 18px}}
+@media(max-width:800px){.workspace{height:auto;min-height:100vh}.editor-layout{display:flex;flex-direction:column}.palette{width:100%;border-right:0;border-bottom:1px solid #dce4ed;padding:12px 16px}.palette-item{display:inline-block;width:auto;margin:5px 6px 5px 0}.editor-main{width:100%;height:65vh;min-height:430px}.properties{order:0;width:100%;max-height:none;border-left:0;border-top:1px solid #dce4ed}.editor-toolbar span:nth-child(2){display:none}.editor-toolbar{gap:8px}.results-panel{max-height:40vh}.results-panel__body{max-height:calc(40vh - 43px)}}
+
+/* FRONT 08 — legibility refinements */
+.react-flow__minimap{background:#e5ecf4!important;border:1px solid #a6b9cc;border-radius:8px;box-shadow:0 3px 12px #1d385c20;overflow:hidden}
+.react-flow__minimap-mask{fill:#abc2da;fill-opacity:.3;stroke:#557b9c;stroke-width:1.5}
+.react-flow__minimap-node{fill:#4c759d;stroke:#254968;stroke-width:2}
+.properties input:disabled,.properties select:disabled{background:#edf2f7;color:#52687f;border-color:#b6c5d5;opacity:1;-webkit-text-fill-color:#52687f;cursor:not-allowed}
+.palette-item:disabled{opacity:1;background:#eef2f7;color:#65798d;border-color:#d2deea;cursor:not-allowed}
+.properties button:disabled{opacity:1;background:#edf2f7;color:#647c94;border-color:#c6d5e3;cursor:not-allowed}
+.results-panel__content table{width:100%;max-width:none;table-layout:fixed}
+.results-panel__content th:first-child,.results-panel__content td:first-child{width:70%}
+.results-panel__content th:last-child,.results-panel__content td:last-child{text-align:right;font-variant-numeric:tabular-nums}
