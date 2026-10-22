@@ -11,7 +11,7 @@ type Props = {
 };
 export default function ResultsPanel({ result, playbackTimeMs, playbackSequence, selectedId }: Props) {
   const [expanded, setExpanded] = useState(true);
-  const [height, setHeight] = useState(260);
+  const [height, setHeight] = useState(230);
   const [tab, setTab] = useState<Tab>('times');
   const [inspectedSequence, setInspectedSequence] = useState<number | null>(null);
   const [following, setFollowing] = useState(true);
@@ -50,7 +50,7 @@ export default function ResultsPanel({ result, playbackTimeMs, playbackSequence,
     </header>
     {expanded && <div className="results-panel__body" style={{ height }}>
       <label className="results-resize">Altura do painel
-        <input aria-label="Altura do painel" type="range" min="160" max="500" step="10" value={height} onChange={(event) => setHeight(Number(event.target.value))} />
+        <input aria-label="Altura do painel" type="range" min="130" max="340" step="10" value={height} onChange={(event) => setHeight(Number(event.target.value))} />
       </label>
       <div className="results-tabs" role="tablist" aria-label="Abas de resultados">
         {([['times','Tempos'], ['events','Eventos'], ['states','Estados']] as const).map(([id, label]) => <button key={id} type="button" role="tab" aria-selected={tab === id} onClick={() => setTab(id)}>{label}</button>)}
