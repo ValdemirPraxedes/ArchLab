@@ -1,0 +1,1491 @@
+openapi: 3.1.0
+info:
+  title: ArchLab Simulation API v2
+  version: 0.2.0-draft
+  description: Contrato proposto da v0.2, separado da API /api/v1. Grafo DAG, uma requisição principal, chamadas
+    síncronas e mensagens apenas ilustrativas. Sem persistência ou tráfego de rede real.
+servers:
+- url: /
+tags:
+- name: Architectures
+  description: Validação estrutural do grafo.
+- name: Scenarios
+  description: Validação do cenário de execução.
+- name: Simulations
+  description: Execução determinística e resultados completos.
+paths:
+  /api/v2/architectures/validate:
+    post:
+      tags:
+      - Architectures
+      operationId: validateArchitectureV2
+      summary: Validar estrutura do grafo
+      description: Valida IDs, direções, modalidades de integração, duplicidade e ciclos no grafo completo.
+        Não exige cenário, não simula. HTTP 200 com valid=false para violações de domínio.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArchitectureV2'
+            examples:
+              sample:
+                $ref: '#/components/examples/architecture'
+      responses:
+        '200':
+          description: Operação concluída.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponseV2'
+              examples:
+                sample:
+                  $ref: '#/components/examples/validationValid'
+        '400':
+          $ref: '#/components/responses/BadRequestV2'
+        '413':
+          $ref: '#/components/responses/PayloadTooLargeV2'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaTypeV2'
+        '500':
+          $ref: '#/components/responses/InternalErrorV2'
+  /api/v2/scenarios/validate:
+    post:
+      tags:
+      - Scenarios
+      operationId: validateScenarioV2
+      summary: Validar arquitetura e cenário selecionado
+      description: Valida primeiro a arquitetura completa, depois Client e conexão inicial, dependências e
+        configurações do cenário. Não executa o motor.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequestV2'
+            examples:
+              sample:
+                $ref: '#/components/examples/scenario'
+      responses:
+        '200':
+          description: Operação concluída.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponseV2'
+              examples:
+                sample:
+                  $ref: '#/components/examples/validationValid'
+        '400':
+          $ref: '#/components/responses/BadRequestV2'
+        '413':
+          $ref: '#/components/responses/PayloadTooLargeV2'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaTypeV2'
+        '500':
+          $ref: '#/components/responses/InternalErrorV2'
+  /api/v2/simulations:
+    post:
+      tags:
+      - Simulations
+      operationId: executeSimulationV2
+      summary: Executar cenário determinístico
+      description: Revalida arquitetura e cenário, executa uma requisição principal em memória e devolve trace
+        integral para playback local. Não há rede real ou persistência.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequestV2'
+            examples:
+              sample:
+                $ref: '#/components/examples/simulationRequest'
+      responses:
+        '200':
+          description: Operação concluída.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationResponseV2'
+              examples:
+                sample:
+                  $ref: '#/components/examples/simulationResult'
+        '400':
+          $ref: '#/components/responses/BadRequestV2'
+        '413':
+          $ref: '#/components/responses/PayloadTooLargeV2'
+        '415':
+          $ref: '#/components/responses/UnsupportedMediaTypeV2'
+        '422':
+          $ref: '#/components/responses/InvalidSimulationV2'
+        '500':
+          $ref: '#/components/responses/InternalErrorV2'
+components:
+  schemas:
+    IdentifierV2:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: .*\S.*
+      description: ID lógico não vazio; unicidade e referências são verificadas pelo validador de domínio.
+    DisplayNameV2:
+      type: string
+      minLength: 1
+      maxLength: 80
+      pattern: .*\S.*
+      description: Nome legível; limite em Unicode code points conforme JSON Schema. Remove-se espaço nas extremidades
+        na validação de domínio.
+    DurationMsV2:
+      type: integer
+      format: int64
+      minimum: 0
+      maximum: 1000000000
+      description: Milissegundos virtuais inteiros. Limite operacional inicial de 1 bilhão por propriedade;
+        overflow da execução é rejeitado.
+    HeadersV2:
+      type: object
+      maxProperties: 32
+      propertyNames:
+        type: string
+        minLength: 1
+        maxLength: 128
+      additionalProperties:
+        type: string
+        maxLength: 1024
+      description: Mapa de cabeçalhos ilustrativos, não enviados na rede.
+    HttpRequestV2:
+      type: object
+      additionalProperties: false
+      properties:
+        method:
+          type: string
+          enum:
+          - GET
+          - POST
+          - PUT
+          - PATCH
+          - DELETE
+        path:
+          type: string
+          maxLength: 2048
+          minLength: 1
+        headers:
+          $ref: '#/components/schemas/HeadersV2'
+        body:
+          type: string
+          maxLength: 32768
+      required:
+      - method
+      - path
+      description: Dados HTTP ilustrativos; headers e body são opcionais.
+    HttpResponseV2:
+      type: object
+      additionalProperties: false
+      properties:
+        statusCode:
+          type: integer
+          minimum: 100
+          maximum: 599
+        headers:
+          $ref: '#/components/schemas/HeadersV2'
+        body:
+          type: string
+          maxLength: 32768
+      required:
+      - statusCode
+      description: Código HTTP ilustrativo, sem propagação automática de falhas.
+    HttpRestIntegrationV2:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          const: HTTP_REST
+          type: string
+        request:
+          $ref: '#/components/schemas/HttpRequestV2'
+        response:
+          $ref: '#/components/schemas/HttpResponseV2'
+      required:
+      - kind
+      description: Integração HTTP/REST; request/response opcionais recebem modelos padrão para inspeção.
+    SoapHttpIntegrationV2:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          const: SOAP_HTTP
+          type: string
+        soapVersion:
+          type: string
+          const: '1.2'
+        operation:
+          type: string
+          maxLength: 256
+        action:
+          type: string
+          maxLength: 2048
+        requestEnvelope:
+          type: string
+          maxLength: 32768
+        responseEnvelope:
+          type: string
+          maxLength: 32768
+        httpStatusCode:
+          type: integer
+          minimum: 100
+          maximum: 599
+        requestHeaders:
+          $ref: '#/components/schemas/HeadersV2'
+        responseHeaders:
+          $ref: '#/components/schemas/HeadersV2'
+      required:
+      - kind
+      - soapVersion
+      description: SOAP 1.2 sobre HTTP; envelopes opcionais são ilustrativos, não executados. XML fornecido
+        deve ser bem-formado, sem entidades externas; sem WSDL/XSD.
+    DatabaseQueryIntegrationV2:
+      type: object
+      additionalProperties: false
+      properties:
+        kind:
+          type: string
+          const: DATABASE_QUERY
+        queryText:
+          type: string
+          maxLength: 32768
+        responseText:
+          type: string
+          maxLength: 32768
+      required:
+      - kind
+      description: Consulta ilustrativa, sem execução de SQL e sem banco real.
+    IntegrationV2:
+      oneOf:
+      - $ref: '#/components/schemas/HttpRestIntegrationV2'
+      - $ref: '#/components/schemas/SoapHttpIntegrationV2'
+      - $ref: '#/components/schemas/DatabaseQueryIntegrationV2'
+      discriminator:
+        propertyName: kind
+        mapping:
+          HTTP_REST: '#/components/schemas/HttpRestIntegrationV2'
+          SOAP_HTTP: '#/components/schemas/SoapHttpIntegrationV2'
+          DATABASE_QUERY: '#/components/schemas/DatabaseQueryIntegrationV2'
+    ClientV2:
+      type: object
+      additionalProperties: false
+      properties:
+        id: &id001
+          $ref: '#/components/schemas/IdentifierV2'
+        displayName: &id002
+          $ref: '#/components/schemas/DisplayNameV2'
+        type:
+          type: string
+          const: CLIENT
+      required:
+      - id
+      - type
+      - displayName
+    ApiV2:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        displayName: *id002
+        type:
+          type: string
+          const: API
+        preProcessingMs:
+          $ref: '#/components/schemas/DurationMsV2'
+        postProcessingMs:
+          $ref: '#/components/schemas/DurationMsV2'
+      required:
+      - id
+      - type
+      - displayName
+      - preProcessingMs
+      - postProcessingMs
+    DatabaseV2:
+      type: object
+      additionalProperties: false
+      properties:
+        id: *id001
+        displayName: *id002
+        type:
+          type: string
+          const: DATABASE
+        processingMs:
+          $ref: '#/components/schemas/DurationMsV2'
+      required:
+      - id
+      - type
+      - displayName
+      - processingMs
+    ComponentV2:
+      oneOf:
+      - $ref: '#/components/schemas/ClientV2'
+      - $ref: '#/components/schemas/ApiV2'
+      - $ref: '#/components/schemas/DatabaseV2'
+      discriminator:
+        propertyName: type
+        mapping:
+          CLIENT: '#/components/schemas/ClientV2'
+          API: '#/components/schemas/ApiV2'
+          DATABASE: '#/components/schemas/DatabaseV2'
+    ConnectionV2:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV2'
+        sourceId:
+          $ref: '#/components/schemas/IdentifierV2'
+        targetId:
+          $ref: '#/components/schemas/IdentifierV2'
+        latencyMs:
+          $ref: '#/components/schemas/DurationMsV2'
+        integration:
+          $ref: '#/components/schemas/IntegrationV2'
+      required:
+      - id
+      - sourceId
+      - targetId
+      - latencyMs
+      - integration
+      description: Conexão lógica dirigida; resposta percorre a conexão em sentido inverso. Unicidade por par
+        não ordenado de componentes.
+    ArchitectureV2:
+      type: object
+      additionalProperties: false
+      properties:
+        components:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/ComponentV2'
+        connections:
+          type: array
+          maxItems: 3000
+          items:
+            $ref: '#/components/schemas/ConnectionV2'
+      required:
+      - components
+      - connections
+      description: Candidata à validação, podendo estar incompleta. Regras de topologia/ciclo aplicadas no
+        domínio.
+    ApiExecutionV2:
+      type: object
+      additionalProperties: false
+      properties:
+        componentId:
+          $ref: '#/components/schemas/IdentifierV2'
+        dependencyConnectionId:
+          $ref: '#/components/schemas/IdentifierV2'
+      required:
+      - componentId
+      - dependencyConnectionId
+      description: Só listar APIs que efetivamente chamam uma dependência; APIs omitidas respondem diretamente.
+    ScenarioV2:
+      type: object
+      additionalProperties: false
+      properties:
+        entryComponentId:
+          $ref: '#/components/schemas/IdentifierV2'
+        entryConnectionId:
+          $ref: '#/components/schemas/IdentifierV2'
+        apiExecutions:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/ApiExecutionV2'
+      required:
+      - entryComponentId
+      - entryConnectionId
+      - apiExecutions
+      description: Uma requisição raiz, Client e conexão inicial explícitos, e zero ou uma dependência por
+        API.
+    SimulationRequestV2:
+      type: object
+      additionalProperties: false
+      properties:
+        architecture:
+          $ref: '#/components/schemas/ArchitectureV2'
+        scenario:
+          $ref: '#/components/schemas/ScenarioV2'
+      required:
+      - architecture
+      - scenario
+    ViolationV2:
+      type: object
+      additionalProperties: false
+      properties:
+        code:
+          type: string
+          enum:
+          - DUPLICATE_COMPONENT_ID
+          - DUPLICATE_CONNECTION_ID
+          - DUPLICATE_CONNECTION
+          - INVALID_CONNECTION
+          - UNKNOWN_COMPONENT
+          - INVALID_DURATION
+          - CYCLIC_DEPENDENCY
+          - INVALID_ENTRY_COMPONENT
+          - INVALID_ENTRY_CONNECTION
+          - INVALID_SCENARIO_DEPENDENCY
+          - DUPLICATE_API_EXECUTION
+          - INVALID_INTEGRATION
+          - INVALID_MESSAGE_TEMPLATE
+          - INVALID_DISPLAY_NAME
+          - INVALID_IDENTIFIER
+          - INVALID_TOPOLOGY
+          - EXCESSIVE_EXECUTION_DURATION
+        path:
+          type: string
+          maxLength: 2048
+          minLength: 1
+        message:
+          type: string
+          maxLength: 2048
+          minLength: 1
+        details:
+          type: object
+          additionalProperties: true
+      required:
+      - code
+      - path
+      - message
+      description: Códigos estáveis para validações estruturais, de cenário e de representação.
+    ValidationResponseV2:
+      type: object
+      additionalProperties: false
+      properties:
+        valid:
+          type: boolean
+        violations:
+          type: array
+          maxItems: 5000
+          items:
+            $ref: '#/components/schemas/ViolationV2'
+      required:
+      - valid
+      - violations
+    ProblemV2:
+      type: object
+      additionalProperties: true
+      properties:
+        type:
+          type: string
+          format: uri-reference
+        title:
+          type: string
+          maxLength: 256
+          minLength: 1
+        status:
+          type: integer
+          minimum: 400
+          maximum: 599
+        detail:
+          type: string
+          maxLength: 2048
+        instance:
+          type: string
+          format: uri-reference
+        code:
+          type: string
+          maxLength: 128
+          minLength: 1
+      required:
+      - type
+      - title
+      - status
+      - code
+      description: RFC 9457 com extensão code.
+    InvalidSimulationProblemV2:
+      allOf:
+      - $ref: '#/components/schemas/ProblemV2'
+      - type: object
+        additionalProperties: true
+        properties:
+          violations:
+            type: array
+            maxItems: 5000
+            items:
+              $ref: '#/components/schemas/ViolationV2'
+        required:
+        - violations
+    ComponentStatusV2:
+      type: string
+      enum:
+      - IDLE
+      - PROCESSING
+      - WAITING
+      - COMPLETED
+    RequestStatusV2:
+      type: string
+      enum:
+      - CREATED
+      - IN_PROGRESS
+      - WAITING_DEPENDENCY
+      - COMPLETED
+    ExchangeStatusV2:
+      type: string
+      enum:
+      - CREATED
+      - WAITING_RESPONSE
+      - COMPLETED
+    InitialStateV2:
+      type: object
+      additionalProperties: false
+      properties:
+        components:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ComponentStatusV2'
+        requests:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/RequestStatusV2'
+        exchanges:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/ExchangeStatusV2'
+      required:
+      - components
+      - requests
+      - exchanges
+    ExecutionInfoV2:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV2'
+        status:
+          type: string
+          const: COMPLETED
+        requestId:
+          $ref: '#/components/schemas/IdentifierV2'
+        entryComponentId:
+          $ref: '#/components/schemas/IdentifierV2'
+        entryConnectionId:
+          $ref: '#/components/schemas/IdentifierV2'
+        totalDurationMs:
+          $ref: '#/components/schemas/DurationMsV2'
+      required:
+      - id
+      - status
+      - requestId
+      - entryComponentId
+      - entryConnectionId
+      - totalDurationMs
+    StateTransitionTraceV2:
+      type: object
+      additionalProperties: false
+      properties:
+        sequence: &id003
+          type: integer
+          format: int64
+          minimum: 1
+        timestampMs: &id004
+          $ref: '#/components/schemas/DurationMsV2'
+        type:
+          type: string
+          const: STATE_TRANSITION
+        entityKind:
+          type: string
+          enum:
+          - COMPONENT
+          - REQUEST
+          - EXCHANGE
+        entityId:
+          $ref: '#/components/schemas/IdentifierV2'
+        previousState:
+          type:
+          - string
+          - 'null'
+        newState:
+          type: string
+          maxLength: 128
+          minLength: 1
+        cause:
+          type: string
+          maxLength: 128
+          minLength: 1
+      required:
+      - sequence
+      - timestampMs
+      - type
+      - entityKind
+      - entityId
+      - previousState
+      - newState
+      - cause
+    MessageTraceV2:
+      type: object
+      additionalProperties: false
+      properties:
+        sequence: *id003
+        timestampMs: *id004
+        type:
+          type: string
+          const: MESSAGE_EVENT
+        action:
+          type: string
+          enum:
+          - SENT
+          - ARRIVED
+        messageId:
+          $ref: '#/components/schemas/IdentifierV2'
+        requestId:
+          $ref: '#/components/schemas/IdentifierV2'
+        exchangeId:
+          $ref: '#/components/schemas/IdentifierV2'
+        parentExchangeId:
+          oneOf:
+          - $ref: '#/components/schemas/IdentifierV2'
+          - type: 'null'
+        connectionId:
+          $ref: '#/components/schemas/IdentifierV2'
+        sourceId:
+          $ref: '#/components/schemas/IdentifierV2'
+        targetId:
+          $ref: '#/components/schemas/IdentifierV2'
+        direction:
+          type: string
+          enum:
+          - REQUEST
+          - RESPONSE
+        intent:
+          type: string
+          enum:
+          - API_REQUEST
+          - DATABASE_QUERY
+      required:
+      - sequence
+      - timestampMs
+      - type
+      - action
+      - messageId
+      - requestId
+      - exchangeId
+      - parentExchangeId
+      - connectionId
+      - sourceId
+      - targetId
+      - direction
+      - intent
+    ProcessingTraceV2:
+      type: object
+      additionalProperties: false
+      properties:
+        sequence: *id003
+        timestampMs: *id004
+        type:
+          type: string
+          const: PROCESSING_EVENT
+        action:
+          type: string
+          enum:
+          - STARTED
+          - COMPLETED
+        componentId:
+          $ref: '#/components/schemas/IdentifierV2'
+        requestId:
+          $ref: '#/components/schemas/IdentifierV2'
+        phase:
+          type: string
+          enum:
+          - API_PRE_PROCESSING
+          - API_POST_PROCESSING
+          - DATABASE_PROCESSING
+      required:
+      - sequence
+      - timestampMs
+      - type
+      - action
+      - componentId
+      - requestId
+      - phase
+    TraceEntryV2:
+      oneOf:
+      - $ref: '#/components/schemas/StateTransitionTraceV2'
+      - $ref: '#/components/schemas/MessageTraceV2'
+      - $ref: '#/components/schemas/ProcessingTraceV2'
+      discriminator:
+        propertyName: type
+        mapping:
+          STATE_TRANSITION: '#/components/schemas/StateTransitionTraceV2'
+          MESSAGE_EVENT: '#/components/schemas/MessageTraceV2'
+          PROCESSING_EVENT: '#/components/schemas/ProcessingTraceV2'
+    CommunicationActivityV2:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV2'
+        kind:
+          type: string
+          const: COMMUNICATION
+        messageId:
+          $ref: '#/components/schemas/IdentifierV2'
+        exchangeId:
+          $ref: '#/components/schemas/IdentifierV2'
+        connectionId:
+          $ref: '#/components/schemas/IdentifierV2'
+        sourceId:
+          $ref: '#/components/schemas/IdentifierV2'
+        targetId:
+          $ref: '#/components/schemas/IdentifierV2'
+        startMs: &id005
+          $ref: '#/components/schemas/DurationMsV2'
+        endMs: &id006
+          $ref: '#/components/schemas/DurationMsV2'
+        durationMs: &id007
+          $ref: '#/components/schemas/DurationMsV2'
+      required:
+      - id
+      - kind
+      - messageId
+      - exchangeId
+      - connectionId
+      - sourceId
+      - targetId
+      - startMs
+      - endMs
+      - durationMs
+    ProcessingActivityV2:
+      type: object
+      additionalProperties: false
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV2'
+        kind:
+          type: string
+          const: PROCESSING
+        componentId:
+          $ref: '#/components/schemas/IdentifierV2'
+        requestId:
+          $ref: '#/components/schemas/IdentifierV2'
+        phase:
+          type: string
+          enum:
+          - API_PRE_PROCESSING
+          - API_POST_PROCESSING
+          - DATABASE_PROCESSING
+        startMs: *id005
+        endMs: *id006
+        durationMs: *id007
+      required:
+      - id
+      - kind
+      - componentId
+      - requestId
+      - phase
+      - startMs
+      - endMs
+      - durationMs
+    TimelineActivityV2:
+      oneOf:
+      - $ref: '#/components/schemas/CommunicationActivityV2'
+      - $ref: '#/components/schemas/ProcessingActivityV2'
+      discriminator:
+        propertyName: kind
+        mapping:
+          COMMUNICATION: '#/components/schemas/CommunicationActivityV2'
+          PROCESSING: '#/components/schemas/ProcessingActivityV2'
+    ProcessingMetricV2:
+      type: object
+      additionalProperties: false
+      properties:
+        componentId:
+          $ref: '#/components/schemas/IdentifierV2'
+        durationMs:
+          $ref: '#/components/schemas/DurationMsV2'
+      required:
+      - componentId
+      - durationMs
+    CommunicationMetricV2:
+      type: object
+      additionalProperties: false
+      properties:
+        connectionId:
+          $ref: '#/components/schemas/IdentifierV2'
+        traversals:
+          type: integer
+          minimum: 1
+        durationMs:
+          $ref: '#/components/schemas/DurationMsV2'
+      required:
+      - connectionId
+      - traversals
+      - durationMs
+    WaitingMetricV2:
+      type: object
+      additionalProperties: false
+      properties:
+        componentId:
+          $ref: '#/components/schemas/IdentifierV2'
+        exchangeId:
+          $ref: '#/components/schemas/IdentifierV2'
+        startMs:
+          $ref: '#/components/schemas/DurationMsV2'
+        endMs:
+          $ref: '#/components/schemas/DurationMsV2'
+        durationMs:
+          $ref: '#/components/schemas/DurationMsV2'
+      required:
+      - componentId
+      - exchangeId
+      - startMs
+      - endMs
+      - durationMs
+    ExchangeMetricV2:
+      type: object
+      additionalProperties: false
+      properties:
+        exchangeId:
+          $ref: '#/components/schemas/IdentifierV2'
+        parentExchangeId:
+          oneOf:
+          - $ref: '#/components/schemas/IdentifierV2'
+          - type: 'null'
+        callerComponentId:
+          $ref: '#/components/schemas/IdentifierV2'
+        calleeComponentId:
+          $ref: '#/components/schemas/IdentifierV2'
+        connectionId:
+          $ref: '#/components/schemas/IdentifierV2'
+        startMs:
+          $ref: '#/components/schemas/DurationMsV2'
+        endMs:
+          $ref: '#/components/schemas/DurationMsV2'
+        durationMs:
+          $ref: '#/components/schemas/DurationMsV2'
+      required:
+      - exchangeId
+      - parentExchangeId
+      - callerComponentId
+      - calleeComponentId
+      - connectionId
+      - startMs
+      - endMs
+      - durationMs
+    SimulationMetricsV2:
+      type: object
+      additionalProperties: false
+      properties:
+        totalDurationMs:
+          $ref: '#/components/schemas/DurationMsV2'
+        processingByComponent:
+          type: array
+          maxItems: 1000
+          items:
+            $ref: '#/components/schemas/ProcessingMetricV2'
+        communicationByConnection:
+          type: array
+          maxItems: 3000
+          items:
+            $ref: '#/components/schemas/CommunicationMetricV2'
+        waitingByComponent:
+          type: array
+          maxItems: 3000
+          items:
+            $ref: '#/components/schemas/WaitingMetricV2'
+        exchanges:
+          type: array
+          maxItems: 3000
+          items:
+            $ref: '#/components/schemas/ExchangeMetricV2'
+      required:
+      - totalDurationMs
+      - processingByComponent
+      - communicationByConnection
+      - waitingByComponent
+      - exchanges
+      description: Esperas aninhadas se sobrepõem; não somar a totalDurationMs.
+    MessageRepresentationV2:
+      type: object
+      additionalProperties: false
+      properties:
+        connectionId:
+          $ref: '#/components/schemas/IdentifierV2'
+        integration:
+          $ref: '#/components/schemas/IntegrationV2'
+      required:
+      - connectionId
+      - integration
+      description: Snapshot imutável da integração efetivamente utilizada para inspeção independente do editor.
+    SimulationResponseV2:
+      type: object
+      additionalProperties: false
+      properties:
+        execution:
+          $ref: '#/components/schemas/ExecutionInfoV2'
+        initialState:
+          $ref: '#/components/schemas/InitialStateV2'
+        trace:
+          type: array
+          maxItems: 50000
+          items:
+            $ref: '#/components/schemas/TraceEntryV2'
+        timeline:
+          type: array
+          maxItems: 30000
+          items:
+            $ref: '#/components/schemas/TimelineActivityV2'
+        metrics:
+          $ref: '#/components/schemas/SimulationMetricsV2'
+        messageRepresentations:
+          type: array
+          maxItems: 3000
+          items:
+            $ref: '#/components/schemas/MessageRepresentationV2'
+      required:
+      - execution
+      - initialState
+      - trace
+      - timeline
+      - metrics
+      - messageRepresentations
+  responses:
+    BadRequestV2:
+      description: JSON ausente, malformado ou incompatível com o schema.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemV2'
+    PayloadTooLargeV2:
+      description: Corpo HTTP acima do limite configurado.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemV2'
+    UnsupportedMediaTypeV2:
+      description: Somente application/json é aceito.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemV2'
+    InternalErrorV2:
+      description: Falha interna do servidor, sem exposição de dados sensíveis.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/ProblemV2'
+    InvalidSimulationV2:
+      description: Arquitetura ou cenário semanticamente inválido para execução.
+      content:
+        application/problem+json:
+          schema:
+            $ref: '#/components/schemas/InvalidSimulationProblemV2'
+  examples:
+    simulationRequest:
+      summary: Client → API Pedidos → API Estoque (100 ms)
+      value:
+        architecture: &id008
+          components:
+          - id: client-web
+            type: CLIENT
+            displayName: Aplicação Web
+          - id: api-pedidos
+            type: API
+            displayName: API de Pedidos
+            preProcessingMs: 20
+            postProcessingMs: 10
+          - id: api-estoque
+            type: API
+            displayName: API de Estoque
+            preProcessingMs: 30
+            postProcessingMs: 10
+          connections:
+          - id: conn-1
+            sourceId: client-web
+            targetId: api-pedidos
+            latencyMs: 10
+            integration: &id010
+              kind: HTTP_REST
+              request:
+                method: POST
+                path: /pedidos
+                headers: {}
+                body: '{"produtoId":123}'
+              response:
+                statusCode: 201
+                headers: {}
+                body: '{"pedidoId":456}'
+          - id: conn-2
+            sourceId: api-pedidos
+            targetId: api-estoque
+            latencyMs: 5
+            integration: &id011
+              kind: HTTP_REST
+              request:
+                method: GET
+                path: /estoque/123
+              response:
+                statusCode: 200
+                body: '{"disponivel":true}'
+        scenario: &id009
+          entryComponentId: client-web
+          entryConnectionId: conn-1
+          apiExecutions:
+          - componentId: api-pedidos
+            dependencyConnectionId: conn-2
+    architecture:
+      summary: Arquitetura com duas APIs
+      value: *id008
+    scenario:
+      summary: Cenário com chamada API → API
+      value:
+        architecture: *id008
+        scenario: *id009
+    simulationResult:
+      summary: Resultado determinístico de 100 ms com trace completo
+      value:
+        execution:
+          id: exec-001
+          status: COMPLETED
+          requestId: req-001
+          entryComponentId: client-web
+          entryConnectionId: conn-1
+          totalDurationMs: 100
+        initialState:
+          components:
+            client-web: IDLE
+            api-pedidos: IDLE
+            api-estoque: IDLE
+          requests:
+            req-001: CREATED
+          exchanges: {}
+        trace:
+        - sequence: 1
+          timestampMs: 0
+          type: STATE_TRANSITION
+          entityKind: REQUEST
+          entityId: req-001
+          previousState: CREATED
+          newState: IN_PROGRESS
+          cause: REQUEST_STARTED
+        - sequence: 2
+          timestampMs: 0
+          type: STATE_TRANSITION
+          entityKind: EXCHANGE
+          entityId: ex-1
+          previousState: null
+          newState: CREATED
+          cause: EXCHANGE_CREATED
+        - sequence: 3
+          timestampMs: 0
+          type: STATE_TRANSITION
+          entityKind: EXCHANGE
+          entityId: ex-1
+          previousState: CREATED
+          newState: WAITING_RESPONSE
+          cause: REQUEST_SENT
+        - sequence: 4
+          timestampMs: 0
+          type: MESSAGE_EVENT
+          action: SENT
+          messageId: msg-1
+          requestId: req-001
+          exchangeId: ex-1
+          parentExchangeId: null
+          connectionId: conn-1
+          sourceId: client-web
+          targetId: api-pedidos
+          direction: REQUEST
+          intent: API_REQUEST
+        - sequence: 5
+          timestampMs: 0
+          type: STATE_TRANSITION
+          entityKind: COMPONENT
+          entityId: client-web
+          previousState: IDLE
+          newState: WAITING
+          cause: API_REQUEST_SENT
+        - sequence: 6
+          timestampMs: 10
+          type: MESSAGE_EVENT
+          action: ARRIVED
+          messageId: msg-1
+          requestId: req-001
+          exchangeId: ex-1
+          parentExchangeId: null
+          connectionId: conn-1
+          sourceId: client-web
+          targetId: api-pedidos
+          direction: REQUEST
+          intent: API_REQUEST
+        - sequence: 7
+          timestampMs: 10
+          type: STATE_TRANSITION
+          entityKind: COMPONENT
+          entityId: api-pedidos
+          previousState: IDLE
+          newState: PROCESSING
+          cause: API_REQUEST_RECEIVED
+        - sequence: 8
+          timestampMs: 10
+          type: PROCESSING_EVENT
+          action: STARTED
+          componentId: api-pedidos
+          requestId: req-001
+          phase: API_PRE_PROCESSING
+        - sequence: 9
+          timestampMs: 30
+          type: PROCESSING_EVENT
+          action: COMPLETED
+          componentId: api-pedidos
+          requestId: req-001
+          phase: API_PRE_PROCESSING
+        - sequence: 10
+          timestampMs: 30
+          type: STATE_TRANSITION
+          entityKind: COMPONENT
+          entityId: api-pedidos
+          previousState: PROCESSING
+          newState: WAITING
+          cause: API_REQUEST_SENT
+        - sequence: 11
+          timestampMs: 30
+          type: STATE_TRANSITION
+          entityKind: REQUEST
+          entityId: req-001
+          previousState: IN_PROGRESS
+          newState: WAITING_DEPENDENCY
+          cause: API_REQUEST_SENT
+        - sequence: 12
+          timestampMs: 30
+          type: STATE_TRANSITION
+          entityKind: EXCHANGE
+          entityId: ex-2
+          previousState: null
+          newState: CREATED
+          cause: EXCHANGE_CREATED
+        - sequence: 13
+          timestampMs: 30
+          type: STATE_TRANSITION
+          entityKind: EXCHANGE
+          entityId: ex-2
+          previousState: CREATED
+          newState: WAITING_RESPONSE
+          cause: REQUEST_SENT
+        - sequence: 14
+          timestampMs: 30
+          type: MESSAGE_EVENT
+          action: SENT
+          messageId: msg-2
+          requestId: req-001
+          exchangeId: ex-2
+          parentExchangeId: ex-1
+          connectionId: conn-2
+          sourceId: api-pedidos
+          targetId: api-estoque
+          direction: REQUEST
+          intent: API_REQUEST
+        - sequence: 15
+          timestampMs: 35
+          type: MESSAGE_EVENT
+          action: ARRIVED
+          messageId: msg-2
+          requestId: req-001
+          exchangeId: ex-2
+          parentExchangeId: ex-1
+          connectionId: conn-2
+          sourceId: api-pedidos
+          targetId: api-estoque
+          direction: REQUEST
+          intent: API_REQUEST
+        - sequence: 16
+          timestampMs: 35
+          type: STATE_TRANSITION
+          entityKind: COMPONENT
+          entityId: api-estoque
+          previousState: IDLE
+          newState: PROCESSING
+          cause: API_REQUEST_RECEIVED
+        - sequence: 17
+          timestampMs: 35
+          type: PROCESSING_EVENT
+          action: STARTED
+          componentId: api-estoque
+          requestId: req-001
+          phase: API_PRE_PROCESSING
+        - sequence: 18
+          timestampMs: 65
+          type: PROCESSING_EVENT
+          action: COMPLETED
+          componentId: api-estoque
+          requestId: req-001
+          phase: API_PRE_PROCESSING
+        - sequence: 19
+          timestampMs: 65
+          type: PROCESSING_EVENT
+          action: STARTED
+          componentId: api-estoque
+          requestId: req-001
+          phase: API_POST_PROCESSING
+        - sequence: 20
+          timestampMs: 75
+          type: PROCESSING_EVENT
+          action: COMPLETED
+          componentId: api-estoque
+          requestId: req-001
+          phase: API_POST_PROCESSING
+        - sequence: 21
+          timestampMs: 75
+          type: STATE_TRANSITION
+          entityKind: COMPONENT
+          entityId: api-estoque
+          previousState: PROCESSING
+          newState: COMPLETED
+          cause: API_POST_PROCESSING_COMPLETED
+        - sequence: 22
+          timestampMs: 75
+          type: MESSAGE_EVENT
+          action: SENT
+          messageId: msg-3
+          requestId: req-001
+          exchangeId: ex-2
+          parentExchangeId: ex-1
+          connectionId: conn-2
+          sourceId: api-estoque
+          targetId: api-pedidos
+          direction: RESPONSE
+          intent: API_REQUEST
+        - sequence: 23
+          timestampMs: 80
+          type: MESSAGE_EVENT
+          action: ARRIVED
+          messageId: msg-3
+          requestId: req-001
+          exchangeId: ex-2
+          parentExchangeId: ex-1
+          connectionId: conn-2
+          sourceId: api-estoque
+          targetId: api-pedidos
+          direction: RESPONSE
+          intent: API_REQUEST
+        - sequence: 24
+          timestampMs: 80
+          type: STATE_TRANSITION
+          entityKind: EXCHANGE
+          entityId: ex-2
+          previousState: WAITING_RESPONSE
+          newState: COMPLETED
+          cause: API_RESPONSE_RECEIVED
+        - sequence: 25
+          timestampMs: 80
+          type: STATE_TRANSITION
+          entityKind: REQUEST
+          entityId: req-001
+          previousState: WAITING_DEPENDENCY
+          newState: IN_PROGRESS
+          cause: API_RESPONSE_RECEIVED
+        - sequence: 26
+          timestampMs: 80
+          type: STATE_TRANSITION
+          entityKind: COMPONENT
+          entityId: api-pedidos
+          previousState: WAITING
+          newState: PROCESSING
+          cause: API_RESPONSE_RECEIVED
+        - sequence: 27
+          timestampMs: 80
+          type: PROCESSING_EVENT
+          action: STARTED
+          componentId: api-pedidos
+          requestId: req-001
+          phase: API_POST_PROCESSING
+        - sequence: 28
+          timestampMs: 90
+          type: PROCESSING_EVENT
+          action: COMPLETED
+          componentId: api-pedidos
+          requestId: req-001
+          phase: API_POST_PROCESSING
+        - sequence: 29
+          timestampMs: 90
+          type: STATE_TRANSITION
+          entityKind: COMPONENT
+          entityId: api-pedidos
+          previousState: PROCESSING
+          newState: COMPLETED
+          cause: API_POST_PROCESSING_COMPLETED
+        - sequence: 30
+          timestampMs: 90
+          type: MESSAGE_EVENT
+          action: SENT
+          messageId: msg-4
+          requestId: req-001
+          exchangeId: ex-1
+          parentExchangeId: null
+          connectionId: conn-1
+          sourceId: api-pedidos
+          targetId: client-web
+          direction: RESPONSE
+          intent: API_REQUEST
+        - sequence: 31
+          timestampMs: 100
+          type: MESSAGE_EVENT
+          action: ARRIVED
+          messageId: msg-4
+          requestId: req-001
+          exchangeId: ex-1
+          parentExchangeId: null
+          connectionId: conn-1
+          sourceId: api-pedidos
+          targetId: client-web
+          direction: RESPONSE
+          intent: API_REQUEST
+        - sequence: 32
+          timestampMs: 100
+          type: STATE_TRANSITION
+          entityKind: EXCHANGE
+          entityId: ex-1
+          previousState: WAITING_RESPONSE
+          newState: COMPLETED
+          cause: API_RESPONSE_RECEIVED
+        - sequence: 33
+          timestampMs: 100
+          type: STATE_TRANSITION
+          entityKind: COMPONENT
+          entityId: client-web
+          previousState: WAITING
+          newState: COMPLETED
+          cause: API_RESPONSE_RECEIVED
+        - sequence: 34
+          timestampMs: 100
+          type: STATE_TRANSITION
+          entityKind: REQUEST
+          entityId: req-001
+          previousState: IN_PROGRESS
+          newState: COMPLETED
+          cause: API_RESPONSE_RECEIVED
+        timeline:
+        - id: a-1
+          kind: COMMUNICATION
+          messageId: msg-1
+          exchangeId: ex-1
+          connectionId: conn-1
+          sourceId: client-web
+          targetId: api-pedidos
+          startMs: 0
+          endMs: 10
+          durationMs: 10
+        - id: a-2
+          kind: PROCESSING
+          componentId: api-pedidos
+          requestId: req-001
+          phase: API_PRE_PROCESSING
+          startMs: 10
+          endMs: 30
+          durationMs: 20
+        - id: a-3
+          kind: COMMUNICATION
+          messageId: msg-2
+          exchangeId: ex-2
+          connectionId: conn-2
+          sourceId: api-pedidos
+          targetId: api-estoque
+          startMs: 30
+          endMs: 35
+          durationMs: 5
+        - id: a-4
+          kind: PROCESSING
+          componentId: api-estoque
+          requestId: req-001
+          phase: API_PRE_PROCESSING
+          startMs: 35
+          endMs: 65
+          durationMs: 30
+        - id: a-5
+          kind: PROCESSING
+          componentId: api-estoque
+          requestId: req-001
+          phase: API_POST_PROCESSING
+          startMs: 65
+          endMs: 75
+          durationMs: 10
+        - id: a-6
+          kind: COMMUNICATION
+          messageId: msg-3
+          exchangeId: ex-2
+          connectionId: conn-2
+          sourceId: api-estoque
+          targetId: api-pedidos
+          startMs: 75
+          endMs: 80
+          durationMs: 5
+        - id: a-7
+          kind: PROCESSING
+          componentId: api-pedidos
+          requestId: req-001
+          phase: API_POST_PROCESSING
+          startMs: 80
+          endMs: 90
+          durationMs: 10
+        - id: a-8
+          kind: COMMUNICATION
+          messageId: msg-4
+          exchangeId: ex-1
+          connectionId: conn-1
+          sourceId: api-pedidos
+          targetId: client-web
+          startMs: 90
+          endMs: 100
+          durationMs: 10
+        metrics:
+          totalDurationMs: 100
+          processingByComponent:
+          - componentId: api-pedidos
+            durationMs: 30
+          - componentId: api-estoque
+            durationMs: 40
+          communicationByConnection:
+          - connectionId: conn-1
+            traversals: 2
+            durationMs: 20
+          - connectionId: conn-2
+            traversals: 2
+            durationMs: 10
+          waitingByComponent:
+          - componentId: api-pedidos
+            exchangeId: ex-2
+            startMs: 30
+            endMs: 80
+            durationMs: 50
+          exchanges:
+          - exchangeId: ex-1
+            parentExchangeId: null
+            callerComponentId: client-web
+            calleeComponentId: api-pedidos
+            connectionId: conn-1
+            startMs: 0
+            endMs: 100
+            durationMs: 100
+          - exchangeId: ex-2
+            parentExchangeId: ex-1
+            callerComponentId: api-pedidos
+            calleeComponentId: api-estoque
+            connectionId: conn-2
+            startMs: 30
+            endMs: 80
+            durationMs: 50
+        messageRepresentations:
+        - connectionId: conn-1
+          integration: *id010
+        - connectionId: conn-2
+          integration: *id011
+    validationValid:
+      summary: Válido
+      value:
+        valid: true
+        violations: []
+    validationInvalid:
+      summary: Cenário inválido
+      value:
+        valid: false
+        violations:
+        - code: INVALID_ENTRY_CONNECTION
+          path: scenario.entryConnectionId
+          message: A conexão inicial deve partir do Client escolhido e apontar para uma API.
