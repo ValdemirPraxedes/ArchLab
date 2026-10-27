@@ -38,11 +38,8 @@ public final class NestedCallRuntimeV2 {
         List<SimulationTraceEntry> trace = new ArrayList<>();
         ConnectionV2 entry = connections.get(scenario.entryConnectionId());
         queue.scheduleAfter(0, new RequestSent(REQUEST_ID, entry.sourceId(), entry.targetId()));
-        boolean completed = false;
-        int processed = 0;
-        while (!queue.isEmpty()) {
-            if (++processed > MAX_EVENTS) throw new IllegalStateException("Event limit exceeded");
-            ScheduledEvent scheduled = queue.pollNext().orElseThrow();
+        boolean[] completed = {false};
+        DiscreteEventLoop.run(() -> !queue.isEmpty(), () -> queue.pollNext().orElseThrow(), scheduled -> {
             SimulationEvent event = scheduled.event();
             trace.add(new SimulationTraceEntry(scheduled.timestampMs(), scheduled.sequence(), event));
 
@@ -107,7 +104,7 @@ public final class NestedCallRuntimeV2 {
                 if (recipient instanceof ClientV2) {
                     if (!e.targetId().equals(scenario.entryComponentId()))
                         throw new IllegalStateException("Response delivered to different client");
-                    completed = true;
+                    completed[0] = true;
                     if (!queue.isEmpty()) throw new IllegalStateException("Residual events after completion");
                 } else if (recipient instanceof ApiV2) {
                     if (stages.get(e.targetId()) != Stage.WAITING
@@ -119,8 +116,8 @@ public final class NestedCallRuntimeV2 {
             } else {
                 throw new IllegalStateException("Unexpected event: " + event);
             }
-        }
-        if (!completed) throw new IllegalStateException("Event queue exhausted before client response");
+        }, MAX_EVENTS);
+        if (!completed[0]) throw new IllegalStateException("Event queue exhausted before client response");
         return new NestedExecutionResultV2(clock.nowMs(), REQUEST_ID, trace);
     }
 

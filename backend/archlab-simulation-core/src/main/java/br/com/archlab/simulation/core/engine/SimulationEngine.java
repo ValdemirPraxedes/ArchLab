@@ -30,10 +30,7 @@ public final class SimulationEngine {
         String requestId = "request-1";
         context.start(requestId);
         context.scheduleAfter(0, new RequestSent(requestId, clientId, apiId));
-        long processed = 0;
-        while (context.hasEvents()) {
-            if (++processed > MAX_EVENTS) throw new IllegalStateException("Event safety limit exceeded");
-            ScheduledEvent scheduled = Objects.requireNonNull(context.next());
+        DiscreteEventLoop.run(context::hasEvents, context::next, scheduled -> {
             if (!requestId.equals(requestIdOf(scheduled.event()))) {
                 throw new IllegalStateException("Unrelated request in execution");
             }
@@ -44,12 +41,13 @@ public final class SimulationEngine {
             if (scheduled.event() instanceof SimulationCompleted terminal) {
                 context.complete(terminal.requestId());
                 if (context.hasEvents()) throw new IllegalStateException("Events remain after completion");
-                return context.result();
+                return;
             }
             Component target = context.component(componentId(scheduled.event()));
             behaviors.behaviorFor(target).handle(scheduled.event(), context);
-        }
-        throw new IllegalStateException("Event queue exhausted before terminal event");
+        }, MAX_EVENTS);
+        if (!context.completed()) throw new IllegalStateException("Event queue exhausted before terminal event");
+        return context.result();
     }
 
     private static String requestIdOf(SimulationEvent event) {
