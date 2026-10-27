@@ -3,6 +3,10 @@ package br.com.archlab.simulation.core.engine;
 import br.com.archlab.simulation.core.domain.*;
 import br.com.archlab.simulation.core.event.*;
 import br.com.archlab.simulation.core.validation.ArchitectureValidator;
+import br.com.archlab.simulation.core.v2.ArchitectureV2;
+import br.com.archlab.simulation.core.v2.ScenarioV2;
+import br.com.archlab.simulation.core.v2.NestedCallRuntimeV2;
+import br.com.archlab.simulation.core.v2.NestedExecutionResultV2;
 import java.util.Objects;
 
 /** Discrete-event driver. No threads, HTTP calls or wall-clock delays. */
@@ -10,6 +14,11 @@ public final class SimulationEngine {
     private static final long MAX_EVENTS = 100_000L;
     private final ArchitectureValidator validator = new ArchitectureValidator();
     private final BehaviorRegistry behaviors = new BehaviorRegistry();
+
+    /** V2 uses the same deterministic DES primitives; hierarchical states follow in BE-06. */
+    public NestedExecutionResultV2 execute(ArchitectureV2 architecture, ScenarioV2 scenario) {
+        return new NestedCallRuntimeV2().run(architecture, scenario);
+    }
 
     public SimulationResult execute(Architecture architecture) {
         validator.requireValid(architecture);
