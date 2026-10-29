@@ -3,6 +3,10 @@ package br.com.archlab.simulation.core.engine;
 import br.com.archlab.simulation.core.domain.*;
 import br.com.archlab.simulation.core.event.*;
 import br.com.archlab.simulation.core.validation.ArchitectureValidator;
+import br.com.archlab.simulation.core.v2.ArchitectureV2;
+import br.com.archlab.simulation.core.v2.ScenarioV2;
+import br.com.archlab.simulation.core.v2.NestedCallRuntimeV2;
+import br.com.archlab.simulation.core.v2.NestedExecutionResultV2;
 import java.util.Objects;
 
 /** Discrete-event driver. No threads, HTTP calls or wall-clock delays. */
@@ -10,6 +14,11 @@ public final class SimulationEngine {
     private static final long MAX_EVENTS = 100_000L;
     private final ArchitectureValidator validator = new ArchitectureValidator();
     private final BehaviorRegistry behaviors = new BehaviorRegistry();
+
+    /** V2 uses the same deterministic DES primitives; hierarchical states follow in BE-06. */
+    public NestedExecutionResultV2 execute(ArchitectureV2 architecture, ScenarioV2 scenario) {
+        return new NestedCallRuntimeV2().run(architecture, scenario);
+    }
 
     public SimulationResult execute(Architecture architecture) {
         validator.requireValid(architecture);
@@ -21,10 +30,7 @@ public final class SimulationEngine {
         String requestId = "request-1";
         context.start(requestId);
         context.scheduleAfter(0, new RequestSent(requestId, clientId, apiId));
-        long processed = 0;
-        while (context.hasEvents()) {
-            if (++processed > MAX_EVENTS) throw new IllegalStateException("Event safety limit exceeded");
-            ScheduledEvent scheduled = Objects.requireNonNull(context.next());
+        DiscreteEventLoop.run(context::hasEvents, context::next, scheduled -> {
             if (!requestId.equals(requestIdOf(scheduled.event()))) {
                 throw new IllegalStateException("Unrelated request in execution");
             }
@@ -35,12 +41,13 @@ public final class SimulationEngine {
             if (scheduled.event() instanceof SimulationCompleted terminal) {
                 context.complete(terminal.requestId());
                 if (context.hasEvents()) throw new IllegalStateException("Events remain after completion");
-                return context.result();
+                return;
             }
             Component target = context.component(componentId(scheduled.event()));
             behaviors.behaviorFor(target).handle(scheduled.event(), context);
-        }
-        throw new IllegalStateException("Event queue exhausted before terminal event");
+        }, MAX_EVENTS);
+        if (!context.completed()) throw new IllegalStateException("Event queue exhausted before terminal event");
+        return context.result();
     }
 
     private static String requestIdOf(SimulationEvent event) {
