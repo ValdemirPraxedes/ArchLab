@@ -173,7 +173,9 @@ public final class NestedCallRuntimeV2 {
         if (!completed[0]) throw new IllegalStateException("Event queue exhausted before client response");
         if (!pendingByEdge.isEmpty() || exchanges.stream().anyMatch(e -> e.completedAtMs() < 0))
             throw new IllegalStateException("Unfinished exchanges");
-        return new NestedExecutionResultV2(clock.nowMs(), REQUEST_ID, trace, exchanges, messages, transitions);
+        var representations = new MessageRepresentationProjectorV2().project(architecture, exchanges);
+        return new NestedExecutionResultV2(clock.nowMs(), REQUEST_ID, trace, exchanges, messages,
+                transitions, representations);
     }
 
     private static void state(Map<String, ComponentRuntimeStateV2> states,
