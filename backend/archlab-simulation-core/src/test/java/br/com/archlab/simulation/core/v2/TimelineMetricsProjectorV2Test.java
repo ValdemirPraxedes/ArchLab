@@ -72,10 +72,16 @@ class TimelineMetricsProjectorV2Test {
     @Test void tracksNestedInclusiveDurationAndExactWaitingExchanges() {
         var r=execute(true,2,10);
         var waits=r.metrics().waitingByComponent();
-        assertEquals("a",waits.get(0).componentId());
-        assertEquals(r.exchanges().get(1).exchangeId(),waits.get(0).exchangeId());
-        assertEquals("b",waits.get(1).componentId());
-        assertEquals(r.exchanges().get(2).exchangeId(),waits.get(1).exchangeId());
+        assertEquals(2, waits.size());
+        var waitsByComponent = new java.util.HashMap<String, WaitingMetricV2>();
+        for (var wait : waits) {
+            assertNull(waitsByComponent.put(wait.componentId(), wait),
+                    "A component must have only one waiting interval in this scenario");
+            assertEquals(wait.endMs() - wait.startMs(), wait.durationMs());
+        }
+        assertEquals(Set.of("a", "b"), waitsByComponent.keySet());
+        assertEquals(r.exchanges().get(1).exchangeId(), waitsByComponent.get("a").exchangeId());
+        assertEquals(r.exchanges().get(2).exchangeId(), waitsByComponent.get("b").exchangeId());
         for(var e:r.metrics().exchanges())
             assertEquals(e.endMs()-e.startMs(),e.durationMs());
         assertEquals(r.totalDurationMs(),r.metrics().exchanges().getFirst().durationMs());
