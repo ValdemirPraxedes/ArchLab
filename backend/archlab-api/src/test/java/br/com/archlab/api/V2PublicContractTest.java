@@ -62,6 +62,12 @@ class V2PublicContractTest {
         assertEquals(57,root.get("execution").get("totalDurationMs").asInt());
         assertEquals(11,root.get("timeline").size());
         assertEquals(3,root.get("messageRepresentations").size());
+        assertEquals("HTTP_REST",root.get("messageRepresentations").get(0)
+                .get("integration").get("kind").asText());
+        assertEquals("SOAP_HTTP",root.get("messageRepresentations").get(1)
+                .get("integration").get("kind").asText());
+        assertEquals("DATABASE_QUERY",root.get("messageRepresentations").get(2)
+                .get("integration").get("kind").asText());
         assertEquals(2,root.get("metrics").get("waitingByComponent").size());
         Set<String> types=new HashSet<>();
         for(int i=0;i<root.get("trace").size();i++){
