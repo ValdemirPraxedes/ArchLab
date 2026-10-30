@@ -20,7 +20,9 @@ public class V2ResponseMapper {
         output.put("trace",trace(result,architecture));
         output.put("timeline",timeline(result));
         output.put("metrics",result.metrics());
-        output.put("messageRepresentations",result.messageRepresentations());
+        output.put("messageRepresentations",result.messageRepresentations().stream().map(representation ->
+                fields("connectionId",representation.connectionId(),
+                        "integration",integration(representation.integration()))).toList());
         return output;
     }
     private List<Map<String,Object>> trace(NestedExecutionResultV2 result,ArchitectureV2 architecture) {
@@ -89,6 +91,28 @@ public class V2ResponseMapper {
         }
         return out;
     }
+    private static Map<String,Object> integration(IntegrationV2 integration) {
+        Map<String,Object> fields=new LinkedHashMap<>();
+        fields.put("kind",integration.kind().name());
+        if(integration instanceof HttpRestIntegrationV2 rest) {
+            fields.put("request",rest.request());
+            fields.put("response",rest.response());
+        } else if(integration instanceof SoapHttpIntegrationV2 soap) {
+            fields.put("soapVersion",soap.soapVersion());
+            if(soap.operation()!=null)fields.put("operation",soap.operation());
+            if(soap.action()!=null)fields.put("action",soap.action());
+            if(soap.requestEnvelope()!=null)fields.put("requestEnvelope",soap.requestEnvelope());
+            if(soap.responseEnvelope()!=null)fields.put("responseEnvelope",soap.responseEnvelope());
+            if(soap.httpStatusCode()!=null)fields.put("httpStatusCode",soap.httpStatusCode());
+            if(soap.requestHeaders()!=null)fields.put("requestHeaders",soap.requestHeaders());
+            if(soap.responseHeaders()!=null)fields.put("responseHeaders",soap.responseHeaders());
+        } else if(integration instanceof DatabaseQueryIntegrationV2 query) {
+            if(query.queryText()!=null)fields.put("queryText",query.queryText());
+            if(query.responseText()!=null)fields.put("responseText",query.responseText());
+        }
+        return fields;
+    }
+
     private static Map<String,Object> fields(Object... args) {
         Map<String,Object> r=new LinkedHashMap<>();
         for(int i=0;i<args.length;i+=2)r.put((String)args[i],args[i+1]);
