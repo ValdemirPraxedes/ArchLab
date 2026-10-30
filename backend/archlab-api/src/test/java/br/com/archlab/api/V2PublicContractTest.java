@@ -100,6 +100,14 @@ class V2PublicContractTest {
     @Test void wrongContentTypeReturns415() throws Exception {
         assertEquals(415,post("architectures/validate",ARCH,"text/plain").statusCode());
     }
+    @Test void oversizedV2JsonBodyReturns413ProblemDetails() throws Exception {
+        var response=post("architectures/validate","x".repeat(1024*1024+1));
+        assertEquals(413,response.statusCode());
+        assertTrue(response.headers().firstValue("content-type").orElse("")
+                .contains("application/problem+json"));
+        assertEquals("PAYLOAD_TOO_LARGE",json.readTree(response.body()).get("code").asText());
+    }
+
     @Test void onlyChosenPathIsSimulatedAndDbIsOptional() throws Exception {
         String scenario="{\"entryComponentId\":\"c\",\"entryConnectionId\":\"ca\",\"apiExecutions\":[]}";
         var response=post("simulations",request(scenario));
