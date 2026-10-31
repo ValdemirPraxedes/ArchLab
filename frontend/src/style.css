@@ -176,3 +176,15 @@ body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
 .playback .playback-inspector-content>details,.playback .playback-inspector-content>.message-inspector{width:100%;min-width:0;max-width:100%;margin:8px 0}
 .playback .playback-inspector-content pre{white-space:pre-wrap;overflow-wrap:anywhere}
 @media(max-width:800px){.playback{max-height:none}.playback .playback-inspector-shell{max-height:45vh}}
+
+/* FE-V2-10 — acessibilidade e leitura responsiva de métricas */
+.metrics-v2{padding:10px 0;color:var(--text)}
+.metrics-v2 h3,.metrics-v2 h4{color:var(--text);margin:8px 0}
+.metrics-v2-note{color:var(--muted);line-height:1.5}
+.metrics-v2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px}
+.metrics-v2-grid>section{min-width:0;overflow-x:auto;background:var(--soft);border:1px solid var(--border);border-radius:8px;padding:10px}
+.metrics-v2 table{border-collapse:collapse;width:100%;font-size:.8rem}
+.metrics-v2 th,.metrics-v2 td{padding:7px 9px;border-bottom:1px solid var(--border);text-align:left;overflow-wrap:anywhere}
+.metrics-v2 th{font-weight:700}
+.metrics-v2 td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.metrics-v2 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}

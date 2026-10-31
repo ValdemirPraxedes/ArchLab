@@ -4,6 +4,7 @@ import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { cursorEvents, inFlightMessages, nextCursor, orderedTrace, previousCursor, traceStateAt } from './traceV2';
 import type { TraceCursor } from './traceV2';
 import { MessageInspectorV2 } from './MessageInspectorV2';
+import { SimulationMetricsV2 } from './SimulationMetricsV2';
 
 type Status = 'REPRODUZINDO' | 'PAUSADA' | 'CONCLUÍDA';
 type Props = { result: SimulationResponseV2; onStatus: (status: Status) => void; onCursor?: (cursor: TraceCursor) => void };
@@ -74,6 +75,7 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
     <details open><summary>Estado reconstruído · {messages.length} mensagens em trânsito</summary><p>Componentes: {Object.entries(state.components).map(([id,status]) => `${id}: ${status}`).join(' · ')}</p><p>Requisições: {Object.entries(state.requests).map(([id,status]) => `${id}: ${status}`).join(' · ')}</p><p>Exchanges: {Object.entries(state.exchanges).map(([id,status]) => `${id}: ${status}`).join(' · ')}</p><p>Mensagens em trânsito: {messages.map(m => `${m.sourceId} → ${m.targetId} (${m.direction})`).join(' · ') || 'nenhuma'}</p></details>
     <details><summary>Timeline recebida do backend</summary><ol>{result.timeline.map(e => <li key={e.id}>{e.kind} · {e.startMs}–{e.endMs}ms</li>)}</ol></details>
     <MessageInspectorV2 result={result} selectedSequence={inspectedMessageSequence} onSelect={sequence => { setInspectedMessageSequence(sequence); setSelectedSequence(sequence); }} />
+    <SimulationMetricsV2 result={result} />
     <details><summary>Métricas e mensagens do snapshot</summary>
       <p>Tempo total: {result.metrics.totalDurationMs} ms.</p>
       <p>Processamentos: {result.metrics.processingByComponent.length}; comunicações: {result.metrics.communicationByConnection.length}; esperas: {result.metrics.waitingByComponent.length}.</p>
