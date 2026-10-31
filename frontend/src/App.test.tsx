@@ -115,26 +115,37 @@ describe('Editor visual', () => {
     expect(screen.getByText(/Arquitetura inválida/)).toBeInTheDocument();
   });
 
-  it('simula e bloqueia edição até reiniciar', async () => {
+  it('executa o cenário v2, preserva snapshot e bloqueia edição até reiniciar', async () => {
+    server.use(http.post('/api/v2/scenarios/validate', () => HttpResponse.json({ valid: true, violations: [] })));
+    server.use(http.post('/api/v2/simulations', async ({ request }) => {
+      const input = await request.json() as { scenario: { entryComponentId: string; entryConnectionId: string }; architecture: { components: unknown[] } };
+      expect(input.architecture.components).toHaveLength(2);
+      expect(input.scenario.entryComponentId).not.toBe('');
+      expect(input.scenario.entryConnectionId).not.toBe('');
+      return HttpResponse.json({
+        execution: { id: 'exec-v2', status: 'COMPLETED', requestId: 'req-v2', entryComponentId: input.scenario.entryComponentId, entryConnectionId: input.scenario.entryConnectionId, totalDurationMs: 260 },
+        initialState: { components: {}, requests: {}, exchanges: {} },
+        trace: [], timeline: [],
+        metrics: { totalDurationMs: 260, processingByComponent: [], communicationByConnection: [], waitingByComponent: [], exchanges: [] },
+        messageRepresentations: [],
+      });
+    }));
     render(<App />);
-    for (const type of ['Client', 'API', 'Database']) fireEvent.click(screen.getByRole('button', { name: type }));
+    for (const type of ['Client', 'API']) fireEvent.click(screen.getByRole('button', { name: type }));
     fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 1' }));
-    const clientDestination = screen.getByRole('combobox', { name: 'Destino' });
-    fireEvent.change(clientDestination, { target: { value: (screen.getByRole('option', { name: /API/ }) as HTMLOptionElement).value } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Destino' }), { target: { value: (screen.getByRole('option', { name: /API 1/ }) as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
-    const apiDestination = screen.getByRole('combobox', { name: 'Destino' });
-    fireEvent.change(apiDestination, { target: { value: (screen.getByRole('option', { name: /Database/ }) as HTMLOptionElement).value } });
-    fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (screen.getByRole('option', { name: /Client 1/ }) as HTMLOptionElement).value } });
+    const start = screen.getByRole('combobox', { name: 'Conexão de entrada' });
+    fireEvent.change(start, { target: { value: (screen.getByRole('option', { name: /API 1/ }) as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
-    await waitFor(() => expect(screen.getByText(/Execução:/)).toHaveTextContent('COMPLETED'));
+    expect(await screen.findByRole('region', { name: 'Reprodução v2' })).toBeInTheDocument();
     expect(screen.getByText(/Execução:/)).toHaveTextContent('260 ms');
     expect(screen.getByRole('button', { name: 'Client' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Reiniciar' }));
     expect(screen.getByRole('button', { name: 'Client' })).toBeEnabled();
-    expect(screen.getByText(/3 componente\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/2 componente\\(s\\)/)).toBeInTheDocument();
   });
-
 
   it('permite nomes duplicados sem alterar identidade e rejeita nome vazio', () => {
     render(<App />);
