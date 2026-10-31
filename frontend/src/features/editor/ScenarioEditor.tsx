@@ -43,6 +43,6 @@ export function ScenarioEditor({ nodes, edges, value, onChange, disabled }: Prop
         </select>
       </label>;
     })}
-    <p aria-live="polite">{issues.length ? issues.join(' ') : 'Caminho selecionado localmente. Execução v2 ainda indisponível.'}</p>
+    <p aria-live="polite">{issues.length ? issues.join(' ') : 'Caminho selecionado localmente. Use Simular para executar no backend v2.'}</p>
   </section>;
 }
