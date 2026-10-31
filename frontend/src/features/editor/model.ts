@@ -40,6 +40,7 @@ export function validDuration(value: number): boolean {
 }
 export function allowedProtocols(source: ComponentType, target: ComponentType): Protocol[] {
   if (source === 'CLIENT' && target === 'API') return ['REST', 'SOAP'];
+  if (source === 'API' && target === 'API') return ['REST', 'SOAP'];
   if (source === 'API' && target === 'DATABASE') return ['TCP'];
   return [];
 }
@@ -52,7 +53,20 @@ export function validateConnection(nodes: ArchitectureNode[], edges: Architectur
   if (edges.some((edge) => (edge.source === sourceId && edge.target === targetId) || (edge.source === targetId && edge.target === sourceId))) {
     return 'Já existe uma conexão entre esses componentes.';
   }
+  if (wouldCreateCycle(edges, sourceId, targetId)) return 'Esta conexão criaria um ciclo no grafo.';
   return null;
+}
+export function wouldCreateCycle(edges: ArchitectureEdge[], sourceId: string, targetId: string): boolean {
+  const visited = new Set<string>();
+  const pending = [targetId];
+  while (pending.length) {
+    const current = pending.pop()!;
+    if (current === sourceId) return true;
+    if (visited.has(current)) continue;
+    visited.add(current);
+    for (const edge of edges) if (edge.source === current) pending.push(edge.target);
+  }
+  return false;
 }
 export function createArchitectureEdge(sourceId: string, targetId: string, protocol: Protocol, latencyMs: number): ArchitectureEdge {
   return {

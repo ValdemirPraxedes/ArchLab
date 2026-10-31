@@ -12,6 +12,7 @@ import { reconstructState } from './traceState';
 import { archlabClient, ArchlabHttpError } from '../../api/archlabClient';
 import type { SimulationResponse } from '../../api/archlabClient';
 import { toArchitectureRequest, validateArchitectureLocally } from './validation';
+import { validateGraphV2 } from './graphValidation';
 import type { ValidationIssue } from './validation';
 import {
   COMPONENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
@@ -67,9 +68,11 @@ function EditorCanvas() {
   };
   const simulate = async () => {
     if (executionStatus !== 'READY' && executionStatus !== 'ERROR') return;
-    const localIssues = validateArchitectureLocally(nodes, edges);
-    if (localIssues.length) {
-      setIssues(localIssues); setValidationStatus('invalid'); setExecutionStatus('ERROR'); return;
+    const graphIssues = validateGraphV2(nodes, edges);
+    const legacyIssues = validateArchitectureLocally(nodes, edges);
+    if (graphIssues.length || legacyIssues.length) {
+      setIssues(graphIssues.length ? graphIssues : [{ code: 'V1_SIMULATION_ONLY', path: '', message: 'O canvas admite grafos v2, mas a simulação nesta etapa ainda usa v1 (Client → API → Database). O cenário v2 será integrado nas próximas tarefas.' }]);
+      setValidationStatus('invalid'); setExecutionStatus('ERROR'); return;
     }
     setExecutionStatus('VALIDATING'); setIssues([]);
     try {
@@ -92,20 +95,10 @@ function EditorCanvas() {
     }
   };
   const resetValidation = () => { setIssues([]); setValidationStatus('idle'); };
-  const validate = async () => {
-    const localIssues = validateArchitectureLocally(nodes, edges);
-    if (localIssues.length) { setIssues(localIssues); setValidationStatus('invalid'); return; }
-    setValidationStatus('checking');
-    setIssues([]);
-    try {
-      const result = await archlabClient.validate(toArchitectureRequest(nodes, edges));
-      setIssues(result.violations.map((v) => ({ code: v.code, path: v.path, message: v.message })));
-      setValidationStatus(result.valid ? 'valid' : 'invalid');
-    } catch (cause) {
-      const message = cause instanceof ArchlabHttpError ? `Erro HTTP ${cause.status} ao validar.` : 'Não foi possível consultar a API.';
-      setIssues([{ code: 'API_ERROR', path: '', message }]);
-      setValidationStatus('error');
-    }
+  const validate = () => {
+    const localIssues = validateGraphV2(nodes, edges);
+    setIssues(localIssues);
+    setValidationStatus(localIssues.length ? 'invalid' : 'valid');
   };
   const addNode = useCallback((type: ComponentType, position: { x: number; y: number }) => {
     if (executionLocked) return null;
@@ -202,11 +195,11 @@ function EditorCanvas() {
         ))}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={validate} disabled={executionLocked || validationStatus === 'checking'}>Validar arquitetura</button><button type="button" onClick={simulate} disabled={executionLocked}>Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart}>Reiniciar</button>}</div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={validate} disabled={executionLocked || validationStatus === 'checking'}>Verificar grafo</button><button type="button" onClick={simulate} disabled={executionLocked}>Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart}>Reiniciar</button>}</div>
         <div className="execution-status" role="status">Execução: {executionStatus}{simulationResult && <span> · Tempo virtual total: {simulationResult.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
           {validationStatus === 'checking' && <p>Validando arquitetura...</p>}
-          {validationStatus === 'valid' && <p>Arquitetura válida para simulação.</p>}
+          {validationStatus === 'valid' && <p>Grafo válido localmente. A validação autoritativa do backend v2 será integrada na FE-V2-06.</p>}
           {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? 'Arquitetura inválida' : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
         {simulationResult && <Playback result={simulationResult} onTimeChange={(time, sequence) => { setPlaybackTimeMs(time); setPlaybackSequence(sequence); }} />}
@@ -238,7 +231,7 @@ function EditorCanvas() {
           <label>Destino
             <select aria-label="Destino" value={targetId} disabled={executionLocked} onChange={(e) => { setTargetId(e.target.value); const target = nodes.find((n) => n.id === e.target.value); const protocols = target ? allowedProtocols(node.data.componentType, target.data.componentType) : []; setProtocol(protocols[0] ?? 'REST'); setError(''); }}>
               <option value="">Selecione...</option>
-              {possibleTargets.map((n) => <option key={n.id} value={n.id}>{n.data.label} · {n.id.slice(0, 8)}</option>)}
+              {possibleTargets.map((n) => <option key={n.id} value={n.id} disabled={Boolean(validateConnection(nodes, edges, node.id, n.id))}>{n.data.label} · {n.id.slice(0, 8)}</option>)}
             </select>
           </label>
           {compatibleProtocols.length > 0 && <>
