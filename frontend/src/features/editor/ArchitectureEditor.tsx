@@ -59,13 +59,22 @@ function EditorCanvas() {
   const activeActivity = simulationResult?.timeline.find((a) => a.startMs <= playbackTimeMs && playbackTimeMs < a.endMs);
   const path = selectedPath(scenario, nodes, edges);
   const hasPath = path.components.size > 0;
-  const invalidIds = new Set(issues.flatMap(issue => issue.path.match(/components\\[(\\d+)\\]/) ? [nodes[Number(issue.path.match(/components\\[(\\d+)\\]/)?.[1])]?.id].filter((id): id is string => Boolean(id)) : []));
+  const invalidIds = new Set(issues.flatMap(issue => {
+    const match = /components\[(\d+)\]/.exec(issue.path);
+    const id = match ? nodes[Number(match[1])]?.id : undefined;
+    return id ? [id] : [];
+  }));
+  const invalidEdgeIds = new Set(issues.flatMap(issue => {
+    const match = /connections\[(\d+)\]/.exec(issue.path);
+    const id = match ? edges[Number(match[1])]?.id : undefined;
+    return id ? [id] : [];
+  }));
   const shownNodes = nodes.map((n) => ({
     ...n, className: invalidIds.has(n.id) ? 'validation-node--invalid' : stateAtPlayback ? `trace-node--${(stateAtPlayback.components[n.id] ?? 'IDLE').toLowerCase()}` : hasPath ? (path.components.has(n.id) ? 'scenario-node--active' : 'scenario-node--inactive') : '',
     data: { ...n.data, stateLabel: stateAtPlayback?.components[n.id] },
   }));
   const shownEdges = edges.map((e) => ({
-    ...e, className: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ? 'playback-edge-active' : hasPath ? (path.connections.has(e.id) ? 'scenario-edge--active' : 'scenario-edge--inactive') : '',
+    ...e, className: invalidEdgeIds.has(e.id) ? 'validation-edge--invalid' : activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ? 'playback-edge-active' : hasPath ? (path.connections.has(e.id) ? 'scenario-edge--active' : 'scenario-edge--inactive') : '',
     animated: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id,
     style: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ?
       { stroke: activeActivity.sourceId === e.source ? '#329eff' : '#35d88c', strokeWidth: 3 } : hasPath && path.connections.has(e.id) ? { stroke: '#1ca879', strokeWidth: 3 } : undefined,
