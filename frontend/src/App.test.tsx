@@ -140,7 +140,7 @@ describe('Editor visual', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (screen.getByRole('option', { name: /Client 1/ }) as HTMLOptionElement).value } });
     const start = screen.getByRole('combobox', { name: 'Conexão de entrada' });
-    fireEvent.change(start, { target: { value: (screen.getByRole('option', { name: /API 1/ }) as HTMLOptionElement).value } });
+    fireEvent.change(start, { target: { value: (start.querySelector('option:not([value=""])') as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
     expect(await screen.findByRole('region', { name: 'Reprodução v2' })).toBeInTheDocument();
     expect(screen.getByText(/Execução:/)).toHaveTextContent('260 ms');
