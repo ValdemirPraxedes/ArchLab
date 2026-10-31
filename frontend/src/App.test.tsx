@@ -147,7 +147,7 @@ describe('Editor visual', () => {
     expect(screen.getByRole('button', { name: 'Client' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Reiniciar' }));
     expect(screen.getByRole('button', { name: 'Client' })).toBeEnabled();
-    expect(screen.getByText(/2 componente\\(s\\)/)).toBeInTheDocument();
+    expect(screen.getByText(/2 componente\(s\)/)).toBeInTheDocument();
   });
 
   it('permite nomes duplicados sem alterar identidade e rejeita nome vazio', () => {
