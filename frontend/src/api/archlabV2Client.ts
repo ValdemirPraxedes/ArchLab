@@ -1,7 +1,6 @@
 import type { paths, components } from './generated/schema-v2';
 
 type ArchitectureValidation = paths['/api/v2/architectures/validate']['post'];
-type ScenarioValidation = paths['/api/v2/scenarios/validate']['post'];
 type Simulation = paths['/api/v2/simulations']['post'];
 
 export type ArchitectureV2 = NonNullable<ArchitectureValidation['requestBody']>['content']['application/json'];
