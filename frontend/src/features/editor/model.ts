@@ -6,6 +6,7 @@ export type Protocol = 'REST' | 'SOAP' | 'TCP';
 export type ArchitectureNode = Node<{
   componentType: ComponentType;
   label: string;
+  displayName?: string;
   stateLabel?: 'IDLE' | 'PROCESSING' | 'WAITING' | 'COMPLETED';
   preProcessingMs?: number;
   postProcessingMs?: number;
@@ -17,11 +18,18 @@ export const COMPONENT_LABELS: Record<ComponentType, string> = { CLIENT: 'Client
 export function isComponentType(value: string): value is ComponentType {
   return COMPONENT_TYPES.some((type) => type === value);
 }
-export function createArchitectureNode(type: ComponentType, position: { x: number; y: number }): ArchitectureNode {
+export function validDisplayName(name: string): boolean { return name.trim().length > 0 && Array.from(name.trim()).length <= 80; }
+export function nextDisplayName(type: ComponentType, nodes: ArchitectureNode[]): string {
+  const names = new Set(nodes.map((n) => n.data.displayName ?? n.data.label));
+  let number = 1;
+  while (names.has(`${COMPONENT_LABELS[type]} ${number}`)) number++;
+  return `${COMPONENT_LABELS[type]} ${number}`;
+}
+export function createArchitectureNode(type: ComponentType, position: { x: number; y: number }, displayName = COMPONENT_LABELS[type]): ArchitectureNode {
   return {
     id: crypto.randomUUID(), type: 'architecture', position,
     data: {
-      componentType: type, label: COMPONENT_LABELS[type],
+      componentType: type, label: displayName, displayName,
       ...(type === 'API' ? { preProcessingMs: 0, postProcessingMs: 0 } : {}),
       ...(type === 'DATABASE' ? { processingMs: 0 } : {}),
     },
