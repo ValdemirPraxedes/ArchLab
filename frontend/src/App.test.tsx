@@ -108,4 +108,29 @@ describe('Editor visual', () => {
   });
 
 
+  it('permite nomes duplicados sem alterar identidade e rejeita nome vazio', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 1' }));
+    const name = screen.getByRole('textbox', { name: 'Nome de apresentação' });
+    fireEvent.change(name, { target: { value: 'Duplicado' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar nome' }));
+    expect(screen.getByText('Nó: Duplicado')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 2' }));
+    fireEvent.change(name, { target: { value: 'Duplicado' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar nome' }));
+    expect(screen.getAllByText('Nó: Duplicado')).toHaveLength(2);
+    fireEvent.change(name, { target: { value: '   ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar nome' }));
+    expect(screen.getByRole('alert')).toHaveTextContent('Nome obrigatório');
+  });
+  it('permite mudar tema sem alterar o canvas', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Tema' }), { target: { value: 'dark' } });
+    expect(document.documentElement.dataset.theme).toBe('dark');
+    expect(screen.getByTestId('flow')).toHaveTextContent('Nó: API 1');
+  });
+
 });
