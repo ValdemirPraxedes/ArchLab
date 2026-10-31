@@ -5,6 +5,7 @@ import {
 import type { DragEvent } from 'react';
 import '@xyflow/react/dist/style.css';
 import { ArchitectureNode } from './ArchitectureNode';
+import { ComponentIcon } from './ComponentIcon';
 import Playback from './Playback';
 import ResultsPanel from './ResultsPanel';
 import { reconstructState } from './traceState';
@@ -14,7 +15,7 @@ import { toArchitectureRequest, validateArchitectureLocally } from './validation
 import type { ValidationIssue } from './validation';
 import {
   COMPONENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
-  isComponentType, allowedProtocols, validateConnection, validDuration, removeComponent,
+  isComponentType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
 } from './model';
 import type { ArchitectureNode as ArchitectureNodeType, ArchitectureEdge, ComponentType, Protocol } from './model';
 
@@ -30,6 +31,7 @@ function EditorCanvas() {
   const [protocol, setProtocol] = useState<Protocol>('REST');
   const [latencyMs, setLatencyMs] = useState('0');
   const [error, setError] = useState('');
+  const [nameDraft, setNameDraft] = useState('');
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid' | 'error'>('idle');
   const [executionStatus, setExecutionStatus] = useState<'READY' | 'VALIDATING' | 'EXECUTING' | 'COMPLETED' | 'ERROR'>('READY');
@@ -108,12 +110,13 @@ function EditorCanvas() {
   const addNode = useCallback((type: ComponentType, position: { x: number; y: number }) => {
     if (executionLocked) return null;
     resetValidation();
-    const newNode = createArchitectureNode(type, position);
+    const newNode = createArchitectureNode(type, position, nextDisplayName(type, nodes));
     setNodes((current) => [...current, newNode]);
     return newNode;
-  }, [setNodes, executionLocked]);
+  }, [setNodes, executionLocked, nodes]);
   const select = (next: { kind: 'node' | 'edge'; id: string } | null) => {
     setSelection(next); setTargetId(''); setError('');
+    setNameDraft(next?.kind === 'node' ? (nodes.find((item) => item.id === next.id)?.data.displayName ?? '') : '');
     const selectedEdge = next?.kind === 'edge' ? edges.find((item) => item.id === next.id) : undefined;
     setEdgeDraft(selectedEdge ? { protocol: selectedEdge.data!.protocol, latencyMs: String(selectedEdge.data!.latencyMs) } : null);
   };
@@ -130,6 +133,14 @@ function EditorCanvas() {
     addNode(rawType, { x: Math.max(0, Math.min(position.x, CANVAS_WIDTH - 180)), y: Math.max(0, Math.min(position.y, CANVAS_HEIGHT - 90)) });
   }, [addNode, screenToFlowPosition]);
 
+  const commitName = () => {
+    if (!node || executionLocked) return;
+    const nextName = nameDraft.trim();
+    if (!validDisplayName(nextName)) { setError('Nome obrigatório com até 80 caracteres.'); return; }
+    setNodes((current) => current.map((item) => item.id === node.id ?
+      { ...item, data: { ...item.data, displayName: nextName, label: nextName } } : item));
+    resetValidation(); setError('');
+  };
   const updateTime = (field: 'preProcessingMs' | 'postProcessingMs' | 'processingMs', value: string) => {
     if (!node || executionLocked) return;
     const parsed = Number(value);
@@ -186,7 +197,7 @@ function EditorCanvas() {
           <button key={type} type="button" className="palette-item" draggable={!executionLocked} disabled={executionLocked}
             onDragStart={(event) => { if (!executionLocked) onPaletteDragStart(event, type); }}
             onClick={() => addNode(type, { x: 120 + (nodes.length % 4) * 210, y: 110 + Math.floor(nodes.length / 4) * 120 })}>
-            {COMPONENT_LABELS[type]}
+            <ComponentIcon type={type} /> {COMPONENT_LABELS[type]}
           </button>
         ))}
       </aside>
@@ -215,7 +226,9 @@ function EditorCanvas() {
         <h2>Propriedades</h2>
         {!selection && <p>Selecione um componente ou conexão no canvas.</p>}
         {node && <>
-          <p><strong>{node.data.label}</strong> · {node.id.slice(0, 8)}</p>
+          <p><strong>{node.data.displayName ?? node.data.label}</strong> · {node.id.slice(0, 8)}</p>
+          <label>Nome de apresentação<input aria-label="Nome de apresentação" type="text" maxLength={100} value={nameDraft} disabled={executionLocked} onChange={(event) => setNameDraft(event.target.value)} onBlur={commitName} /></label>
+          <button type="button" disabled={executionLocked} onClick={commitName}>Salvar nome</button>
           {node.data.componentType === 'API' && <>
             <label>Pré-processamento (ms)<input aria-label="Pré-processamento (ms)" type="number" min="0" step="1" value={node.data.preProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('preProcessingMs', e.target.value)} /></label>
             <label>Pós-processamento (ms)<input aria-label="Pós-processamento (ms)" type="number" min="0" step="1" value={node.data.postProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('postProcessingMs', e.target.value)} /></label>
