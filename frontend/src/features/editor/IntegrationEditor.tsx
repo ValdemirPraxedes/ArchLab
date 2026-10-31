@@ -21,8 +21,8 @@ export function IntegrationEditor({ value, source, target, disabled, onSave }: P
     const req = parseHeaders(requestHeaders), res = parseHeaders(responseHeaders);
     if (draft.kind !== 'DATABASE_QUERY' && (!req || !res)) { setError('Cabeçalhos inválidos. Use uma linha Nome: valor por cabeçalho (máximo 32).'); return; }
     let next: IntegrationV2 = draft;
-    if (draft.kind === 'HTTP_REST') next = { ...draft, request: { ...draft.request!, ...(requestHeaders.trim() ? { headers: req! } : {}) }, response: { ...draft.response!, ...(responseHeaders.trim() ? { headers: res! } : {}) } };
-    if (draft.kind === 'SOAP_HTTP') next = { ...draft, ...(requestHeaders.trim() ? { requestHeaders: req! } : {}), ...(responseHeaders.trim() ? { responseHeaders: res! } : {}) };
+    if (draft.kind === 'HTTP_REST') next = { ...draft, request: { ...draft.request!, headers: req! }, response: { ...draft.response!, headers: res! } };
+    if (draft.kind === 'SOAP_HTTP') next = { ...draft, requestHeaders: req!, responseHeaders: res! };
     const invalid = integrationError(next, source, target);
     if (invalid) { setError(invalid); return; }
     setError(''); onSave(next);
