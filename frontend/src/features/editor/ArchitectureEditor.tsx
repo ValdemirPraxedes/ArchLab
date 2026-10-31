@@ -6,6 +6,8 @@ import type { DragEvent } from 'react';
 import '@xyflow/react/dist/style.css';
 import { ArchitectureNode } from './ArchitectureNode';
 import { ComponentIcon } from './ComponentIcon';
+import { IntegrationEditor } from './IntegrationEditor';
+import { defaultIntegration, allowedIntegrationKinds } from './integration';
 import { ScenarioEditor } from './ScenarioEditor';
 import { emptyScenario, reconcileScenario, selectedPath } from './scenario';
 import type { ScenarioDraft } from './scenario';
@@ -158,7 +160,9 @@ function EditorCanvas() {
     const duration = Number(latencyMs);
     if (!latencyMs.trim() || !validDuration(duration)) { setError('Latência deve ser um inteiro não negativo.'); return; }
     resetValidation();
-    setEdges((current) => [...current, createArchitectureEdge(node.id, destination.id, chosenProtocol, duration)]);
+    const created = createArchitectureEdge(node.id, destination.id, chosenProtocol, duration);
+    const kind = allowedIntegrationKinds(node.data.componentType, destination.data.componentType)[0];
+    setEdges((current) => [...current, { ...created, data: { ...created.data!, integration: defaultIntegration(kind) } }]);
     setError(''); setTargetId('');
   };
   const confirmEdge = () => {
@@ -170,7 +174,7 @@ function EditorCanvas() {
       setError('Protocolo incompatível ou latência inválida.'); return;
     }
     resetValidation();
-    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { protocol: edgeDraft.protocol, latencyMs: ms } } : item));
+    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, latencyMs: ms } } : item));
     setError('');
   };
   const cancelEdge = () => {
@@ -260,6 +264,9 @@ function EditorCanvas() {
             </select>
           </label>
           <label>Latência (ms)<input aria-label="Editar latência (ms)" type="number" min="0" step="1" value={edgeDraft?.latencyMs ?? String(edge.data?.latencyMs ?? 0)} disabled={executionLocked} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, latencyMs: e.target.value } : null)} /></label>
+          <IntegrationEditor key={edge.id} value={edge.data?.integration ?? defaultIntegration(allowedIntegrationKinds(nodes.find(n => n.id === edge.source)!.data.componentType, nodes.find(n => n.id === edge.target)!.data.componentType)[0])}
+            source={nodes.find(n => n.id === edge.source)!.data.componentType} target={nodes.find(n => n.id === edge.target)!.data.componentType}
+            disabled={executionLocked} onSave={(integration) => { setEdges(current => current.map(item => item.id === edge.id ? { ...item, data: { ...item.data!, integration } } : item)); resetValidation(); }} />
           <div className="property-actions"><button type="button" disabled={executionLocked} onClick={confirmEdge}>Confirmar alterações</button><button type="button" disabled={executionLocked} onClick={cancelEdge}>Cancelar alterações</button></div>
         </>}
         {error && <p className="editor-error" role="alert">{error}</p>}

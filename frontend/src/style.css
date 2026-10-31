@@ -135,3 +135,11 @@ body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
 .scenario-node--active .architecture-node{outline:3px solid #22a775;outline-offset:3px}
 .scenario-node--inactive{opacity:.42}
 .scenario-edge--inactive{opacity:.28}
+
+/* FE-V2-05 — editor de mensagens ilustrativas */
+.integration-editor{border-top:1px solid var(--border);margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:9px}
+.integration-editor h3{margin:0}
+.integration-editor p{font-size:.78rem;color:var(--muted);margin:0}
+.integration-editor label{display:flex;flex-direction:column;gap:4px}
+.integration-editor input,.integration-editor textarea,.integration-editor select{width:100%;max-width:100%;font:inherit}
+.integration-editor textarea{min-height:72px;resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}

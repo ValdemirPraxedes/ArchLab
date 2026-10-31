@@ -158,4 +158,24 @@ describe('Editor visual', () => {
     expect(screen.queryByText(/V1_SIMULATION_ONLY/)).not.toBeInTheDocument();
   });
 
+  it('preserva integração SOAP ao confirmar latência da conexão', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 1' }));
+    const option = screen.getByRole('option', { name: /API 1/ });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Destino' }), { target: { value: (option as HTMLOptionElement).value } });
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conexão: REST' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Tipo de integração' }), { target: { value: 'SOAP_HTTP' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'Operação SOAP' }), { target: { value: 'ConsultarSeguro' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar integração' }));
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Editar latência (ms)' }), { target: { value: '55' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar alterações' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conexão: REST' }));
+    expect(screen.getByRole('combobox', { name: 'Tipo de integração' })).toHaveValue('SOAP_HTTP');
+    expect(screen.getByRole('textbox', { name: 'Operação SOAP' })).toHaveValue('ConsultarSeguro');
+  });
+
 });
