@@ -57,7 +57,11 @@ function EditorCanvas() {
       if (!(target instanceof Element)) return;
       if (propertiesRef.current?.contains(target)) return;
       if (target.closest('.react-flow__node, .react-flow__edge')) return;
-      select(null);
+      setSelection(null);
+      setTargetId('');
+      setError('');
+      setNameDraft('');
+      setEdgeDraft(null);
     };
     document.addEventListener('pointerdown', dismiss);
     return () => document.removeEventListener('pointerdown', dismiss);
