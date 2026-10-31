@@ -5,6 +5,7 @@ type Simulation = paths['/api/v2/simulations']['post'];
 
 export type ArchitectureV2 = NonNullable<ArchitectureValidation['requestBody']>['content']['application/json'];
 export type SimulationRequestV2 = NonNullable<Simulation['requestBody']>['content']['application/json'];
+export type ScenarioV2 = components['schemas']['ScenarioV2'];
 export type ValidationResponseV2 = ArchitectureValidation['responses'][200]['content']['application/json'];
 export type SimulationResponseV2 = Simulation['responses'][200]['content']['application/json'];
 export type ViolationV2 = components['schemas']['ViolationV2'];

@@ -132,4 +132,30 @@ describe('Editor visual', () => {
     expect(screen.getByTestId('flow')).toHaveTextContent('Nó: API 1');
   });
 
+  it('exibe editor de cenário e não seleciona entrada automaticamente', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    expect(screen.getByRole('region', { name: 'Editor de cenário' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Client inicial' })).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toBeDisabled();
+    const clientOption = screen.getByRole('option', { name: /Client 1/ });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (clientOption as HTMLOptionElement).value } });
+    expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toBeEnabled();
+    expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toHaveValue('');
+  });
+
+  it('limpa o erro da simulação v1 quando o cenário é editado', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
+    expect(screen.getByText(/Execução:/)).toHaveTextContent('ERROR');
+    expect(screen.getByText(/V1_SIMULATION_ONLY/)).toBeInTheDocument();
+    const clientOption = screen.getByRole('option', { name: /Client 1/ });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (clientOption as HTMLOptionElement).value } });
+    expect(screen.getByText(/Execução:/)).toHaveTextContent('READY');
+    expect(screen.queryByText(/V1_SIMULATION_ONLY/)).not.toBeInTheDocument();
+  });
+
 });

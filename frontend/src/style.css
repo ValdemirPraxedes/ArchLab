@@ -123,3 +123,15 @@ body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
 [data-theme="dark"] .properties input:disabled,[data-theme="dark"] .properties select:disabled{background:#2b3d51;color:#b7c9d9;-webkit-text-fill-color:#b7c9d9}
 [data-theme="dark"] .editor-toolbar button,[data-theme="dark"] .results-tabs button[aria-selected="true"]{background:#2e70ad;color:white}
 @media(max-width:700px){.workspace-actions{flex-wrap:wrap;justify-content:flex-end}.workspace-actions .workspace-status{display:none}}
+
+/* FE-V2-04 — edição explícita de cenário */
+.scenario-editor{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 18px;display:flex;gap:10px 16px;align-items:flex-end;flex-wrap:wrap;color:var(--text)}
+.scenario-editor h3{width:100%;margin:0;font-size:.95rem}
+.scenario-editor p{margin:0;font-size:.76rem;color:var(--muted)}
+.scenario-editor>p:last-child{flex-basis:100%}
+.scenario-editor label{font-size:.8rem;display:flex;flex-direction:column;gap:5px;min-width:160px;max-width:260px;color:var(--text)}
+.scenario-editor select{background:var(--input);color:var(--text);border:1px solid var(--border);padding:8px;border-radius:6px;width:100%}
+.scenario-editor select:disabled{opacity:.6;cursor:not-allowed}
+.scenario-node--active .architecture-node{outline:3px solid #22a775;outline-offset:3px}
+.scenario-node--inactive{opacity:.42}
+.scenario-edge--inactive{opacity:.28}
