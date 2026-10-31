@@ -51,7 +51,7 @@ describe('Editor visual', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'API' }));
     fireEvent.click(screen.getByRole('button', { name: 'Database' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: API' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Pré-processamento (ms)' }), { target: { value: '30' } });
     expect(screen.getByRole('spinbutton', { name: 'Pré-processamento (ms)' })).toHaveValue(30);
     const target = screen.getByRole('combobox', { name: 'Destino' });
@@ -90,11 +90,11 @@ describe('Editor visual', () => {
   it('simula e bloqueia edição até reiniciar', async () => {
     render(<App />);
     for (const type of ['Client', 'API', 'Database']) fireEvent.click(screen.getByRole('button', { name: type }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 1' }));
     const clientDestination = screen.getByRole('combobox', { name: 'Destino' });
     fireEvent.change(clientDestination, { target: { value: (screen.getByRole('option', { name: /API/ }) as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: API' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
     const apiDestination = screen.getByRole('combobox', { name: 'Destino' });
     fireEvent.change(apiDestination, { target: { value: (screen.getByRole('option', { name: /Database/ }) as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
