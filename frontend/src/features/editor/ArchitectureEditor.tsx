@@ -100,7 +100,7 @@ function EditorCanvas() {
       } else setIssues([{ code: 'NETWORK_ERROR', path: '', message: 'Falha de comunicação com a API.' }]);
     }
   };
-  const resetValidation = () => { setIssues([]); setValidationStatus('idle'); if (executionStatus === 'ERROR') setExecutionStatus('READY'); };
+  const resetValidation = useCallback(() => { setIssues([]); setValidationStatus('idle'); setExecutionStatus((status) => status === 'ERROR' ? 'READY' : status); }, []);
   const validate = () => {
     const localIssues = validateGraphV2(nodes, edges);
     setIssues(localIssues);
@@ -112,7 +112,7 @@ function EditorCanvas() {
     const newNode = createArchitectureNode(type, position, nextDisplayName(type, nodes));
     setNodes((current) => [...current, newNode]);
     return newNode;
-  }, [setNodes, executionLocked, nodes]);
+  }, [setNodes, executionLocked, nodes, resetValidation]);
   const select = (next: { kind: 'node' | 'edge'; id: string } | null) => {
     setSelection(next); setTargetId(''); setError('');
     setNameDraft(next?.kind === 'node' ? (nodes.find((item) => item.id === next.id)?.data.displayName ?? '') : '');
