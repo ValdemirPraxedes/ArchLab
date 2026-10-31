@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, useReactFlow,
 } from '@xyflow/react';
@@ -49,6 +49,23 @@ function EditorCanvas() {
   const executionLocked = executionStatus === 'VALIDATING' || executionStatus === 'EXECUTING' || executionStatus === 'COMPLETED' || simulationResultV2 !== null;
   const [edgeDraft, setEdgeDraft] = useState<{ protocol: Protocol; latencyMs: string } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
+  const propertiesRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    if (!selection) return;
+    const dismiss = (event: PointerEvent) => {
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+      if (propertiesRef.current?.contains(target)) return;
+      if (target.closest('.react-flow__node, .react-flow__edge')) return;
+      setSelection(null);
+      setTargetId('');
+      setError('');
+      setNameDraft('');
+      setEdgeDraft(null);
+    };
+    document.addEventListener('pointerdown', dismiss);
+    return () => document.removeEventListener('pointerdown', dismiss);
+  }, [selection]);
   const { screenToFlowPosition } = useReactFlow();
   const nodeTypes = useMemo(() => ({ architecture: ArchitectureNode }), []);
   const node = selection?.kind === 'node' ? nodes.find((n) => n.id === selection.id) : undefined;
@@ -266,7 +283,7 @@ function EditorCanvas() {
           </ReactFlow>
         </div>
       </section>
-      <aside className="properties" aria-label="Propriedades">
+      <aside className="properties" aria-label="Propriedades" ref={propertiesRef}>
         <h2>Propriedades</h2>
         {!selection && <p>Selecione um componente ou conexão no canvas.</p>}
         {node && <>
