@@ -1,4 +1,5 @@
 import type { Edge, Node } from '@xyflow/react';
+import type { IntegrationV2 } from '../../api/archlabV2Client';
 
 export const COMPONENT_TYPES = ['CLIENT', 'API', 'DATABASE'] as const;
 export type ComponentType = (typeof COMPONENT_TYPES)[number];
@@ -12,7 +13,7 @@ export type ArchitectureNode = Node<{
   postProcessingMs?: number;
   processingMs?: number;
 }>;
-export type ArchitectureEdge = Edge<{ protocol: Protocol; latencyMs: number }>;
+export type ArchitectureEdge = Edge<{ protocol: Protocol; latencyMs: number; integration?: IntegrationV2 }>;
 export const COMPONENT_LABELS: Record<ComponentType, string> = { CLIENT: 'Client', API: 'API', DATABASE: 'Database' };
 
 export function isComponentType(value: string): value is ComponentType {
