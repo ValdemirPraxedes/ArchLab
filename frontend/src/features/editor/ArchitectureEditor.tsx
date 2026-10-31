@@ -100,7 +100,7 @@ function EditorCanvas() {
       } else setIssues([{ code: 'NETWORK_ERROR', path: '', message: 'Falha de comunicação com a API.' }]);
     }
   };
-  const resetValidation = () => { setIssues([]); setValidationStatus('idle'); };
+  const resetValidation = () => { setIssues([]); setValidationStatus('idle'); if (executionStatus === 'ERROR') setExecutionStatus('READY'); };
   const validate = () => {
     const localIssues = validateGraphV2(nodes, edges);
     setIssues(localIssues);
@@ -213,7 +213,7 @@ function EditorCanvas() {
           {validationStatus === 'valid' && <p>Grafo válido localmente. A validação autoritativa do backend v2 será integrada na FE-V2-06.</p>}
           {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? 'Arquitetura inválida' : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
-        <ScenarioEditor nodes={nodes} edges={edges} value={scenario} onChange={setScenario} disabled={executionLocked} />
+        <ScenarioEditor nodes={nodes} edges={edges} value={scenario} onChange={(next) => { setScenario(next); resetValidation(); }} disabled={executionLocked} />
         {simulationResult && <Playback result={simulationResult} onTimeChange={(time, sequence) => { setPlaybackTimeMs(time); setPlaybackSequence(sequence); }} />}
         <div className="editor-canvas" ref={canvasRef} onDrop={(event) => { if (!executionLocked) onDrop(event); }} onDragOver={(event) => { if (!executionLocked) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} aria-label="Canvas da arquitetura">
           <ReactFlow nodes={shownNodes} edges={shownEdges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
