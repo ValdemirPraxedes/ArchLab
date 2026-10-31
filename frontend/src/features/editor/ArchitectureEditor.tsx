@@ -6,6 +6,9 @@ import type { DragEvent } from 'react';
 import '@xyflow/react/dist/style.css';
 import { ArchitectureNode } from './ArchitectureNode';
 import { ComponentIcon } from './ComponentIcon';
+import { ScenarioEditor } from './ScenarioEditor';
+import { emptyScenario, reconcileScenario, selectedPath } from './scenario';
+import type { ScenarioDraft } from './scenario';
 import Playback from './Playback';
 import ResultsPanel from './ResultsPanel';
 import { reconstructState } from './traceState';
@@ -27,6 +30,7 @@ const CANVAS_HEIGHT = 1600;
 function EditorCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<ArchitectureNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<ArchitectureEdge>([]);
+  const [scenario, setScenario] = useState<ScenarioDraft>(emptyScenario);
   const [selection, setSelection] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null);
   const [targetId, setTargetId] = useState('');
   const [protocol, setProtocol] = useState<Protocol>('REST');
@@ -48,15 +52,17 @@ function EditorCanvas() {
   const edge = selection?.kind === 'edge' ? edges.find((e) => e.id === selection.id) : undefined;
   const stateAtPlayback = simulationResult ? reconstructState(simulationResult.initialState, simulationResult.trace, playbackTimeMs, playbackSequence) : null;
   const activeActivity = simulationResult?.timeline.find((a) => a.startMs <= playbackTimeMs && playbackTimeMs < a.endMs);
+  const path = selectedPath(scenario, nodes, edges);
+  const hasPath = path.components.size > 0;
   const shownNodes = nodes.map((n) => ({
-    ...n, className: stateAtPlayback ? `trace-node--${(stateAtPlayback.components[n.id] ?? 'IDLE').toLowerCase()}` : '',
+    ...n, className: stateAtPlayback ? `trace-node--${(stateAtPlayback.components[n.id] ?? 'IDLE').toLowerCase()}` : hasPath ? (path.components.has(n.id) ? 'scenario-node--active' : 'scenario-node--inactive') : '',
     data: { ...n.data, stateLabel: stateAtPlayback?.components[n.id] },
   }));
   const shownEdges = edges.map((e) => ({
-    ...e, className: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ? 'playback-edge-active' : '',
+    ...e, className: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ? 'playback-edge-active' : hasPath ? (path.connections.has(e.id) ? 'scenario-edge--active' : 'scenario-edge--inactive') : '',
     animated: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id,
     style: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ?
-      { stroke: activeActivity.sourceId === e.source ? '#329eff' : '#35d88c', strokeWidth: 3 } : undefined,
+      { stroke: activeActivity.sourceId === e.source ? '#329eff' : '#35d88c', strokeWidth: 3 } : hasPath && path.connections.has(e.id) ? { stroke: '#1ca879', strokeWidth: 3 } : undefined,
   }));
   const destination = nodes.find((n) => n.id === targetId);
   const compatibleProtocols = node && destination ? allowedProtocols(node.data.componentType, destination.data.componentType) : [];
@@ -178,7 +184,12 @@ function EditorCanvas() {
     if (selection.kind === 'node') {
       const result = removeComponent(nodes, edges, selection.id);
       setNodes(result.nodes); setEdges(result.edges);
-    } else setEdges((current) => current.filter((item) => item.id !== selection.id));
+      setScenario((current) => reconcileScenario(current, result.nodes, result.edges));
+    } else setEdges((current) => {
+      const remaining = current.filter((item) => item.id !== selection.id);
+      setScenario((value) => reconcileScenario(value, nodes, remaining));
+      return remaining;
+    });
     select(null);
   };
   return (
@@ -202,6 +213,7 @@ function EditorCanvas() {
           {validationStatus === 'valid' && <p>Grafo válido localmente. A validação autoritativa do backend v2 será integrada na FE-V2-06.</p>}
           {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? 'Arquitetura inválida' : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
+        <ScenarioEditor nodes={nodes} edges={edges} value={scenario} onChange={setScenario} disabled={executionLocked} />
         {simulationResult && <Playback result={simulationResult} onTimeChange={(time, sequence) => { setPlaybackTimeMs(time); setPlaybackSequence(sequence); }} />}
         <div className="editor-canvas" ref={canvasRef} onDrop={(event) => { if (!executionLocked) onDrop(event); }} onDragOver={(event) => { if (!executionLocked) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} aria-label="Canvas da arquitetura">
           <ReactFlow nodes={shownNodes} edges={shownEdges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
