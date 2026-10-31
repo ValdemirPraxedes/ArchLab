@@ -174,7 +174,7 @@ function EditorCanvas() {
       setError('Protocolo incompatível ou latência inválida.'); return;
     }
     resetValidation();
-    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { protocol: edgeDraft.protocol, latencyMs: ms } } : item));
+    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, latencyMs: ms } } : item));
     setError('');
   };
   const cancelEdge = () => {
