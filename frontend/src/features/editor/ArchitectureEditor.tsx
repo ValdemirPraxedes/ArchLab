@@ -13,13 +13,6 @@ import { SimulationPlaybackV2 } from './SimulationPlaybackV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { emptyScenario, reconcileScenario, selectedPath } from './scenario';
 import type { ScenarioDraft } from './scenario';
-import Playback from './Playback';
-import ResultsPanel from './ResultsPanel';
-import { reconstructState } from './traceState';
-import { archlabClient, ArchlabHttpError } from '../../api/archlabClient';
-import type { SimulationResponse } from '../../api/archlabClient';
-import { toArchitectureRequest, validateArchitectureLocally } from './validation';
-import { validateGraphV2 } from './graphValidation';
 import { toArchitectureV2 } from './architectureV2';
 import { archlabV2Client, ArchlabV2HttpError } from '../../api/archlabV2Client';
 import type { ValidationIssue } from './validation';
@@ -47,11 +40,8 @@ function EditorCanvas() {
   const [validationScope, setValidationScope] = useState<'architecture' | 'scenario'>('architecture');
   const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid' | 'error'>('idle');
   const [executionStatus, setExecutionStatus] = useState<'READY' | 'VALIDATING' | 'EXECUTING' | 'COMPLETED' | 'ERROR'>('READY');
-  const [simulationResult, setSimulationResult] = useState<SimulationResponse | null>(null);
   const [simulationResultV2, setSimulationResultV2] = useState<SimulationResponseV2 | null>(null);
   const [v2PlaybackStatus, setV2PlaybackStatus] = useState<'REPRODUZINDO' | 'PAUSADA' | 'CONCLUÍDA'>('PAUSADA');
-  const [playbackTimeMs, setPlaybackTimeMs] = useState(0);
-  const [playbackSequence, setPlaybackSequence] = useState(Number.POSITIVE_INFINITY);
   const executionLocked = executionStatus === 'VALIDATING' || executionStatus === 'EXECUTING' || executionStatus === 'COMPLETED' || simulationResultV2 !== null;
   const [edgeDraft, setEdgeDraft] = useState<{ protocol: Protocol; latencyMs: string } | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
@@ -59,8 +49,6 @@ function EditorCanvas() {
   const nodeTypes = useMemo(() => ({ architecture: ArchitectureNode }), []);
   const node = selection?.kind === 'node' ? nodes.find((n) => n.id === selection.id) : undefined;
   const edge = selection?.kind === 'edge' ? edges.find((e) => e.id === selection.id) : undefined;
-  const stateAtPlayback = simulationResult ? reconstructState(simulationResult.initialState, simulationResult.trace, playbackTimeMs, playbackSequence) : null;
-  const activeActivity = simulationResult?.timeline.find((a) => a.startMs <= playbackTimeMs && playbackTimeMs < a.endMs);
   const path = selectedPath(scenario, nodes, edges);
   const hasPath = path.components.size > 0;
   const invalidIds = new Set(issues.flatMap(issue => {
@@ -74,21 +62,20 @@ function EditorCanvas() {
     return id ? [id] : [];
   }));
   const shownNodes = nodes.map((n) => ({
-    ...n, className: invalidIds.has(n.id) ? 'validation-node--invalid' : stateAtPlayback ? `trace-node--${(stateAtPlayback.components[n.id] ?? 'IDLE').toLowerCase()}` : hasPath ? (path.components.has(n.id) ? 'scenario-node--active' : 'scenario-node--inactive') : '',
-    data: { ...n.data, stateLabel: stateAtPlayback?.components[n.id] },
+    ...n, className: invalidIds.has(n.id) ? 'validation-node--invalid' : hasPath ? (path.components.has(n.id) ? 'scenario-node--active' : 'scenario-node--inactive') : '',
+    data: { ...n.data },
   }));
   const shownEdges = edges.map((e) => ({
-    ...e, className: invalidEdgeIds.has(e.id) ? 'validation-edge--invalid' : activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ? 'playback-edge-active' : hasPath ? (path.connections.has(e.id) ? 'scenario-edge--active' : 'scenario-edge--inactive') : '',
-    animated: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id,
-    style: activeActivity?.kind === 'COMMUNICATION' && activeActivity.connectionId === e.id ?
-      { stroke: activeActivity.sourceId === e.source ? '#329eff' : '#35d88c', strokeWidth: 3 } : hasPath && path.connections.has(e.id) ? { stroke: '#1ca879', strokeWidth: 3 } : undefined,
+    ...e, className: invalidEdgeIds.has(e.id) ? 'validation-edge--invalid' : hasPath ? (path.connections.has(e.id) ? 'scenario-edge--active' : 'scenario-edge--inactive') : '',
+    animated: false,
+    style: hasPath && path.connections.has(e.id) ? { stroke: '#1ca879', strokeWidth: 3 } : undefined,
   }));
   const destination = nodes.find((n) => n.id === targetId);
   const compatibleProtocols = node && destination ? allowedProtocols(node.data.componentType, destination.data.componentType) : [];
   const possibleTargets = node ? nodes.filter((n) => n.id !== node.id && allowedProtocols(node.data.componentType, n.data.componentType).length > 0) : [];
 
   const restart = () => {
-    setExecutionStatus('READY'); setSimulationResult(null); setSimulationResultV2(null); setV2PlaybackStatus('PAUSADA'); setPlaybackTimeMs(0); setPlaybackSequence(Number.POSITIVE_INFINITY);
+    setExecutionStatus('READY'); setSimulationResultV2(null); setV2PlaybackStatus('PAUSADA');
     setIssues([]); setValidationStatus('idle'); setError('');
   };
   const simulate = async () => {
@@ -246,7 +233,7 @@ function EditorCanvas() {
       </aside>
       <section className="editor-main" aria-label="Editor visual">
         <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'}>Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'}>Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked}>Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart}>Reiniciar</button>}</div>
-        <div className="execution-status" role="status">Execução: {simulationResultV2 ? v2PlaybackStatus : executionStatus}{simulationResultV2 && <span> · Tempo virtual total: {simulationResultV2.execution.totalDurationMs} ms</span>}{simulationResult && <span> · Tempo virtual total: {simulationResult.execution.totalDurationMs} ms</span>}</div>
+        <div className="execution-status" role="status">Execução: {simulationResultV2 ? v2PlaybackStatus : executionStatus}{simulationResultV2 && <span> · Tempo virtual total: {simulationResultV2.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
           {validationStatus === 'checking' && <p>Validando arquitetura...</p>}
           {validationStatus === 'valid' && <p>{validationScope === 'architecture' ? 'Arquitetura v2 válida pelo backend.' : 'Cenário v2 válido pelo backend.'}</p>}
@@ -254,7 +241,6 @@ function EditorCanvas() {
         </section>}
         <ScenarioEditor nodes={nodes} edges={edges} value={scenario} onChange={(next) => { setScenario(next); resetValidation(); }} disabled={executionLocked} />
         {simulationResultV2 && <SimulationPlaybackV2 result={simulationResultV2} onStatus={setV2PlaybackStatus} />}
-        {simulationResult && <Playback result={simulationResult} onTimeChange={(time, sequence) => { setPlaybackTimeMs(time); setPlaybackSequence(sequence); }} />}
         <div className="editor-canvas" ref={canvasRef} onDrop={(event) => { if (!executionLocked) onDrop(event); }} onDragOver={(event) => { if (!executionLocked) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} aria-label="Canvas da arquitetura">
           <ReactFlow nodes={shownNodes} edges={shownEdges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
             onNodeClick={(_, chosen) => select({ kind: 'node', id: chosen.id })}
@@ -265,7 +251,6 @@ function EditorCanvas() {
             <Background /><Controls /><MiniMap pannable zoomable nodeColor={(n) => n.data?.componentType === "CLIENT" ? "#1d9eaf" : n.data?.componentType === "API" ? "#6963d4" : "#cc9440"} nodeStrokeColor="#37506a" nodeStrokeWidth={2} maskColor="rgba(95,126,160,0.18)" />
           </ReactFlow>
         </div>
-        {simulationResult && <ResultsPanel result={simulationResult} playbackTimeMs={playbackTimeMs} playbackSequence={playbackSequence} selectedId={selection?.id} />}
       </section>
       <aside className="properties" aria-label="Propriedades">
         <h2>Propriedades</h2>
