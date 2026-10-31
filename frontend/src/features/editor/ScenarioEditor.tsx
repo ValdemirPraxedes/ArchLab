@@ -37,7 +37,7 @@ export function ScenarioEditor({ nodes, edges, value, onChange, disabled }: Prop
       const options = edges.filter(e => e.source === api.id && nodes.some(n => n.id === e.target && ['API', 'DATABASE'].includes(n.data.componentType)));
       return <label key={api.id}>Dependência de {api.data.displayName ?? api.data.label}{!active && ' (inativa)'}
         <select aria-label={`Dependência de ${api.data.displayName ?? api.data.label}`} disabled={disabled || !active} value={scenario.apiExecutions.find(e => e.componentId === api.id)?.dependencyConnectionId ?? ''}
-          onChange={e => onChange({ ...scenario, apiExecutions: [...scenario.apiExecutions.filter(item => item.componentId !== api.id), ...(e.target.value ? [{ componentId: api.id, dependencyConnectionId: e.target.value }] : [])] })}>
+          onChange={e => onChange(reconcileScenario({ ...scenario, apiExecutions: [...scenario.apiExecutions.filter(item => item.componentId !== api.id), ...(e.target.value ? [{ componentId: api.id, dependencyConnectionId: e.target.value }] : [])] }, nodes, edges))}>
           <option value="">Responder diretamente</option>
           {options.map(edge => <option key={edge.id} value={edge.id}>{nodes.find(n => n.id === edge.target)?.data.displayName} · {edge.id.slice(0, 8)}</option>)}
         </select>
