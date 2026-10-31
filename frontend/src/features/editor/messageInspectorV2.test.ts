@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
-import { exchangeTree, messageEvents, representationFor } from './messageInspectorV2';
+import { exchangeTree, messageEvents, representationFor } from './exchangeTreeV2';
 
 const message = (sequence:number, exchangeId:string, parentExchangeId:string|null, connectionId:string, direction:'REQUEST'|'RESPONSE') => ({
   type:'MESSAGE_EVENT' as const, sequence,timestampMs:sequence*10,action:'SENT' as const,messageId:'msg-'+sequence,requestId:'req',exchangeId,parentExchangeId,connectionId,sourceId:'api1',targetId:'api2',direction,intent:'API_REQUEST' as const,
