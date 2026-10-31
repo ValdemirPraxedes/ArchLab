@@ -16,7 +16,7 @@ export function IntegrationEditor({ value, source, target, disabled, onSave }: P
     setResponseHeaders(value.kind === 'HTTP_REST' ? headerText(value.response?.headers) : value.kind === 'SOAP_HTTP' ? headerText(value.responseHeaders) : '');
     setError('');
   }, [value]);
-  const update = (change: Partial<IntegrationV2>) => setDraft(d => ({ ...d, ...change }) as IntegrationV2);
+  const update = (change: Record<string, unknown>) => setDraft(d => ({ ...d, ...change }) as IntegrationV2);
   const save = () => {
     const req = parseHeaders(requestHeaders), res = parseHeaders(responseHeaders);
     if (draft.kind !== 'DATABASE_QUERY' && (!req || !res)) { setError('Cabeçalhos inválidos. Use uma linha Nome: valor por cabeçalho (máximo 32).'); return; }
