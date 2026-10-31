@@ -85,7 +85,7 @@ describe('Editor visual', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Validar arquitetura v2' }));
     expect(await screen.findByText(/INVALID_DAG/)).toBeInTheDocument();
-    expect(screen.getByText(/connections\\[0\\]/)).toBeInTheDocument();
+    expect(screen.getByText('connections[0]', { exact: false })).toBeInTheDocument();
   });
   it('valida cenário em rota separada sem executar o motor', async () => {
     server.use(http.post('/api/v2/scenarios/validate', async ({ request }) => {
