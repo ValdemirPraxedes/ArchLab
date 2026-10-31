@@ -143,3 +143,7 @@ body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
 .integration-editor label{display:flex;flex-direction:column;gap:4px}
 .integration-editor input,.integration-editor textarea,.integration-editor select{width:100%;max-width:100%;font:inherit}
 .integration-editor textarea{min-height:72px;resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
+
+/* FE-V2-06 — referências indicadas pelo backend */
+.validation-node--invalid .architecture-node{outline:3px solid #e45c64;outline-offset:3px}
+.validation-edge--invalid .react-flow__edge-path{stroke:#e45c64!important;stroke-width:3px!important}
