@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { cursorEvents, inFlightMessages, nextCursor, orderedTrace, previousCursor, traceStateAt } from './traceV2';
 import type { TraceCursor } from './traceV2';
+import { MessageInspectorV2 } from './MessageInspectorV2';
 
 type Status = 'REPRODUZINDO' | 'PAUSADA' | 'CONCLUÍDA';
 type Props = { result: SimulationResponseV2; onStatus: (status: Status) => void; onCursor?: (cursor: TraceCursor) => void };
@@ -9,6 +10,7 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
   const [cursor, setCursor] = useState<TraceCursor>({ time: 0, sequence: 0 });
   const time = cursor.time;
   const [selectedSequence, setSelectedSequence] = useState<number | null>(null);
+  const [inspectedMessageSequence, setInspectedMessageSequence] = useState<number | null>(null);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(1);
   const [step, setStep] = useState(false);
@@ -48,10 +50,11 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
     <button type="button" disabled={!step || (time >= total && cursor.sequence === Number.POSITIVE_INFINITY)} onClick={() => setCursor(nextCursor(result.trace,cursor,total))}>Próximo</button>
     <progress aria-label="Progresso v2" value={time} max={total || 1}/>
     <p>Eventos até o instante: {events.length} / {result.trace.length}. Atividades iniciadas: {activities.length} / {result.timeline.length}.</p>
-    <details open><summary>Trace recebido do backend · {events.length} eventos</summary><ol>{sorted.map(e => <li key={e.sequence}><button type="button" aria-current={selectedSequence === e.sequence ? 'true' : undefined} onClick={() => { setPlaying(false); setStep(true); setSelectedSequence(e.sequence); setCursor({time:e.timestampMs,sequence:e.sequence}); }}>{e.timestampMs}ms · #{e.sequence} · {e.type}{e.type === 'MESSAGE_EVENT' ? ` · ${e.action} ${e.direction}` : ''}</button></li>)}</ol></details>
+    <details open><summary>Trace recebido do backend · {events.length} eventos</summary><ol>{sorted.map(e => <li key={e.sequence}><button type="button" aria-current={selectedSequence === e.sequence ? 'true' : undefined} onClick={() => { setPlaying(false); setStep(true); setSelectedSequence(e.sequence); if (e.type === 'MESSAGE_EVENT') setInspectedMessageSequence(e.sequence); setCursor({time:e.timestampMs,sequence:e.sequence}); }}>{e.timestampMs}ms · #{e.sequence} · {e.type}{e.type === 'MESSAGE_EVENT' ? ` · ${e.action} ${e.direction}` : ''}</button></li>)}</ol></details>
     <p>{selectedSequence === null ? 'Acompanhamento automático ativo' : 'Acompanhamento suspenso para inspeção'} {selectedSequence !== null && <button type="button" onClick={() => setSelectedSequence(null)}>Acompanhar execução</button>}</p>
     <details open><summary>Estado reconstruído · {messages.length} mensagens em trânsito</summary><p>Componentes: {Object.entries(state.components).map(([id,status]) => `${id}: ${status}`).join(' · ')}</p><p>Requisições: {Object.entries(state.requests).map(([id,status]) => `${id}: ${status}`).join(' · ')}</p><p>Exchanges: {Object.entries(state.exchanges).map(([id,status]) => `${id}: ${status}`).join(' · ')}</p><p>Mensagens em trânsito: {messages.map(m => `${m.sourceId} → ${m.targetId} (${m.direction})`).join(' · ') || 'nenhuma'}</p></details>
     <details><summary>Timeline recebida do backend</summary><ol>{result.timeline.map(e => <li key={e.id}>{e.kind} · {e.startMs}–{e.endMs}ms</li>)}</ol></details>
+    <MessageInspectorV2 result={result} selectedSequence={inspectedMessageSequence} onSelect={sequence => { setInspectedMessageSequence(sequence); setSelectedSequence(sequence); }} />
     <details><summary>Métricas e mensagens do snapshot</summary>
       <p>Tempo total: {result.metrics.totalDurationMs} ms.</p>
       <p>Processamentos: {result.metrics.processingByComponent.length}; comunicações: {result.metrics.communicationByConnection.length}; esperas: {result.metrics.waitingByComponent.length}.</p>
