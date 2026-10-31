@@ -1,4 +1,4 @@
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import App from './App';
 import { http, HttpResponse } from 'msw';
@@ -108,33 +108,47 @@ describe('Editor visual', () => {
     expect(screen.getByText(/HTTP 413: Limite excedido/)).toBeInTheDocument();
   });
 
-  it('não inicia execução quando faltam componentes', () => {
+  it('apresenta 422 de validação v2 sem executar o motor', async () => {
+    server.use(http.post('/api/v2/scenarios/validate', () => HttpResponse.json({
+      valid: false, violations: [{ code: 'INVALID_ENTRY_CONNECTION', path: 'scenario.entryConnectionId', message: 'Selecione uma conexão inicial' }],
+    })));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
+    expect(await screen.findByText(/INVALID_ENTRY_CONNECTION/)).toBeInTheDocument();
     expect(screen.getByText(/Execução:/)).toHaveTextContent('ERROR');
-    expect(screen.getByText(/Arquitetura inválida/)).toBeInTheDocument();
   });
 
-  it('simula e bloqueia edição até reiniciar', async () => {
+  it('executa o cenário v2, preserva snapshot e bloqueia edição até reiniciar', async () => {
+    server.use(http.post('/api/v2/scenarios/validate', () => HttpResponse.json({ valid: true, violations: [] })));
+    server.use(http.post('/api/v2/simulations', async ({ request }) => {
+      const input = await request.json() as { scenario: { entryComponentId: string; entryConnectionId: string }; architecture: { components: unknown[] } };
+      expect(input.architecture.components).toHaveLength(2);
+      expect(input.scenario.entryComponentId).not.toBe('');
+      expect(input.scenario.entryConnectionId).not.toBe('');
+      return HttpResponse.json({
+        execution: { id: 'exec-v2', status: 'COMPLETED', requestId: 'req-v2', entryComponentId: input.scenario.entryComponentId, entryConnectionId: input.scenario.entryConnectionId, totalDurationMs: 260 },
+        initialState: { components: {}, requests: {}, exchanges: {} },
+        trace: [], timeline: [],
+        metrics: { totalDurationMs: 260, processingByComponent: [], communicationByConnection: [], waitingByComponent: [], exchanges: [] },
+        messageRepresentations: [],
+      });
+    }));
     render(<App />);
-    for (const type of ['Client', 'API', 'Database']) fireEvent.click(screen.getByRole('button', { name: type }));
+    for (const type of ['Client', 'API']) fireEvent.click(screen.getByRole('button', { name: type }));
     fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 1' }));
-    const clientDestination = screen.getByRole('combobox', { name: 'Destino' });
-    fireEvent.change(clientDestination, { target: { value: (screen.getByRole('option', { name: /API/ }) as HTMLOptionElement).value } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Destino' }), { target: { value: (screen.getByRole('option', { name: /API 1/ }) as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
-    const apiDestination = screen.getByRole('combobox', { name: 'Destino' });
-    fireEvent.change(apiDestination, { target: { value: (screen.getByRole('option', { name: /Database/ }) as HTMLOptionElement).value } });
-    fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (screen.getByRole('option', { name: /Client 1/ }) as HTMLOptionElement).value } });
+    const start = screen.getByRole('combobox', { name: 'Conexão de entrada' });
+    fireEvent.change(start, { target: { value: (start.querySelector('option:not([value=""])') as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
-    await waitFor(() => expect(screen.getByText(/Execução:/)).toHaveTextContent('COMPLETED'));
+    expect(await screen.findByRole('region', { name: 'Reprodução v2' })).toBeInTheDocument();
     expect(screen.getByText(/Execução:/)).toHaveTextContent('260 ms');
     expect(screen.getByRole('button', { name: 'Client' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Reiniciar' }));
     expect(screen.getByRole('button', { name: 'Client' })).toBeEnabled();
-    expect(screen.getByText(/3 componente\(s\)/)).toBeInTheDocument();
+    expect(screen.getByText(/2 componente\(s\)/)).toBeInTheDocument();
   });
-
 
   it('permite nomes duplicados sem alterar identidade e rejeita nome vazio', () => {
     render(<App />);
@@ -174,17 +188,19 @@ describe('Editor visual', () => {
     expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toHaveValue('');
   });
 
-  it('limpa o erro da simulação v1 quando o cenário é editado', () => {
+  it('limpa erro de cenário v2 ao editar seleção', async () => {
+    server.use(http.post('/api/v2/scenarios/validate', () => HttpResponse.json({
+      valid: false, violations: [{ code: 'INVALID_ENTRY_CONNECTION', path: 'scenario.entryConnectionId', message: 'Entrada ausente' }],
+    })));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Client' }));
     fireEvent.click(screen.getByRole('button', { name: 'API' }));
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
-    expect(screen.getByText(/Execução:/)).toHaveTextContent('ERROR');
-    expect(screen.getByText(/V1_SIMULATION_ONLY/)).toBeInTheDocument();
+    expect(await screen.findByText(/INVALID_ENTRY_CONNECTION/)).toBeInTheDocument();
     const clientOption = screen.getByRole('option', { name: /Client 1/ });
     fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (clientOption as HTMLOptionElement).value } });
     expect(screen.getByText(/Execução:/)).toHaveTextContent('READY');
-    expect(screen.queryByText(/V1_SIMULATION_ONLY/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/INVALID_ENTRY_CONNECTION/)).not.toBeInTheDocument();
   });
 
   it('preserva integração SOAP ao confirmar latência da conexão', () => {
