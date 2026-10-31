@@ -15,8 +15,8 @@ function IntegrationSnapshot({ integration }: { integration: IntegrationV2 }) {
   if (integration.kind === 'SOAP_HTTP') return <div>
     <h4>SOAP HTTP — snapshot</h4>
     <p>Operação: {integration.operation ?? ''} · SOAP {integration.soapVersion}</p>
-    <p>Status HTTP: {integration.responseStatusCode ?? 200} (ilustrativo)</p>
-    <p>SOAP Action: {integration.soapAction ?? ''}</p>
+    <p>Status HTTP: {integration.httpStatusCode ?? 200} (ilustrativo)</p>
+    <p>SOAP Action: {integration.action ?? ''}</p>
     <h5>Envelope de requisição</h5><pre>{integration.requestEnvelope ?? ''}</pre>
     <h5>Envelope de resposta</h5><pre>{integration.responseEnvelope ?? ''}</pre>
   </div>;
