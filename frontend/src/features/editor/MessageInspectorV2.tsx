@@ -1,6 +1,6 @@
 import type { SimulationResponseV2, IntegrationV2 } from '../../api/archlabV2Client';
-import { exchangeTree, messageEvents, representationFor } from './messageInspectorV2';
-import type { MessageEventV2 } from './messageInspectorV2';
+import { exchangeTree, messageEvents, representationFor } from './exchangeTreeV2';
+import type { MessageEventV2 } from './exchangeTreeV2';
 
 function IntegrationSnapshot({ integration }: { integration: IntegrationV2 }) {
   if (integration.kind === 'HTTP_REST') return <div>
