@@ -10,6 +10,8 @@ import { IntegrationEditor } from './IntegrationEditor';
 import { defaultIntegration, allowedIntegrationKinds } from './integration';
 import { ScenarioEditor } from './ScenarioEditor';
 import { SimulationPlaybackV2 } from './SimulationPlaybackV2';
+import { inFlightMessages, traceStateAt } from './traceV2';
+import type { TraceCursor } from './traceV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { emptyScenario, reconcileScenario, selectedPath } from './scenario';
 import type { ScenarioDraft } from './scenario';
@@ -41,6 +43,8 @@ function EditorCanvas() {
   const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid' | 'error'>('idle');
   const [executionStatus, setExecutionStatus] = useState<'READY' | 'VALIDATING' | 'EXECUTING' | 'COMPLETED' | 'ERROR'>('READY');
   const [simulationResultV2, setSimulationResultV2] = useState<SimulationResponseV2 | null>(null);
+  const [traceCursor, setTraceCursor] = useState<TraceCursor>({time:0,sequence:0});
+  const generation = useRef(0);
   const [v2PlaybackStatus, setV2PlaybackStatus] = useState<'REPRODUZINDO' | 'PAUSADA' | 'CONCLUÍDA'>('PAUSADA');
   const executionLocked = executionStatus === 'VALIDATING' || executionStatus === 'EXECUTING' || executionStatus === 'COMPLETED' || simulationResultV2 !== null;
   const [edgeDraft, setEdgeDraft] = useState<{ protocol: Protocol; latencyMs: string } | null>(null);
@@ -49,6 +53,9 @@ function EditorCanvas() {
   const nodeTypes = useMemo(() => ({ architecture: ArchitectureNode }), []);
   const node = selection?.kind === 'node' ? nodes.find((n) => n.id === selection.id) : undefined;
   const edge = selection?.kind === 'edge' ? edges.find((e) => e.id === selection.id) : undefined;
+  const traceState = simulationResultV2 ? traceStateAt(simulationResultV2,traceCursor) : null;
+  const flying = simulationResultV2 ? inFlightMessages(simulationResultV2.trace,traceCursor) : [];
+  const flyingConnections = new Set(flying.map(e => e.connectionId));
   const path = selectedPath(scenario, nodes, edges);
   const hasPath = path.components.size > 0;
   const invalidIds = new Set(issues.flatMap(issue => {
@@ -62,39 +69,46 @@ function EditorCanvas() {
     return id ? [id] : [];
   }));
   const shownNodes = nodes.map((n) => ({
-    ...n, className: invalidIds.has(n.id) ? 'validation-node--invalid' : hasPath ? (path.components.has(n.id) ? 'scenario-node--active' : 'scenario-node--inactive') : '',
-    data: { ...n.data },
+    ...n, className: invalidIds.has(n.id) ? 'validation-node--invalid' : traceState ? `trace-node--${(traceState.components[n.id] ?? 'IDLE').toLowerCase()}` : hasPath ? (path.components.has(n.id) ? 'scenario-node--active' : 'scenario-node--inactive') : '',
+    data: { ...n.data, stateLabel: (['IDLE', 'PROCESSING', 'WAITING', 'COMPLETED'] as const).find(status => status === traceState?.components[n.id]) },
   }));
   const shownEdges = edges.map((e) => ({
-    ...e, className: invalidEdgeIds.has(e.id) ? 'validation-edge--invalid' : hasPath ? (path.connections.has(e.id) ? 'scenario-edge--active' : 'scenario-edge--inactive') : '',
-    animated: false,
-    style: hasPath && path.connections.has(e.id) ? { stroke: '#1ca879', strokeWidth: 3 } : undefined,
+    ...e, className: invalidEdgeIds.has(e.id) ? 'validation-edge--invalid' : flyingConnections.has(e.id) ? 'playback-edge-active' : hasPath ? (path.connections.has(e.id) ? 'scenario-edge--active' : 'scenario-edge--inactive') : '',
+    animated: flyingConnections.has(e.id),
+    style: flyingConnections.has(e.id) ? { stroke: '#329eff', strokeWidth: 3 } : hasPath && path.connections.has(e.id) ? { stroke: '#1ca879', strokeWidth: 3 } : undefined,
   }));
   const destination = nodes.find((n) => n.id === targetId);
   const compatibleProtocols = node && destination ? allowedProtocols(node.data.componentType, destination.data.componentType) : [];
   const possibleTargets = node ? nodes.filter((n) => n.id !== node.id && allowedProtocols(node.data.componentType, n.data.componentType).length > 0) : [];
 
   const restart = () => {
+    generation.current += 1;
+    setTraceCursor({time:0,sequence:0});
     setExecutionStatus('READY'); setSimulationResultV2(null); setV2PlaybackStatus('PAUSADA');
     setIssues([]); setValidationStatus('idle'); setError('');
   };
   const simulate = async () => {
     if (executionStatus !== 'READY' && executionStatus !== 'ERROR') return;
+    const requestGeneration = ++generation.current;
     setIssues([]); setValidationStatus('checking'); setExecutionStatus('VALIDATING'); setValidationScope('scenario');
     try {
       const architecture = toArchitectureV2(nodes, edges);
       const request = { architecture, scenario };
       const result = await archlabV2Client.validateScenario(request);
+      if (requestGeneration !== generation.current) return;
       if (!result.valid) {
         setIssues(result.violations.map(v => ({ code: v.code, path: v.path, message: v.message })));
         setValidationStatus('invalid'); setExecutionStatus('ERROR'); return;
       }
       setValidationStatus('valid'); setExecutionStatus('EXECUTING');
       const response = await archlabV2Client.simulate(request);
+      if (requestGeneration !== generation.current) return;
+      setTraceCursor({time:0,sequence:0});
       setSimulationResultV2(response);
       setV2PlaybackStatus('PAUSADA');
       setExecutionStatus('COMPLETED');
     } catch (cause) {
+      if (requestGeneration !== generation.current) return;
       setSimulationResultV2(null); setExecutionStatus('ERROR'); setValidationStatus('error');
       if (cause instanceof ArchlabV2HttpError) {
         const violations = cause.violations.map(v => ({ code: v.code, path: v.path, message: v.message }));
@@ -240,7 +254,7 @@ function EditorCanvas() {
           {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? (validationScope === 'architecture' ? 'Arquitetura inválida' : 'Cenário inválido') : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
         <ScenarioEditor nodes={nodes} edges={edges} value={scenario} onChange={(next) => { setScenario(next); resetValidation(); }} disabled={executionLocked} />
-        {simulationResultV2 && <SimulationPlaybackV2 result={simulationResultV2} onStatus={setV2PlaybackStatus} />}
+        {simulationResultV2 && <SimulationPlaybackV2 result={simulationResultV2} onStatus={setV2PlaybackStatus} onCursor={setTraceCursor} />}
         <div className="editor-canvas" ref={canvasRef} onDrop={(event) => { if (!executionLocked) onDrop(event); }} onDragOver={(event) => { if (!executionLocked) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} aria-label="Canvas da arquitetura">
           <ReactFlow nodes={shownNodes} edges={shownEdges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
             onNodeClick={(_, chosen) => select({ kind: 'node', id: chosen.id })}
