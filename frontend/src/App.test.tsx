@@ -108,11 +108,14 @@ describe('Editor visual', () => {
     expect(screen.getByText(/HTTP 413: Limite excedido/)).toBeInTheDocument();
   });
 
-  it('não inicia execução quando faltam componentes', () => {
+  it('apresenta 422 de validação v2 sem executar o motor', async () => {
+    server.use(http.post('/api/v2/scenarios/validate', () => HttpResponse.json({
+      valid: false, violations: [{ code: 'INVALID_ENTRY_CONNECTION', path: 'scenario.entryConnectionId', message: 'Selecione uma conexão inicial' }],
+    })));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
+    expect(await screen.findByText(/INVALID_ENTRY_CONNECTION/)).toBeInTheDocument();
     expect(screen.getByText(/Execução:/)).toHaveTextContent('ERROR');
-    expect(screen.getByText(/Arquitetura inválida/)).toBeInTheDocument();
   });
 
   it('executa o cenário v2, preserva snapshot e bloqueia edição até reiniciar', async () => {
@@ -185,17 +188,19 @@ describe('Editor visual', () => {
     expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toHaveValue('');
   });
 
-  it('limpa o erro da simulação v1 quando o cenário é editado', () => {
+  it('limpa erro de cenário v2 ao editar seleção', async () => {
+    server.use(http.post('/api/v2/scenarios/validate', () => HttpResponse.json({
+      valid: false, violations: [{ code: 'INVALID_ENTRY_CONNECTION', path: 'scenario.entryConnectionId', message: 'Entrada ausente' }],
+    })));
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Client' }));
     fireEvent.click(screen.getByRole('button', { name: 'API' }));
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
-    expect(screen.getByText(/Execução:/)).toHaveTextContent('ERROR');
-    expect(screen.getByText(/V1_SIMULATION_ONLY/)).toBeInTheDocument();
+    expect(await screen.findByText(/INVALID_ENTRY_CONNECTION/)).toBeInTheDocument();
     const clientOption = screen.getByRole('option', { name: /Client 1/ });
     fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (clientOption as HTMLOptionElement).value } });
     expect(screen.getByText(/Execução:/)).toHaveTextContent('READY');
-    expect(screen.queryByText(/V1_SIMULATION_ONLY/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/INVALID_ENTRY_CONNECTION/)).not.toBeInTheDocument();
   });
 
   it('preserva integração SOAP ao confirmar latência da conexão', () => {
