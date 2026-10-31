@@ -147,3 +147,19 @@ body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
 /* FE-V2-06 — referências indicadas pelo backend */
 .validation-node--invalid .architecture-node{outline:3px solid #e45c64;outline-offset:3px}
 .validation-edge--invalid .react-flow__edge-path{stroke:#e45c64!important;stroke-width:3px!important}
+
+/* FE-V2-09 — playback e inspetor não cobrem a edição */
+.editor-main{min-height:0;overflow:hidden}
+.playback{flex:0 0 auto;max-height:min(38vh,360px);min-height:0;overflow-y:auto;overflow-x:hidden;align-content:flex-start;scrollbar-gutter:stable}
+.playback>details,.playback>.message-inspector{flex:1 1 100%;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.playback>details>ol{max-height:155px;overflow-y:auto}
+.playback .message-inspector{padding:10px 12px;background:var(--soft);border:1px solid var(--border);border-radius:8px}
+.playback .message-inspector pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;overflow:auto}
+.playback .message-inspector dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px}
+.playback .message-inspector dd{margin:3px 0 0;overflow-wrap:anywhere}
+.editor-canvas{flex:1 1 auto;min-height:180px}
+.properties{min-height:0}
+.properties .property-actions{display:grid;grid-template-columns:1fr;gap:10px;margin:14px 0}
+.properties .property-actions button,.properties .integration-editor>button,.properties>.danger{display:block;width:100%;min-height:40px;margin:0;text-align:center}
+.properties>.danger{margin-top:14px}
+@media(max-width:800px){.playback{max-height:280px}.editor-main{height:75vh;min-height:470px}}
