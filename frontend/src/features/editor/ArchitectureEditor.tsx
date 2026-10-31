@@ -18,6 +18,8 @@ import { archlabClient, ArchlabHttpError } from '../../api/archlabClient';
 import type { SimulationResponse } from '../../api/archlabClient';
 import { toArchitectureRequest, validateArchitectureLocally } from './validation';
 import { validateGraphV2 } from './graphValidation';
+import { toArchitectureV2 } from './architectureV2';
+import { archlabV2Client, ArchlabV2HttpError } from '../../api/archlabV2Client';
 import type { ValidationIssue } from './validation';
 import {
   COMPONENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
@@ -40,6 +42,7 @@ function EditorCanvas() {
   const [error, setError] = useState('');
   const [nameDraft, setNameDraft] = useState('');
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
+  const [validationScope, setValidationScope] = useState<'architecture' | 'scenario'>('architecture');
   const [validationStatus, setValidationStatus] = useState<'idle' | 'checking' | 'valid' | 'invalid' | 'error'>('idle');
   const [executionStatus, setExecutionStatus] = useState<'READY' | 'VALIDATING' | 'EXECUTING' | 'COMPLETED' | 'ERROR'>('READY');
   const [simulationResult, setSimulationResult] = useState<SimulationResponse | null>(null);
@@ -56,8 +59,9 @@ function EditorCanvas() {
   const activeActivity = simulationResult?.timeline.find((a) => a.startMs <= playbackTimeMs && playbackTimeMs < a.endMs);
   const path = selectedPath(scenario, nodes, edges);
   const hasPath = path.components.size > 0;
+  const invalidIds = new Set(issues.flatMap(issue => issue.path.match(/components\\[(\\d+)\\]/) ? [nodes[Number(issue.path.match(/components\\[(\\d+)\\]/)?.[1])]?.id].filter((id): id is string => Boolean(id)) : []));
   const shownNodes = nodes.map((n) => ({
-    ...n, className: stateAtPlayback ? `trace-node--${(stateAtPlayback.components[n.id] ?? 'IDLE').toLowerCase()}` : hasPath ? (path.components.has(n.id) ? 'scenario-node--active' : 'scenario-node--inactive') : '',
+    ...n, className: invalidIds.has(n.id) ? 'validation-node--invalid' : stateAtPlayback ? `trace-node--${(stateAtPlayback.components[n.id] ?? 'IDLE').toLowerCase()}` : hasPath ? (path.components.has(n.id) ? 'scenario-node--active' : 'scenario-node--inactive') : '',
     data: { ...n.data, stateLabel: stateAtPlayback?.components[n.id] },
   }));
   const shownEdges = edges.map((e) => ({
@@ -103,10 +107,30 @@ function EditorCanvas() {
     }
   };
   const resetValidation = useCallback(() => { setIssues([]); setValidationStatus('idle'); setExecutionStatus((status) => status === 'ERROR' ? 'READY' : status); }, []);
-  const validate = () => {
-    const localIssues = validateGraphV2(nodes, edges);
-    setIssues(localIssues);
-    setValidationStatus(localIssues.length ? 'invalid' : 'valid');
+  const validateV2 = async (scope: 'architecture' | 'scenario') => {
+    if (executionLocked || validationStatus === 'checking') return;
+    setValidationScope(scope);
+    setIssues([]);
+    setValidationStatus('checking');
+    try {
+      const architecture = toArchitectureV2(nodes, edges);
+      const response = scope === 'architecture'
+        ? await archlabV2Client.validateArchitecture(architecture)
+        : await archlabV2Client.validateScenario({ architecture, scenario });
+      setIssues(response.violations.map(v => ({ code: v.code, path: v.path, message: v.message })));
+      setValidationStatus(response.valid ? 'valid' : 'invalid');
+    } catch (cause) {
+      if (cause instanceof ArchlabV2HttpError) {
+        const problem = cause.problem;
+        const violations = cause.violations.map(v => ({ code: v.code, path: v.path, message: v.message }));
+        setIssues(violations.length ? violations : [{
+          code: problem?.code ?? 'HTTP_ERROR', path: '', message: `HTTP ${cause.status}: ${problem?.detail ?? problem?.title ?? cause.message}`,
+        }]);
+      } else {
+        setIssues([{ code: 'NETWORK_ERROR', path: '', message: cause instanceof Error ? cause.message : 'Falha na validação v2.' }]);
+      }
+      setValidationStatus('error');
+    }
   };
   const addNode = useCallback((type: ComponentType, position: { x: number; y: number }) => {
     if (executionLocked) return null;
@@ -210,12 +234,12 @@ function EditorCanvas() {
         ))}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={validate} disabled={executionLocked || validationStatus === 'checking'}>Verificar grafo</button><button type="button" onClick={simulate} disabled={executionLocked}>Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart}>Reiniciar</button>}</div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'}>Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'}>Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked}>Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart}>Reiniciar</button>}</div>
         <div className="execution-status" role="status">Execução: {executionStatus}{simulationResult && <span> · Tempo virtual total: {simulationResult.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
           {validationStatus === 'checking' && <p>Validando arquitetura...</p>}
-          {validationStatus === 'valid' && <p>Grafo válido localmente. A validação autoritativa do backend v2 será integrada na FE-V2-06.</p>}
-          {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? 'Arquitetura inválida' : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
+          {validationStatus === 'valid' && <p>{validationScope === 'architecture' ? 'Arquitetura v2 válida pelo backend.' : 'Cenário v2 válido pelo backend.'}</p>}
+          {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? (validationScope === 'architecture' ? 'Arquitetura inválida' : 'Cenário inválido') : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
         <ScenarioEditor nodes={nodes} edges={edges} value={scenario} onChange={(next) => { setScenario(next); resetValidation(); }} disabled={executionLocked} />
         {simulationResult && <Playback result={simulationResult} onTimeChange={(time, sequence) => { setPlaybackTimeMs(time); setPlaybackSequence(sequence); }} />}
