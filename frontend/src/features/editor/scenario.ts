@@ -14,7 +14,14 @@ export function reconcileScenario(scenario: ScenarioDraft, nodes: ArchitectureNo
     apis.has(e.componentId) && edges.some(edge =>
       edge.id === e.dependencyConnectionId && edge.source === e.componentId &&
       nodes.some(n => n.id === edge.target && (n.data.componentType === 'API' || n.data.componentType === 'DATABASE'))));
-  return { entryComponentId, entryConnectionId, apiExecutions };
+  const reachable = new Set<string>();
+  let current = entryEdge?.target;
+  while (current && !reachable.has(current)) {
+    reachable.add(current);
+    const dependency = apiExecutions.find(e => e.componentId === current);
+    current = dependency ? edges.find(e => e.id === dependency.dependencyConnectionId)?.target : undefined;
+  }
+  return { entryComponentId, entryConnectionId, apiExecutions: apiExecutions.filter(e => reachable.has(e.componentId)) };
 }
 
 /** Selection is explicit; nothing in the graph automatically becomes an execution. */
