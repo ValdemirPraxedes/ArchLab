@@ -153,6 +153,14 @@ describe('Editor visual', () => {
     fireEvent.change(start, { target: { value: (start.querySelector('option:not([value=""])') as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
     expect(await screen.findByRole('region', { name: 'Reprodução v2' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Abrir inspeção/ })).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByRole('separator', { name: 'Redimensionar inspeção' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /Abrir inspeção/ }));
+    expect(screen.getByRole('separator', { name: 'Redimensionar inspeção' })).toBeInTheDocument();
+    fireEvent.keyDown(screen.getByRole('separator', { name: 'Redimensionar inspeção' }), { key: 'ArrowDown' });
+    expect(screen.getByRole('separator', { name: 'Redimensionar inspeção' })).toHaveAttribute('aria-valuenow', '284');
+    fireEvent.click(screen.getByRole('button', { name: /Recolher inspeção/ }));
+    expect(screen.queryByRole('separator', { name: 'Redimensionar inspeção' })).not.toBeInTheDocument();
     expect(screen.getByText(/Execução:/)).toHaveTextContent('260 ms');
     expect(screen.getByRole('button', { name: 'Client' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Reiniciar' }));
