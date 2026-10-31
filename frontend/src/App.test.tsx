@@ -1,6 +1,8 @@
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import App from './App';
+import { http, HttpResponse } from 'msw';
+import { server } from './test/server';
 
 vi.mock('@xyflow/react', async () => {
   const React = await import('react');
@@ -73,10 +75,37 @@ describe('Editor visual', () => {
     expect(screen.getByText(/0 conexão\(ões\)/)).toBeInTheDocument();
     expect(screen.getByText(/2 componente\(s\)/)).toBeInTheDocument();
   });
-  it('exibe violações locais sem chamar a API', async () => {
+  it('valida arquitetura com backend v2, preserva resultado valid:false e path', async () => {
+    server.use(http.post('/api/v2/architectures/validate', async ({ request }) => {
+      const body = await request.json() as { components: unknown[]; scenario?: unknown };
+      expect(body.components).toEqual([]);
+      expect(body).not.toHaveProperty('scenario');
+      return HttpResponse.json({ valid: false, violations: [{ code: 'INVALID_DAG', path: 'connections[0]', message: 'Conexão inválida' }] });
+    }));
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Verificar grafo' }));
-    expect(await screen.findByText(/Grafo válido localmente/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Validar arquitetura v2' }));
+    expect(await screen.findByText(/INVALID_DAG/)).toBeInTheDocument();
+    expect(screen.getByText(/connections\\[0\\]/)).toBeInTheDocument();
+  });
+  it('valida cenário em rota separada sem executar o motor', async () => {
+    server.use(http.post('/api/v2/scenarios/validate', async ({ request }) => {
+      const body = await request.json() as { architecture: { components: unknown[] }; scenario: { apiExecutions: unknown[] } };
+      expect(body.architecture.components).toEqual([]);
+      expect(body.scenario.apiExecutions).toEqual([]);
+      return HttpResponse.json({ valid: true, violations: [] });
+    }));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Validar cenário v2' }));
+    expect(await screen.findByText(/Cenário v2 válido pelo backend/)).toBeInTheDocument();
+  });
+  it('mostra Problem Details de falhas HTTP v2', async () => {
+    server.use(http.post('/api/v2/architectures/validate', () => HttpResponse.json({
+      type: 'about:blank', title: 'Too Large', status: 413, code: 'PAYLOAD_TOO_LARGE', detail: 'Limite excedido',
+    }, { status: 413 })));
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Validar arquitetura v2' }));
+    expect(await screen.findByText(/PAYLOAD_TOO_LARGE/)).toBeInTheDocument();
+    expect(screen.getByText(/HTTP 413: Limite excedido/)).toBeInTheDocument();
   });
 
   it('não inicia execução quando faltam componentes', () => {
