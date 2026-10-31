@@ -132,4 +132,17 @@ describe('Editor visual', () => {
     expect(screen.getByTestId('flow')).toHaveTextContent('Nó: API 1');
   });
 
+  it('exibe editor de cenário e não seleciona entrada automaticamente', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    expect(screen.getByRole('region', { name: 'Editor de cenário' })).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Client inicial' })).toHaveValue('');
+    expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toBeDisabled();
+    const clientOption = screen.getByRole('option', { name: /Client 1/ });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (clientOption as HTMLOptionElement).value } });
+    expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toBeEnabled();
+    expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toHaveValue('');
+  });
+
 });
