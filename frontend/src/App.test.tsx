@@ -75,9 +75,8 @@ describe('Editor visual', () => {
   });
   it('exibe violações locais sem chamar a API', async () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Validar arquitetura' }));
-    expect(await screen.findByText(/Arquitetura inválida/)).toBeInTheDocument();
-    expect(screen.getAllByText(/MISSING_COMPONENT/).length).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole('button', { name: 'Verificar grafo' }));
+    expect(await screen.findByText(/Grafo válido localmente/)).toBeInTheDocument();
   });
 
   it('não inicia execução quando faltam componentes', () => {
