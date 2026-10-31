@@ -41,6 +41,16 @@ describe('Editor visual', () => {
     expect(screen.getByRole('region', { name: 'Editor visual' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Propriedades' })).toBeInTheDocument();
   });
+  it('fecha propriedades ao clicar fora e preserva seleção ao interagir no painel', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
+    expect(screen.getByRole('textbox', { name: 'Nome de apresentação' })).toBeInTheDocument();
+    fireEvent.pointerDown(screen.getByRole('textbox', { name: 'Nome de apresentação' }));
+    expect(screen.getByRole('textbox', { name: 'Nome de apresentação' })).toBeInTheDocument();
+    fireEvent.pointerDown(screen.getByRole('complementary', { name: 'Paleta de componentes' }));
+    expect(screen.queryByRole('textbox', { name: 'Nome de apresentação' })).not.toBeInTheDocument();
+  });
   it('adiciona várias instâncias mantendo tipos', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Client' }));
