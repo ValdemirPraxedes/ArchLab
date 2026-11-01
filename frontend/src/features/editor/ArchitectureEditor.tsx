@@ -48,6 +48,7 @@ function EditorCanvas() {
   const [v2PlaybackStatus, setV2PlaybackStatus] = useState<'REPRODUZINDO' | 'PAUSADA' | 'CONCLUÍDA'>('PAUSADA');
   const executionLocked = executionStatus === 'VALIDATING' || executionStatus === 'EXECUTING' || executionStatus === 'COMPLETED' || simulationResultV2 !== null;
   const [edgeDraft, setEdgeDraft] = useState<{ protocol: Protocol; latencyMs: string } | null>(null);
+  const [overrideDraft, setOverrideDraft] = useState<{enabled:boolean; pre:string; post:string} | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const propertiesRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -62,6 +63,7 @@ function EditorCanvas() {
       setError('');
       setNameDraft('');
       setEdgeDraft(null);
+      setOverrideDraft(null);
     };
     document.addEventListener('pointerdown', dismiss);
     return () => document.removeEventListener('pointerdown', dismiss);
@@ -173,6 +175,9 @@ function EditorCanvas() {
     setNameDraft(next?.kind === 'node' ? (nodes.find((item) => item.id === next.id)?.data.displayName ?? '') : '');
     const selectedEdge = next?.kind === 'edge' ? edges.find((item) => item.id === next.id) : undefined;
     setEdgeDraft(selectedEdge ? { protocol: selectedEdge.data!.protocol, latencyMs: String(selectedEdge.data!.latencyMs) } : null);
+    const defaults = nodes.find(n => n.id === selectedEdge?.target)?.data;
+    const override = selectedEdge?.data?.apiProcessingOverride;
+    setOverrideDraft(selectedEdge ? { enabled: Boolean(override), pre: String(override?.preProcessingMs ?? defaults?.preProcessingMs ?? 0), post: String(override?.postProcessingMs ?? defaults?.postProcessingMs ?? 0) } : null);
   };
   const onPaletteDragStart = (event: DragEvent<HTMLButtonElement>, type: ComponentType) => {
     event.dataTransfer.setData(DRAG_MIME, type); event.dataTransfer.effectAllowed = 'copy';
@@ -226,13 +231,20 @@ function EditorCanvas() {
     if (!source || !target || !allowedProtocols(source.data.componentType, target.data.componentType).includes(edgeDraft.protocol) || !edgeDraft.latencyMs.trim() || !validDuration(ms)) {
       setError('Protocolo incompatível ou latência inválida.'); return;
     }
+    const targetNode = nodes.find(n => n.id === edge.target);
+    if (overrideDraft?.enabled && targetNode?.data.componentType !== 'API') { setError('Personalização permitida apenas para conexões de entrada de API.'); return; }
+    const overridePre = Number(overrideDraft?.pre), overridePost = Number(overrideDraft?.post);
+    if (overrideDraft?.enabled && (![overrideDraft.pre, overrideDraft.post].every(value => value.trim() !== '') || ![overridePre, overridePost].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000))) { setError('Pré e pós-processamento devem ser inteiros entre 0 e 1000000000 ms.'); return; }
     resetValidation();
-    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, latencyMs: ms } } : item));
+    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, latencyMs: ms, apiProcessingOverride: overrideDraft?.enabled ? { preProcessingMs: overridePre, postProcessingMs: overridePost } : undefined } } : item));
     setError('');
   };
   const cancelEdge = () => {
     if (!edge) return;
     setEdgeDraft({ protocol: edge.data!.protocol, latencyMs: String(edge.data!.latencyMs) });
+    const defaultApi = nodes.find(n => n.id === edge.target)?.data;
+    const override = edge.data?.apiProcessingOverride;
+    setOverrideDraft({ enabled: Boolean(override), pre: String(override?.preProcessingMs ?? defaultApi?.preProcessingMs ?? 0), post: String(override?.postProcessingMs ?? defaultApi?.postProcessingMs ?? 0) });
     setError('');
   };
   const removeSelected = () => {
@@ -316,6 +328,20 @@ function EditorCanvas() {
             </select>
           </label>
           <label>Latência (ms)<input aria-label="Editar latência (ms)" type="number" min="0" step="1" value={edgeDraft?.latencyMs ?? String(edge.data?.latencyMs ?? 0)} disabled={executionLocked} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, latencyMs: e.target.value } : null)} /></label>
+          {nodes.find(n => n.id === edge.target)?.data.componentType === 'API' && <section className="api-override-editor" aria-label="Processamento da API de destino">
+            <h3>Processamento da API de destino</h3>
+            <p>{nodes.find(n => n.id === edge.target)?.data.displayName ?? nodes.find(n => n.id === edge.target)?.data.label} · padrão: pré {nodes.find(n => n.id === edge.target)?.data.preProcessingMs ?? 0} ms / pós {nodes.find(n => n.id === edge.target)?.data.postProcessingMs ?? 0} ms</p>
+            <label>Configuração de processamento
+              <select aria-label="Modo de processamento da conexão" disabled={executionLocked} value={overrideDraft?.enabled ? 'custom' : 'default'} onChange={event => setOverrideDraft(current => current ? { ...current, enabled: event.target.value === 'custom' } : null)}>
+                <option value="default">Usar padrão da API</option>
+                <option value="custom">Personalizar nesta conexão</option>
+              </select>
+            </label>
+            {overrideDraft?.enabled && <>
+              <label>Pré-processamento da conexão (ms)<input aria-label="Pré-processamento da conexão (ms)" type="number" min="0" max="1000000000" step="1" disabled={executionLocked} value={overrideDraft.pre} onChange={event => setOverrideDraft(current => current ? { ...current, pre: event.target.value } : null)}/></label>
+              <label>Pós-processamento da conexão (ms)<input aria-label="Pós-processamento da conexão (ms)" type="number" min="0" max="1000000000" step="1" disabled={executionLocked} value={overrideDraft.post} onChange={event => setOverrideDraft(current => current ? { ...current, post: event.target.value } : null)}/></label>
+            </>}
+          </section>}
           <IntegrationEditor key={edge.id} value={edge.data?.integration ?? defaultIntegration(allowedIntegrationKinds(nodes.find(n => n.id === edge.source)!.data.componentType, nodes.find(n => n.id === edge.target)!.data.componentType)[0])}
             source={nodes.find(n => n.id === edge.source)!.data.componentType} target={nodes.find(n => n.id === edge.target)!.data.componentType}
             disabled={executionLocked} onSave={(integration) => { setEdges(current => current.map(item => item.id === edge.id ? { ...item, data: { ...item.data!, integration } } : item)); resetValidation(); }} />

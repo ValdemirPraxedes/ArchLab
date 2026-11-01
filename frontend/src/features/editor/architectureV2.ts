@@ -22,7 +22,10 @@ export function toArchitectureV2(nodes: ArchitectureNode[], edges: ArchitectureE
       const integration = e.data?.integration ?? defaultIntegration(kind);
       const error = integrationError(integration, source.data.componentType, target.data.componentType);
       if (error) throw new Error(error);
-      return { id: e.id, sourceId: e.source, targetId: e.target, latencyMs: e.data?.latencyMs ?? 0, integration };
+      const override = e.data?.apiProcessingOverride;
+      if (override && target.data.componentType !== 'API') throw new Error('Override de processamento permitido somente para API de destino.');
+      if (override && (![override.preProcessingMs, override.postProcessingMs].every(ms => Number.isSafeInteger(ms) && ms >= 0 && ms <= 1_000_000_000))) throw new Error('Tempos personalizados devem estar entre 0 e 1000000000 ms.');
+      return { id: e.id, sourceId: e.source, targetId: e.target, latencyMs: e.data?.latencyMs ?? 0, integration, ...(override ? { apiProcessingOverride: override } : {}) };
     }),
   };
 }
