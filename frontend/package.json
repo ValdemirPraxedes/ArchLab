@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "typegen": "openapi-typescript ../docs/api/openapi.yaml -o src/api/generated/schema.d.ts",
+    "typegen": "npm run typegen:v1 && npm run typegen:v2",
+    "typegen:v1": "openapi-typescript ../docs/api/openapi.yaml -o src/api/generated/schema.d.ts",
+    "typegen:v2": "openapi-typescript ../docs/api/openapi-v2.yaml -o src/api/generated/schema-v2.d.ts",
     "prebuild": "npm run typegen",
     "build": "tsc -b && vite build",
     "pretest": "npm run typegen",
@@ -18,7 +20,8 @@
     "@xyflow/react": "^12.9.0",
     "@vitejs/plugin-react": "^4.7.0",
     "react": "^19.1.0",
-    "react-dom": "^19.1.0"
+    "react-dom": "^19.1.0",
+    "lucide-react": "^0.468.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.25.0",

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { allowedProtocols, createArchitectureEdge, createArchitectureNode, isComponentType, removeComponent, validDuration, validateConnection } from './model';
+import { allowedProtocols, createArchitectureEdge, createArchitectureNode, isComponentType, removeComponent, validDuration, validateConnection, validDisplayName, nextDisplayName } from './model';
 
 describe('modelo do editor', () => {
   it('aceita somente tipos conhecidos', () => {
@@ -52,4 +52,15 @@ describe('modelo do editor', () => {
     expect(result.nodes).toHaveLength(2);
     expect(result.edges).toEqual([second]);
   });
+  it('valida displayName em code points e gera nomes padrão sem colisão', () => {
+    expect(validDisplayName(' Nome ')).toBe(true);
+    expect(validDisplayName('  ')).toBe(false);
+    expect(validDisplayName('a'.repeat(81))).toBe(false);
+    expect(validDisplayName('😀'.repeat(80))).toBe(true);
+    const first = createArchitectureNode('API', { x: 0, y: 0 }, 'API 1');
+    expect(nextDisplayName('API', [first])).toBe('API 2');
+    const duplicate = createArchitectureNode('API', { x: 1, y: 1 }, 'API 1');
+    expect(first.id).not.toBe(duplicate.id);
+  });
+
 });

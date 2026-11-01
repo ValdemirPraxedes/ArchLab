@@ -98,3 +98,111 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="tab"]:focus
 .results-panel__content table{width:100%;max-width:none;table-layout:fixed}
 .results-panel__content th:first-child,.results-panel__content td:first-child{width:70%}
 .results-panel__content th:last-child,.results-panel__content td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+
+/* FE-V2-02: semantic presentation tokens and themes */
+:root,[data-theme="light"]{color-scheme:light;--surface:#fff;--canvas:#f6f9fc;--page:#f4f7fb;--border:#dce4ed;--text:#233349;--muted:#607287;--input:#fff;--soft:#f4f8fc;--accent:#2473ba}
+[data-theme="dark"]{color-scheme:dark;--surface:#182637;--canvas:#101b2a;--page:#101722;--border:#415571;--text:#eaf0f8;--muted:#b5c8d9;--input:#25384d;--soft:#22344a;--accent:#4c93d9}
+body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
+.workspace-header,.palette,.properties,.editor-toolbar,.playback,.results-panel,.results-panel__header{background:var(--surface);color:var(--text);border-color:var(--border)}
+.workspace-header h1,.palette h2,.properties h2,.properties h3,.architecture-node{color:var(--text)}
+.workspace-status,.palette p,.properties p,.properties label,.editor-toolbar,.playback p,.results-follow{color:var(--muted)}
+.editor-canvas,.react-flow__background{background:var(--canvas)}
+.architecture-node{background:var(--surface)}
+.palette-item,.playback button,.playback select,.results-panel button,.properties button{background:var(--soft);color:var(--text);border-color:var(--border)}
+.properties input,.properties select,.workspace-actions select{background:var(--input);color:var(--text);border:1px solid var(--border)}
+.execution-status,.validation-result{background:var(--soft);color:var(--text);border-color:var(--border)}
+.results-panel__content td,.results-panel__content th{border-color:var(--border)}
+.react-flow__controls button{background:var(--surface);color:var(--text)}
+.react-flow__minimap{background:var(--soft)!important;border-color:var(--border)}
+.workspace-actions{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.85rem}
+.workspace-actions select{padding:8px 10px;border-radius:7px}
+.component-icon{display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem;width:1.6rem;height:1.6rem;vertical-align:middle;font-weight:800}
+.component-icon--client{color:#129daf}.component-icon--api{color:#8175e3}.component-icon--database{color:#b8832e}
+.architecture-node strong{display:flex;align-items:center;gap:6px}
+[data-theme="dark"] .architecture-node small{color:#b5c8d9}
+[data-theme="dark"] .properties input:disabled,[data-theme="dark"] .properties select:disabled{background:#2b3d51;color:#b7c9d9;-webkit-text-fill-color:#b7c9d9}
+[data-theme="dark"] .editor-toolbar button,[data-theme="dark"] .results-tabs button[aria-selected="true"]{background:#2e70ad;color:white}
+@media(max-width:700px){.workspace-actions{flex-wrap:wrap;justify-content:flex-end}.workspace-actions .workspace-status{display:none}}
+
+/* FE-V2-04 — edição explícita de cenário */
+.scenario-editor{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 18px;display:flex;gap:10px 16px;align-items:flex-end;flex-wrap:wrap;color:var(--text)}
+.scenario-editor h3{width:100%;margin:0;font-size:.95rem}
+.scenario-editor p{margin:0;font-size:.76rem;color:var(--muted)}
+.scenario-editor>p:last-child{flex-basis:100%}
+.scenario-editor label{font-size:.8rem;display:flex;flex-direction:column;gap:5px;min-width:160px;max-width:260px;color:var(--text)}
+.scenario-editor select{background:var(--input);color:var(--text);border:1px solid var(--border);padding:8px;border-radius:6px;width:100%}
+.scenario-editor select:disabled{opacity:.6;cursor:not-allowed}
+.scenario-node--active .architecture-node{outline:3px solid #22a775;outline-offset:3px}
+.scenario-node--inactive{opacity:.42}
+.scenario-edge--inactive{opacity:.28}
+
+/* FE-V2-05 — editor de mensagens ilustrativas */
+.integration-editor{border-top:1px solid var(--border);margin-top:14px;padding-top:12px;display:flex;flex-direction:column;gap:9px}
+.integration-editor h3{margin:0}
+.integration-editor p{font-size:.78rem;color:var(--muted);margin:0}
+.integration-editor label{display:flex;flex-direction:column;gap:4px}
+.integration-editor input,.integration-editor textarea,.integration-editor select{width:100%;max-width:100%;font:inherit}
+.integration-editor textarea{min-height:72px;resize:vertical;font-family:ui-monospace,Consolas,monospace;font-size:.8rem}
+
+/* FE-V2-06 — referências indicadas pelo backend */
+.validation-node--invalid .architecture-node{outline:3px solid #e45c64;outline-offset:3px}
+.validation-edge--invalid .react-flow__edge-path{stroke:#e45c64!important;stroke-width:3px!important}
+
+/* FE-V2-09 — playback e inspetor não cobrem a edição */
+.editor-main{min-height:0;overflow:hidden}
+.playback{flex:0 0 auto;max-height:min(38vh,360px);min-height:0;overflow-y:auto;overflow-x:hidden;align-content:flex-start;scrollbar-gutter:stable}
+.playback>details,.playback>.message-inspector{flex:1 1 100%;min-width:0;max-width:100%;overflow-wrap:anywhere}
+.playback>details>ol{max-height:155px;overflow-y:auto}
+.playback .message-inspector{padding:10px 12px;background:var(--soft);border:1px solid var(--border);border-radius:8px}
+.playback .message-inspector pre{white-space:pre-wrap;overflow-wrap:anywhere;max-height:180px;overflow:auto}
+.playback .message-inspector dl{display:grid;grid-template-columns:repeat(auto-fit,minmax(175px,1fr));gap:8px}
+.playback .message-inspector dd{margin:3px 0 0;overflow-wrap:anywhere}
+.editor-canvas{flex:1 1 auto;min-height:180px}
+.properties{min-height:0}
+.properties .property-actions{display:grid;grid-template-columns:1fr;gap:10px;margin:14px 0}
+.properties .property-actions button,.properties .integration-editor>button,.properties>.danger{display:block;width:100%;min-height:40px;margin:0;text-align:center}
+.properties>.danger{margin-top:14px}
+@media(max-width:800px){.playback{max-height:280px}.editor-main{height:75vh;min-height:470px}}
+
+/* FE-V2-09 — inspector drawer with mouse/keyboard resize */
+.playback{max-height:none;overflow:visible;display:flex;flex-wrap:wrap;gap:8px;flex-shrink:0;align-content:normal}
+.playback .inspector-toggle-row{flex:1 1 100%;display:flex;align-items:center;border-top:1px solid var(--border);padding-top:5px}
+.playback .inspector-toggle-row button{min-height:30px;font-weight:600}
+.playback .playback-inspector-shell{flex:1 1 100%;min-width:0;min-height:100px;max-height:min(600px,55vh);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:8px;background:var(--surface)}
+.playback .playback-inspector-resize{height:15px;flex:0 0 15px;display:flex;align-items:center;justify-content:center;background:var(--soft);border-bottom:1px solid var(--border);cursor:ns-resize;touch-action:none;user-select:none}
+.playback .playback-inspector-resize:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.playback .playback-resize-grip{display:block;width:64px;height:4px;border-radius:5px;background:var(--muted);opacity:.65}
+.playback .playback-inspector-content{flex:1 1 auto;min-height:0;overflow:auto;padding:10px 12px;scrollbar-gutter:stable}
+.playback .playback-inspector-content>details,.playback .playback-inspector-content>.message-inspector{width:100%;min-width:0;max-width:100%;margin:8px 0}
+.playback .playback-inspector-content pre{white-space:pre-wrap;overflow-wrap:anywhere}
+@media(max-width:800px){.playback{max-height:none}.playback .playback-inspector-shell{max-height:45vh}}
+
+/* FE-V2-10 — acessibilidade e leitura responsiva de métricas */
+.metrics-v2{padding:10px 0;color:var(--text)}
+.metrics-v2 h3,.metrics-v2 h4{color:var(--text);margin:8px 0}
+.metrics-v2-note{color:var(--muted);line-height:1.5}
+.metrics-v2-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px}
+.metrics-v2-grid>section{min-width:0;overflow-x:auto;background:var(--soft);border:1px solid var(--border);border-radius:8px;padding:10px}
+.metrics-v2 table{border-collapse:collapse;width:100%;font-size:.8rem}
+.metrics-v2 th,.metrics-v2 td{padding:7px 9px;border-bottom:1px solid var(--border);text-align:left;overflow-wrap:anywhere}
+.metrics-v2 th{font-weight:700}
+.metrics-v2 td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.metrics-v2 :focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+/* FE-V2-11 — processamento da API de destino por conexão */
+.api-override-editor{margin:12px 0;padding:12px;border:1px solid var(--border);border-radius:8px;background:var(--soft)}
+.api-override-editor h3{margin:0 0 8px}
+.api-override-editor p{margin:0 0 8px;overflow-wrap:anywhere}
+.api-override-editor label{margin:10px 0}
+
+/* FE-V2-12: feedback contextual persistente e acessível */
+.action-feedback{padding:9px 12px;margin:8px 0;border:1px solid var(--border);border-left:4px solid var(--accent);border-radius:6px;color:var(--text);background:var(--soft);line-height:1.5}
+.property-help{font-size:.85rem;line-height:1.5;color:var(--muted);margin:8px 0 12px}
+
+/* FE-V2-13 — Lucide: geometria e interação coerentes */
+.component-icon{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;line-height:1}
+.component-icon svg{display:block;flex:none}
+.editor-toolbar button,.properties button,.playback button,.inspector-toggle-row button{display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:36px}
+.editor-toolbar button svg,.properties button svg,.playback button svg{flex-shrink:0}
+.editor-toolbar button:focus-visible,.properties button:focus-visible,.playback button:focus-visible,.palette-item:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+@media(max-width:700px){.editor-toolbar button,.playback button{white-space:normal}}
