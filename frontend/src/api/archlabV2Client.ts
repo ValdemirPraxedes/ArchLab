@@ -12,6 +12,7 @@ export type ViolationV2 = components['schemas']['ViolationV2'];
 export type ProblemV2 = components['schemas']['ProblemV2'];
 export type InvalidSimulationProblemV2 = components['schemas']['InvalidSimulationProblemV2'];
 export type IntegrationV2 = components['schemas']['IntegrationV2'];
+export type ApiProcessingOverrideV2 = components['schemas']['ApiProcessingOverrideV2'];
 export type ComponentV2 = components['schemas']['ComponentV2'];
 
 export type V2ErrorStatus = 400 | 413 | 415 | 422 | 500;
