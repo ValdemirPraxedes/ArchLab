@@ -1,5 +1,7 @@
+import { Database, Monitor, Server } from 'lucide-react';
 import type { ComponentType } from './model';
-const icons: Record<ComponentType, string> = { CLIENT: '▣', API: '⬡', DATABASE: '▤' };
+const icons = {CLIENT: Monitor, API: Server, DATABASE: Database};
 export function ComponentIcon({ type }: { type: ComponentType }) {
-  return <span aria-hidden="true" className={`component-icon component-icon--${type.toLowerCase()}`}>{icons[type]}</span>;
+  const Icon = icons[type];
+  return <span aria-hidden="true" className={`component-icon component-icon--${type.toLowerCase()}`}><Icon size={22} strokeWidth={1.8} focusable="false" /></span>;
 }
