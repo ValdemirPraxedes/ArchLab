@@ -26,12 +26,20 @@ public class V2RequestMapper {
         }
         List<ConnectionV2> connections=new ArrayList<>();
         for(JsonNode c:array(node,"connections")) {
-            object(c,"id","sourceId","targetId","latencyMs","integration");
+            object(c,"id","sourceId","targetId","latencyMs","integration","apiProcessingOverride");
             connections.add(new ConnectionV2(text(c,"id"),text(c,"sourceId"),text(c,"targetId"),
-                    number(c,"latencyMs"),integration(required(c,"integration"))));
+                    number(c,"latencyMs"),integration(required(c,"integration")),
+                    has(c,"apiProcessingOverride") ? override(required(c,"apiProcessingOverride")) : null));
         }
         return new ArchitectureV2(components,connections);
     }
+    private static ApiProcessingOverrideV2 override(JsonNode node) {
+        object(node,"preProcessingMs","postProcessingMs");
+        // Both fields must exist; no partial fallback to API defaults.
+        return new ApiProcessingOverrideV2(number(node,"preProcessingMs"),
+                number(node,"postProcessingMs"));
+    }
+
     public Request scenarioRequest(JsonNode root) {
         object(root,"architecture","scenario");
         ArchitectureV2 architecture=architecture(required(root,"architecture"));

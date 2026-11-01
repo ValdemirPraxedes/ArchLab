@@ -35,6 +35,8 @@ public final class NestedCallRuntimeV2 {
         }
         Map<String, Stage> stages = new HashMap<>();
         Map<String, String> callers = new HashMap<>();
+        // One activation per API in the approved synchronous DAG execution.
+        Map<String, ApiProcessingOverrideV2> effectiveProcessing = new HashMap<>();
         List<SimulationTraceEntry> trace = new ArrayList<>();
         List<ExchangeTraceV2> exchanges = new ArrayList<>();
         List<CorrelatedMessageV2> messages = new ArrayList<>();
@@ -79,7 +81,14 @@ public final class NestedCallRuntimeV2 {
                 messages.add(new CorrelatedMessageV2("message-" + messageCounter[0],
                         REQUEST_ID, id, e.sourceId(), e.targetId(), "REQUEST", "ARRIVED", clock.nowMs()));
                 state(states, transitions, e.targetId(), ComponentRuntimeStateV2.PROCESSING, clock.nowMs());
-                if (components.get(e.targetId()) instanceof ApiV2) {
+                if (components.get(e.targetId()) instanceof ApiV2 api) {
+                    ConnectionV2 incoming = edges.get(key(e.sourceId(), e.targetId()));
+                    if (incoming == null) throw new IllegalStateException("Missing API entry connection");
+                    ApiProcessingOverrideV2 resolved = incoming.apiProcessingOverride() != null
+                            ? incoming.apiProcessingOverride()
+                            : new ApiProcessingOverrideV2(api.preProcessingMs(), api.postProcessingMs());
+                    if (effectiveProcessing.putIfAbsent(api.id(), resolved) != null)
+                        throw new IllegalStateException("Repeated API activation");
                     if (stages.putIfAbsent(e.targetId(), Stage.PRE_READY) != null)
                         throw new IllegalStateException("Unexpected repeated API invocation");
                     queue.scheduleAfter(0, new ProcessingStarted(REQUEST_ID, e.targetId()));
@@ -92,10 +101,10 @@ public final class NestedCallRuntimeV2 {
                     Stage stage = stages.get(e.componentId());
                     if (stage == Stage.PRE_READY) {
                         stages.put(e.componentId(), Stage.PRE_RUNNING);
-                        queue.scheduleAfter(api.preProcessingMs(), new ProcessingCompleted(REQUEST_ID, e.componentId()));
+                        queue.scheduleAfter(effectiveProcessing.get(api.id()).preProcessingMs(), new ProcessingCompleted(REQUEST_ID, e.componentId()));
                     } else if (stage == Stage.POST_READY) {
                         stages.put(e.componentId(), Stage.POST_RUNNING);
-                        queue.scheduleAfter(api.postProcessingMs(), new ProcessingCompleted(REQUEST_ID, e.componentId()));
+                        queue.scheduleAfter(effectiveProcessing.get(api.id()).postProcessingMs(), new ProcessingCompleted(REQUEST_ID, e.componentId()));
                     } else throw new IllegalStateException("Unexpected API processing stage: " + stage);
                 } else if (component instanceof DatabaseV2 database) {
                     queue.scheduleAfter(database.processingMs(), new ProcessingCompleted(REQUEST_ID, e.componentId()));

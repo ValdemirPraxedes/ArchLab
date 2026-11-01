@@ -116,4 +116,58 @@ class V2PublicContractTest {
         assertEquals(19,node.get("execution").get("totalDurationMs").asInt());
         assertEquals(1,node.get("messageRepresentations").size());
     }
+
+    @Test void incomingOverrideChangesOnlyDestinationProcessingAndMetrics() throws Exception {
+        String overridden=ARCH.replace("\"sourceId\":\"a\",\"targetId\":\"b\",\"latencyMs\":2,",
+                "\"sourceId\":\"a\",\"targetId\":\"b\",\"latencyMs\":2,"
+                +"\"apiProcessingOverride\":{\"preProcessingMs\":40,\"postProcessingMs\":15},");
+        String request="{\"architecture\":"+overridden+",\"scenario\":"+SCENARIO+"}";
+        var reply=post("simulations",request);
+        assertEquals(200,reply.statusCode(),reply.body());
+        var body=json.readTree(reply.body());
+        assertEquals(102,body.get("execution").get("totalDurationMs").asInt());
+        var processing=body.get("metrics").get("processingByComponent");
+        boolean found=false;
+        for(var p:processing) if("b".equals(p.get("componentId").asText())) {
+            assertEquals(55,p.get("durationMs").asInt());
+            found=true;
+        }
+        assertTrue(found);
+    }
+    @Test void partialOverrideIsRejectedAndInvalidDurationIsDomainViolation() throws Exception {
+        String partial=ARCH.replace("\"sourceId\":\"a\",\"targetId\":\"b\",\"latencyMs\":2,",
+                "\"sourceId\":\"a\",\"targetId\":\"b\",\"latencyMs\":2,"
+                +"\"apiProcessingOverride\":{\"preProcessingMs\":40},");
+        assertEquals(400,post("architectures/validate",partial).statusCode());
+        String negative=ARCH.replace("\"sourceId\":\"a\",\"targetId\":\"b\",\"latencyMs\":2,",
+                "\"sourceId\":\"a\",\"targetId\":\"b\",\"latencyMs\":2,"
+                +"\"apiProcessingOverride\":{\"preProcessingMs\":-1,\"postProcessingMs\":0},");
+        var response=post("architectures/validate",negative);
+        assertEquals(200,response.statusCode());
+        assertFalse(json.readTree(response.body()).get("valid").asBoolean());
+    }
+    @Test void overrideOnDatabaseConnectionIsRejected() throws Exception {
+        String invalid=ARCH.replace("\"sourceId\":\"b\",\"targetId\":\"d\",\"latencyMs\":2,",
+                "\"sourceId\":\"b\",\"targetId\":\"d\",\"latencyMs\":2,"
+                +"\"apiProcessingOverride\":{\"preProcessingMs\":10,\"postProcessingMs\":5},");
+        var response=post("architectures/validate",invalid);
+        assertEquals(200,response.statusCode());
+        assertFalse(json.readTree(response.body()).get("valid").asBoolean());
+    }
+    @Test void nonIntegralAndOutOfBoundsOverrideAreRejected() throws Exception {
+        String target="\"sourceId\":\"a\",\"targetId\":\"b\",\"latencyMs\":2,";
+        String partialPrefix=target+"\"apiProcessingOverride\":";
+        String fractional=ARCH.replace(target,partialPrefix+
+                "{\"preProcessingMs\":1.5,\"postProcessingMs\":0},");
+        assertEquals(400,post("architectures/validate",fractional).statusCode());
+        String excessive=ARCH.replace(target,partialPrefix+
+                "{\"preProcessingMs\":1000000001,\"postProcessingMs\":0},");
+        var validation=post("architectures/validate",excessive);
+        assertEquals(200,validation.statusCode());
+        assertFalse(json.readTree(validation.body()).get("valid").asBoolean());
+        var rejected=post("simulations","{\"architecture\":"+excessive+
+                ",\"scenario\":"+SCENARIO+"}");
+        assertEquals(422,rejected.statusCode());
+        assertTrue(json.readTree(rejected.body()).get("violations").size()>0);
+    }
 }
