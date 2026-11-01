@@ -154,4 +154,20 @@ class V2PublicContractTest {
         assertEquals(200,response.statusCode());
         assertFalse(json.readTree(response.body()).get("valid").asBoolean());
     }
+    @Test void nonIntegralAndOutOfBoundsOverrideAreRejected() throws Exception {
+        String target="\"sourceId\":\"a\",\"targetId\":\"b\",\"latencyMs\":2,";
+        String partialPrefix=target+"\"apiProcessingOverride\":";
+        String fractional=ARCH.replace(target,partialPrefix+
+                "{\"preProcessingMs\":1.5,\"postProcessingMs\":0},");
+        assertEquals(400,post("architectures/validate",fractional).statusCode());
+        String excessive=ARCH.replace(target,partialPrefix+
+                "{\"preProcessingMs\":1000000001,\"postProcessingMs\":0},");
+        var validation=post("architectures/validate",excessive);
+        assertEquals(200,validation.statusCode());
+        assertFalse(json.readTree(validation.body()).get("valid").asBoolean());
+        var rejected=post("simulations","{\"architecture\":"+excessive+
+                ",\"scenario\":"+SCENARIO+"}");
+        assertEquals(422,rejected.statusCode());
+        assertTrue(json.readTree(rejected.body()).get("violations").size()>0);
+    }
 }

@@ -74,4 +74,33 @@ class ApiProcessingOverrideV2Test {
                 new ArchitectureV2(architecture(null,null).components(),conns));
         assertTrue(db.violations().stream().anyMatch(x->x.path().endsWith(".apiProcessingOverride")));
     }
+    @Test void clientEntryOverrideUsesIncomingClientConnection() {
+        var original=architecture(null,null);
+        var connections=new ArrayList<>(original.connections());
+        connections.set(0,new ConnectionV2("xa","x","a",1,HTTP,new ApiProcessingOverrideV2(8,12)));
+        var modified=new ArchitectureV2(original.components(),connections);
+        var scenario=new ScenarioV2("x","xa",List.of());
+        var customized=new SimulationEngine().execute(modified,scenario);
+        var defaultRun=new SimulationEngine().execute(original,scenario);
+        assertEquals(20,processed(customized,"a"));
+        assertEquals(22,customized.totalDurationMs());
+        assertEquals(5,processed(defaultRun,"a"));
+        assertEquals(7,defaultRun.totalDurationMs());
+        assertEquals(2,customized.metrics().communicationByConnection().getFirst().durationMs());
+    }
+    @Test void acceptsMaximumDurationAndRejectsAboveMaximumForEachField() {
+        var base=architecture(null,null);
+        var connections=new ArrayList<>(base.connections());
+        connections.set(2,new ConnectionV2("ab","a","b",1,HTTP,
+                new ApiProcessingOverrideV2(1_000_000_000,0)));
+        var valid=new ArchitectureV2(base.components(),connections);
+        assertTrue(new ArchitectureGraphValidatorV2().validate(valid).valid());
+        connections.set(2,new ConnectionV2("ab","a","b",1,HTTP,
+                new ApiProcessingOverrideV2(0,1_000_000_001)));
+        var rejected=new ArchitectureGraphValidatorV2().validate(
+                new ArchitectureV2(base.components(),connections));
+        assertTrue(rejected.violations().stream().anyMatch(v ->
+                v.path().endsWith(".apiProcessingOverride.postProcessingMs") &&
+                v.code().equals("INVALID_DURATION")));
+    }
 }
