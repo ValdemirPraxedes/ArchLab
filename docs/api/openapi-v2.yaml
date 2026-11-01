@@ -332,6 +332,18 @@ components:
           CLIENT: '#/components/schemas/ClientV2'
           API: '#/components/schemas/ApiV2'
           DATABASE: '#/components/schemas/DatabaseV2'
+    ApiProcessingOverrideV2:
+      type: object
+      additionalProperties: false
+      description: Tempos efetivos de pré e pós-processamento da API de destino quando ativada por esta conexão de entrada. Ambos obrigatórios; não permitido em API→Database. A regra de compatibilidade de arestas é validada pelo domínio.
+      properties:
+        preProcessingMs:
+          $ref: '#/components/schemas/DurationMsV2'
+        postProcessingMs:
+          $ref: '#/components/schemas/DurationMsV2'
+      required:
+      - preProcessingMs
+      - postProcessingMs
     ConnectionV2:
       type: object
       additionalProperties: false
@@ -346,6 +358,9 @@ components:
           $ref: '#/components/schemas/DurationMsV2'
         integration:
           $ref: '#/components/schemas/IntegrationV2'
+        apiProcessingOverride:
+          $ref: '#/components/schemas/ApiProcessingOverrideV2'
+          description: Substitui os tempos padrão da API destinatária, somente em conexões Client→API ou API→API; ausente preserva padrões de ApiV2.
       required:
       - id
       - sourceId
@@ -353,7 +368,8 @@ components:
       - latencyMs
       - integration
       description: Conexão lógica dirigida; resposta percorre a conexão em sentido inverso. Unicidade por par
-        não ordenado de componentes.
+        não ordenado de componentes. apiProcessingOverride é opcional, aplicável só à API de destino em Client→API ou API→API;
+        se ausente, prevalecem os valores obrigatórios preProcessingMs/postProcessingMs de ApiV2. DATABASE_QUERY não aceita override.
     ArchitectureV2:
       type: object
       additionalProperties: false
