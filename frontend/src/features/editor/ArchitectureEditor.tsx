@@ -1,3 +1,4 @@
+import { Check, CirclePlay, Link2, RotateCcw, Save, Trash2, X, ShieldCheck } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Background, Controls, MiniMap, ReactFlow, ReactFlowProvider, useNodesState, useEdgesState, useReactFlow,
@@ -277,7 +278,7 @@ function EditorCanvas() {
         ))}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo">Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado">Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend">Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas">Reiniciar</button>}</div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
         {actionFeedback && <p className="action-feedback" role="status" aria-live="polite">{actionFeedback}</p>}
         <div className="execution-status" role="status">Execução: {simulationResultV2 ? v2PlaybackStatus : executionStatus}{simulationResultV2 && <span> · Tempo virtual total: {simulationResultV2.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
@@ -304,7 +305,7 @@ function EditorCanvas() {
         {node && <>
           <p><strong>{node.data.displayName ?? node.data.label}</strong> · {node.id.slice(0, 8)}</p>
           <label>Nome de apresentação<input aria-label="Nome de apresentação" type="text" maxLength={100} value={nameDraft} disabled={executionLocked} onChange={(event) => setNameDraft(event.target.value)} onBlur={commitName} /></label>
-          <button type="button" disabled={executionLocked} onClick={commitName}>Salvar nome</button>
+          <button type="button" disabled={executionLocked} onClick={commitName}><Save size={16} aria-hidden="true" /> Salvar nome</button>
           <p className="property-help">Os tempos são aplicados imediatamente ao canvas. Não é necessário salvar.</p>
           {node.data.componentType === 'API' && <>
             <label>Pré-processamento (ms)<input aria-label="Pré-processamento (ms)" type="number" min="0" step="1" value={node.data.preProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('preProcessingMs', e.target.value)} /></label>
@@ -322,7 +323,7 @@ function EditorCanvas() {
             <label>Protocolo<select aria-label="Protocolo" value={protocol} disabled={executionLocked} onChange={(e) => setProtocol(e.target.value as Protocol)}>{compatibleProtocols.map((p) => <option key={p} value={p}>{p}</option>)}</select></label>
             <label>Latência (ms)<input aria-label="Latência (ms)" type="number" min="0" step="1" value={latencyMs} disabled={executionLocked} onChange={(e) => setLatencyMs(e.target.value)} /></label>
           </>}
-          <button type="button" disabled={executionLocked} onClick={connect}>Conectar</button>
+          <button type="button" disabled={executionLocked} onClick={connect}><Link2 size={16} aria-hidden="true" /> Conectar</button>
         </>}
         {edge && <>
           <p>Conexão: {edge.source.slice(0, 8)} → {edge.target.slice(0, 8)}</p>
@@ -350,10 +351,10 @@ function EditorCanvas() {
             source={nodes.find(n => n.id === edge.source)!.data.componentType} target={nodes.find(n => n.id === edge.target)!.data.componentType}
             disabled={executionLocked} onSave={(integration) => { setEdges(current => current.map(item => item.id === edge.id ? { ...item, data: { ...item.data!, integration } } : item)); resetValidation(); }} />
           <p className="property-help">Protocolo, latência e override são aplicados ao clicar em Confirmar alterações. Cancelar restaura os valores atuais.</p>
-          <div className="property-actions"><button type="button" disabled={executionLocked} onClick={confirmEdge}>Confirmar alterações</button><button type="button" disabled={executionLocked} onClick={cancelEdge}>Cancelar alterações</button></div>
+          <div className="property-actions"><button type="button" disabled={executionLocked} onClick={confirmEdge}><Check size={16} aria-hidden="true" /> Confirmar alterações</button><button type="button" disabled={executionLocked} onClick={cancelEdge}><X size={16} aria-hidden="true" /> Cancelar alterações</button></div>
         </>}
         {error && <p className="editor-error" role="alert">{error}</p>}
-        {selection && <button type="button" className="danger" disabled={executionLocked} onClick={removeSelected}>Remover selecionado</button>}
+        {selection && <button type="button" className="danger" disabled={executionLocked} onClick={removeSelected}><Trash2 size={16} aria-hidden="true" /> Remover selecionado</button>}
       </aside>
     </div>
   );
