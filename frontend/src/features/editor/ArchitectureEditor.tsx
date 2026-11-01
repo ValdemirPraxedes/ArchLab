@@ -37,6 +37,7 @@ function EditorCanvas() {
   const [protocol, setProtocol] = useState<Protocol>('REST');
   const [latencyMs, setLatencyMs] = useState('0');
   const [error, setError] = useState('');
+  const [actionFeedback, setActionFeedback] = useState('');
   const [nameDraft, setNameDraft] = useState('');
   const [issues, setIssues] = useState<ValidationIssue[]>([]);
   const [validationScope, setValidationScope] = useState<'architecture' | 'scenario'>('architecture');
@@ -104,7 +105,7 @@ function EditorCanvas() {
     generation.current += 1;
     setTraceCursor({time:0,sequence:0});
     setExecutionStatus('READY'); setSimulationResultV2(null); setV2PlaybackStatus('PAUSADA');
-    setIssues([]); setValidationStatus('idle'); setError('');
+    setIssues([]); setValidationStatus('idle'); setError(''); setActionFeedback('Execução reiniciada. A arquitetura foi preservada.');
   };
   const simulate = async () => {
     if (executionStatus !== 'READY' && executionStatus !== 'ERROR') return;
@@ -171,7 +172,7 @@ function EditorCanvas() {
     return newNode;
   }, [setNodes, executionLocked, nodes, resetValidation]);
   const select = (next: { kind: 'node' | 'edge'; id: string } | null) => {
-    setSelection(next); setTargetId(''); setError('');
+    setSelection(next); setTargetId(''); setError(''); setActionFeedback('');
     setNameDraft(next?.kind === 'node' ? (nodes.find((item) => item.id === next.id)?.data.displayName ?? '') : '');
     const selectedEdge = next?.kind === 'edge' ? edges.find((item) => item.id === next.id) : undefined;
     setEdgeDraft(selectedEdge ? { protocol: selectedEdge.data!.protocol, latencyMs: String(selectedEdge.data!.latencyMs) } : null);
@@ -198,7 +199,7 @@ function EditorCanvas() {
     if (!validDisplayName(nextName)) { setError('Nome obrigatório com até 80 caracteres.'); return; }
     setNodes((current) => current.map((item) => item.id === node.id ?
       { ...item, data: { ...item.data, displayName: nextName, label: nextName } } : item));
-    resetValidation(); setError('');
+    resetValidation(); setError(''); setActionFeedback('Nome atualizado no canvas.');
   };
   const updateTime = (field: 'preProcessingMs' | 'postProcessingMs' | 'processingMs', value: string) => {
     if (!node || executionLocked) return;
@@ -206,7 +207,7 @@ function EditorCanvas() {
     if (!value.trim() || !validDuration(parsed)) { setError('Informe um tempo inteiro não negativo.'); return; }
     resetValidation();
     setNodes((current) => current.map((item) => item.id === node.id ? { ...item, data: { ...item.data, [field]: parsed } } : item));
-    setError('');
+    setError(''); setActionFeedback('Tempo aplicado imediatamente ao componente.');
   };
   const connect = () => {
     if (executionLocked) return;
@@ -221,7 +222,7 @@ function EditorCanvas() {
     const created = createArchitectureEdge(node.id, destination.id, chosenProtocol, duration);
     const kind = allowedIntegrationKinds(node.data.componentType, destination.data.componentType)[0];
     setEdges((current) => [...current, { ...created, data: { ...created.data!, integration: defaultIntegration(kind) } }]);
-    setError(''); setTargetId('');
+    setError(''); setTargetId(''); setActionFeedback('Conexão criada no canvas.');
   };
   const confirmEdge = () => {
     if (!edge || !edgeDraft || executionLocked) return;
@@ -237,7 +238,7 @@ function EditorCanvas() {
     if (overrideDraft?.enabled && (![overrideDraft.pre, overrideDraft.post].every(value => value.trim() !== '') || ![overridePre, overridePost].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000))) { setError('Pré e pós-processamento devem ser inteiros entre 0 e 1000000000 ms.'); return; }
     resetValidation();
     setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, latencyMs: ms, apiProcessingOverride: overrideDraft?.enabled ? { preProcessingMs: overridePre, postProcessingMs: overridePost } : undefined } } : item));
-    setError('');
+    setError(''); setActionFeedback('Alterações da conexão aplicadas.');
   };
   const cancelEdge = () => {
     if (!edge) return;
@@ -245,7 +246,7 @@ function EditorCanvas() {
     const defaultApi = nodes.find(n => n.id === edge.target)?.data;
     const override = edge.data?.apiProcessingOverride;
     setOverrideDraft({ enabled: Boolean(override), pre: String(override?.preProcessingMs ?? defaultApi?.preProcessingMs ?? 0), post: String(override?.postProcessingMs ?? defaultApi?.postProcessingMs ?? 0) });
-    setError('');
+    setError(''); setActionFeedback('Alterações não aplicadas foram descartadas.');
   };
   const removeSelected = () => {
     if (!selection || executionLocked) return;
@@ -260,6 +261,7 @@ function EditorCanvas() {
       return remaining;
     });
     select(null);
+    setActionFeedback('Elemento removido do canvas.');
   };
   return (
     <div className="editor-layout">
@@ -275,7 +277,8 @@ function EditorCanvas() {
         ))}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'}>Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'}>Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked}>Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart}>Reiniciar</button>}</div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo">Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado">Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend">Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas">Reiniciar</button>}</div>
+        {actionFeedback && <p className="action-feedback" role="status" aria-live="polite">{actionFeedback}</p>}
         <div className="execution-status" role="status">Execução: {simulationResultV2 ? v2PlaybackStatus : executionStatus}{simulationResultV2 && <span> · Tempo virtual total: {simulationResultV2.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
           {validationStatus === 'checking' && <p>Validando arquitetura...</p>}
@@ -302,6 +305,7 @@ function EditorCanvas() {
           <p><strong>{node.data.displayName ?? node.data.label}</strong> · {node.id.slice(0, 8)}</p>
           <label>Nome de apresentação<input aria-label="Nome de apresentação" type="text" maxLength={100} value={nameDraft} disabled={executionLocked} onChange={(event) => setNameDraft(event.target.value)} onBlur={commitName} /></label>
           <button type="button" disabled={executionLocked} onClick={commitName}>Salvar nome</button>
+          <p className="property-help">Os tempos são aplicados imediatamente ao canvas. Não é necessário salvar.</p>
           {node.data.componentType === 'API' && <>
             <label>Pré-processamento (ms)<input aria-label="Pré-processamento (ms)" type="number" min="0" step="1" value={node.data.preProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('preProcessingMs', e.target.value)} /></label>
             <label>Pós-processamento (ms)<input aria-label="Pós-processamento (ms)" type="number" min="0" step="1" value={node.data.postProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('postProcessingMs', e.target.value)} /></label>
@@ -345,6 +349,7 @@ function EditorCanvas() {
           <IntegrationEditor key={edge.id} value={edge.data?.integration ?? defaultIntegration(allowedIntegrationKinds(nodes.find(n => n.id === edge.source)!.data.componentType, nodes.find(n => n.id === edge.target)!.data.componentType)[0])}
             source={nodes.find(n => n.id === edge.source)!.data.componentType} target={nodes.find(n => n.id === edge.target)!.data.componentType}
             disabled={executionLocked} onSave={(integration) => { setEdges(current => current.map(item => item.id === edge.id ? { ...item, data: { ...item.data!, integration } } : item)); resetValidation(); }} />
+          <p className="property-help">Protocolo, latência e override são aplicados ao clicar em Confirmar alterações. Cancelar restaura os valores atuais.</p>
           <div className="property-actions"><button type="button" disabled={executionLocked} onClick={confirmEdge}>Confirmar alterações</button><button type="button" disabled={executionLocked} onClick={cancelEdge}>Cancelar alterações</button></div>
         </>}
         {error && <p className="editor-error" role="alert">{error}</p>}
