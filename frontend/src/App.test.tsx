@@ -85,6 +85,26 @@ describe('Editor visual', () => {
     expect(screen.getByText(/0 conexão\(ões\)/)).toBeInTheDocument();
     expect(screen.getByText(/2 componente\(s\)/)).toBeInTheDocument();
   });
+  it('anuncia alterações aplicadas e descartadas com feedback acessível', () => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', {name:'API'}));
+    fireEvent.click(screen.getByRole('button', {name:'Database'}));
+    fireEvent.click(screen.getByRole('button', {name:'Nó: API 1'}));
+    expect(screen.getByText(/Os tempos são aplicados imediatamente/)).toBeInTheDocument();
+    fireEvent.change(screen.getByRole('spinbutton', {name:'Pré-processamento (ms)'}), {target:{value:'30'}});
+    expect(screen.getByText('Tempo aplicado imediatamente ao componente.')).toBeInTheDocument();
+    const destination=screen.getByRole('combobox',{name:'Destino'});
+    fireEvent.change(destination,{target:{value:(screen.getByRole('option',{name:/Database/}) as HTMLOptionElement).value}});
+    fireEvent.click(screen.getByRole('button',{name:'Conectar'}));
+    expect(screen.getByText('Conexão criada no canvas.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Conexão: TCP'}));
+    fireEvent.click(screen.getByRole('button',{name:'Cancelar alterações'}));
+    expect(screen.getByText('Alterações não aplicadas foram descartadas.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Confirmar alterações'}));
+    expect(screen.getByText('Alterações da conexão aplicadas.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Remover selecionado'}));
+    expect(screen.getByText('Elemento removido do canvas.')).toBeInTheDocument();
+  });
   it('valida arquitetura com backend v2, preserva resultado valid:false e path', async () => {
     server.use(http.post('/api/v2/architectures/validate', async ({ request }) => {
       const body = await request.json() as { components: unknown[]; scenario?: unknown };
