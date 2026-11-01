@@ -61,6 +61,11 @@ public final class ArchitectureGraphValidatorV2 {
                 add(errors, "DUPLICATE_CONNECTION_ID", path + ".id", "Connection ID is already used");
             }
             duration(connection.latencyMs(), path + ".latencyMs", errors);
+            ApiProcessingOverrideV2 override = connection.apiProcessingOverride();
+            if (override != null) {
+                duration(override.preProcessingMs(), path + ".apiProcessingOverride.preProcessingMs", errors);
+                duration(override.postProcessingMs(), path + ".apiProcessingOverride.postProcessingMs", errors);
+            }
             boolean fromOk = identifier(connection.sourceId());
             boolean toOk = identifier(connection.targetId());
             if (!fromOk) add(errors, "INVALID_IDENTIFIER", path + ".sourceId", "Source ID is invalid");
@@ -85,6 +90,10 @@ public final class ArchitectureGraphValidatorV2 {
             boolean http = (source.type() == ComponentTypeV2.CLIENT && target.type() == ComponentTypeV2.API)
                     || (source.type() == ComponentTypeV2.API && target.type() == ComponentTypeV2.API);
             boolean db = source.type() == ComponentTypeV2.API && target.type() == ComponentTypeV2.DATABASE;
+            if (override != null && !http) {
+                add(errors, "INVALID_INTEGRATION", path + ".apiProcessingOverride",
+                        "Processing override is permitted only for connections entering an API");
+            }
             if (!http && !db) {
                 add(errors, "INVALID_CONNECTION", path, "Only CLIENT->API, API->API and API->DATABASE are allowed");
             }
