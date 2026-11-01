@@ -44,7 +44,7 @@ Arquitetura admite vários Clients; cenário escolhe um entryComponentId e entry
 
 ### RF-030 — Múltiplas APIs
 
-Várias APIs com tempos próprios; podem ter várias conexões possíveis, mas executar no máximo uma descendente por ativação; APIs inativas não contam.
+Várias APIs com tempos padrão próprios; conexões de entrada para API podem opcionalmente substituir ambos os tempos de pré e pós-processamento da API destinatária por interação. Podem existir várias conexões possíveis, mas no máximo uma chamada descendente por ativação; APIs inativas não contam.
 
 **Aceite:** testes positivos e negativos para as regras acima; IDs e referencias corretos, com falhas reportadas em violações quando aplicável. **ADRs:** ADR-010, ADR-011.
 
@@ -177,3 +177,31 @@ POST /api/v2/architectures/validate, /scenarios/validate, /simulations; executio
 Referência proposta: [openapi-v2.yaml](../api/openapi-v2.yaml). Validar com ferramentas OpenAPI 3.1 e geração TypeScript. Os testes unitários e de integração devem cobrir ambas versões da API, formatos de erro 400/413/415/422/500 e os cenários S01–S15.
 
 **Condição de conclusão:** RF-026 a RF-043 implementados e testados; regressões v1 passando; OpenAPI v2 alinhado ao código; execução backend concluída antes do frontend.
+
+## Ajuste em validação de uso — RF-044 (aprovado em 2026-11-01)
+
+### RF-044 — Tempos de processamento configuráveis por conexão de entrada
+
+**Motivação.** Em uma arquitetura v0.2, duas conexões que chegam à mesma API podem representar operações de complexidades diferentes. O usuário precisa atribuir tempos de processamento específicos à interação, sem deslocar a responsabilidade de processamento da API para a conexão.
+
+**Modelo e precedência.**
+- A API conserva `preProcessingMs` e `postProcessingMs` obrigatórios como **valores padrão**. Isso preserva os cenários e clientes já desenvolvidos.
+- Cada conexão **Client→API** ou **API→API** pode carregar opcionalmente o objeto `apiProcessingOverride`, com **ambos** `preProcessingMs` e `postProcessingMs` não negativos. Os dois campos formam uma substituição atômica para aquela conexão de entrada; não há herança parcial.
+- Se o override existir, são usados os dois valores da conexão de entrada para **a API destinatária daquela chamada**. Se ausente, são usados os dois valores padrão do componente API.
+- Conexões **API→Database** não podem declarar `apiProcessingOverride` (Database preserva `processingMs` no componente).
+- Valores zero são válidos; os limites seguem `DurationMsV2`.
+- A conexão continua representando comunicação (latência e integração); o override é uma configuração de **comportamento da API destinatária para aquela interação**, não processamento executado no transporte.
+- Alterar override não muda seleção de dependência no Scenario nem os IDs/correlações; não cria novas chamadas.
+
+**Aceite funcional:**
+1. API B com padrão pré 20/pós 10 chamada por A→B com override 40/15 executa PROCESSING na **API B** durante 40 e 15 ms; conexões mostram só comunicação.
+2. Outra entrada C→B com override 10/5 produz tempos próprios, sem mudar a API B ou os tempos da entrada A→B.
+3. Entrada sem override usa 20/10. A mudança na configuração do componente atualiza somente entradas sem override.
+4. Uma API com dependência descendente continua WAITING entre o pré e o pós; as métricas de processamento e a timeline apontam para a API executora, não para a conexão.
+5. Override ausente mantém aceitas requisições v2 já existentes e preserva o cenário v0.1 260 ms/170 ms/7 atividades; os contratos v1 não mudam.
+6. Rejeitar override parcial, duração negativa/não inteira/acima do limite e override em conexão API→Database, com violações de domínio apropriadas.
+7. Editor mostra no painel da conexão a seção **“Processamento da API de destino”** com padrão da API e opção “Personalizar nesta conexão”. A timeline identifica explicitamente “API B — Pré-processamento” e “API B — Pós-processamento”.
+
+**Rastreabilidade:** ADR-011, ADR-015, ADR-017; OpenAPI v2 `ConnectionV2.apiProcessingOverride`; tarefa corretiva de Backend antes de Frontend.
+
+**Escopo:** ajuste incremental da v0.2 ainda em validação, sem criar operações nomeadas, catálogo de endpoints, paralelismo ou alteração de versão da API.
