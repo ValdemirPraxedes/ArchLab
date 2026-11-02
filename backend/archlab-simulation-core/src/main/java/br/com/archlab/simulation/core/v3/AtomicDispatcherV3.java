@@ -4,7 +4,7 @@ import static br.com.archlab.simulation.core.v3.EffectBatchV3.*;
 /** The only publication point is a volatile immutable snapshot after complete validation. */
 public final class AtomicDispatcherV3 {
     @FunctionalInterface public interface Handler {DispatchDecisionV3 decide(DeterministicSchedulerV3.Event<SimulationEventV3> event,ReadView view);}
-    public record ReadView(IdentifierV3 executionId,RuntimeStateV3 state,long nowMs,long randomState,long dispatchSequence,List<DeterministicSchedulerV3.Event<SimulationEventV3>> pending) {public ReadView {pending=List.copyOf(pending);}}
+    public record ReadView(IdentifierV3 executionId,RuntimeStateV3 state,long nowMs,long randomState,long dispatchSequence,List<DeterministicSchedulerV3.Event<SimulationEventV3>> pending,Map<IdentifierV3,Claim> claims) {public ReadView {pending=List.copyOf(pending);claims=Map.copyOf(claims);}}
     public record EntityDelta(IdentifierV3 deltaId,long sequence,long timestampMs,IdentifierV3 sourceTraceRecordId,RuntimeEntityV3 before,RuntimeEntityV3 after) {
         public EntityDelta {Objects.requireNonNull(deltaId);Objects.requireNonNull(sourceTraceRecordId);if(sequence<0 || timestampMs<0 || before==null && after==null)throw new IllegalArgumentException("Invalid entity delta");
             if(before!=null && after!=null && (!before.id().equals(after.id()) || before.kind()!=after.kind() || after.version()!=Math.addExact(before.version(),1)) || before==null && after.version()!=0)throw new IllegalArgumentException("Invalid delta identity/version");}
@@ -36,7 +36,7 @@ public final class AtomicDispatcherV3 {
             DispatchDecisionV3 decision;
             if(expected!=null){if(expected.dispatchSequence()!=initial.nextDispatchSequence() || !expected.event().equals(event))throw new IllegalStateException("Journal event/sequence mismatch");decision=expected.decision();}
             else {var handler=handlers.get(event.payload().eventType());if(handler==null)throw new IllegalStateException("No handler for "+event.payload().eventType());
-                decision=Objects.requireNonNull(handler.decide(event,new ReadView(initial.executionId(),initial.state(),event.scheduledAtMs(),initial.randomState(),initial.nextDispatchSequence(),agenda.snapshot().pending())));}
+                decision=Objects.requireNonNull(handler.decide(event,new ReadView(initial.executionId(),initial.state(),event.scheduledAtMs(),initial.randomState(),initial.nextDispatchSequence(),agenda.snapshot().pending(),initial.claims())));}
             if(decision instanceof DispatchDecisionV3.Apply apply){String stale=staleReason(initial,apply.batch());if(stale!=null)decision=new DispatchDecisionV3.Ignore(stale);}
             var state=initial.state();long random=initial.randomState(),traceSequence=initial.nextTraceSequence(),deltaSequence=initial.nextDeltaSequence();
             var claims=new LinkedHashMap<>(initial.claims());var traces=new ArrayList<TraceRecordV3>();var deltas=new ArrayList<EntityDelta>();

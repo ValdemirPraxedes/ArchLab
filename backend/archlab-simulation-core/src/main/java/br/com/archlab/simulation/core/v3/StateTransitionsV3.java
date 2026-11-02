@@ -18,7 +18,7 @@ public final class StateTransitionsV3 {
         all.put(Kind.WAIT_CLAIM,table("WAITING:ACQUIRED,TIMED_OUT,REJECTED","ACQUIRED:","TIMED_OUT:","REJECTED:"));
         all.put(Kind.WORK_ITEM,table("PENDING:RESOLVED","RESOLVED:"));all.put(Kind.COMPONENT,table("AVAILABLE:UNAVAILABLE","UNAVAILABLE:AVAILABLE"));
         all.put(Kind.PRINCIPAL,table("IN_PROGRESS:RESPONDED,FAILED,TIMED_OUT,CANCELLED","RESPONDED:","FAILED:","TIMED_OUT:","CANCELLED:"));
-        all.put(Kind.RESOURCE,table("AVAILABLE:UNAVAILABLE,EXHAUSTED","EXHAUSTED:AVAILABLE,UNAVAILABLE","UNAVAILABLE:AVAILABLE,EXHAUSTED"));return Map.copyOf(all);
+        all.put(Kind.RESOURCE,table("AVAILABLE:UNAVAILABLE,EXHAUSTED","EXHAUSTED:AVAILABLE,UNAVAILABLE","UNAVAILABLE:AVAILABLE,EXHAUSTED"));all.put(Kind.POLICY_STATE,table("ENABLED:DISABLED","DISABLED:ENABLED"));return Map.copyOf(all);
     }
     private static Map<String,Set<String>> table(String... rows){var result=new LinkedHashMap<String,Set<String>>();for(var row:rows){var parts=row.split(":",-1);result.put(parts[0],parts[1].isEmpty()?Set.of():Set.of(parts[1].split(",")));}return Map.copyOf(result);}
     public static boolean known(Kind kind,String status){if(status==null)return !TABLES.containsKey(kind);if(kind==Kind.POLICY_STATE)return !status.isEmpty();return TABLES.getOrDefault(kind,Map.of()).containsKey(status);}

@@ -22,10 +22,10 @@ public record TypeCatalogV3(Map<String,ComponentType> components,Map<String,Reso
         types.put("BROKER_GENERIC",new ComponentType(processing,Set.of("PUBLISH","COMPLETE","FAIL"),Set.of("BROKER_ACCEPT")));
         types.put("QUEUE_GENERIC",new ComponentType(common,Set.of("COMPLETE","FAIL"),Set.of("QUEUE_DELIVER")));
         types.put("TELEMETRY_GENERIC",new ComponentType(processing,Set.of("PROCESS","COMPLETE","FAIL"),Set.of("TELEMETRY_COLLECT")));
-        var pools=Map.<String,Class<? extends PropertyValueV3>>of("capacity",PropertyValueV3.IntegerValue.class,"available",PropertyValueV3.Flag.class);
+        var pools=Map.<String,Class<? extends PropertyValueV3>>of("capacity",PropertyValueV3.IntegerValue.class,"available",PropertyValueV3.Flag.class,"waitTimeoutMs",PropertyValueV3.IntegerValue.class);
         return new TypeCatalogV3(types,Map.of(
                 "PROCESSING_POOL",new ResourceType(Set.of("API_SERVICE","DATABASE_GENERIC","TELEMETRY_GENERIC"),pools),
-                "MESSAGE_QUEUE",new ResourceType(Set.of("QUEUE_GENERIC"),Map.of("capacity",PropertyValueV3.IntegerValue.class,"ttlMs",PropertyValueV3.IntegerValue.class)),
-                "POLICY_INSTANCE",new ResourceType(Set.of("API_SERVICE","CLIENT_GENERIC"),Map.of("timeoutMs",PropertyValueV3.IntegerValue.class)),"TOPIC",new ResourceType(Set.of("BROKER_GENERIC"),Map.of())),Set.of("HTTP_REST","SOAP_HTTP","DATABASE_QUERY","MESSAGING","TELEMETRY"));
+                "MESSAGE_QUEUE",new ResourceType(Set.of("QUEUE_GENERIC"),Map.ofEntries(Map.entry("capacity",PropertyValueV3.IntegerValue.class),Map.entry("ttlMs",PropertyValueV3.IntegerValue.class),Map.entry("consumerEndpointId",PropertyValueV3.Reference.class),Map.entry("consumerOperationId",PropertyValueV3.Reference.class),Map.entry("consumerConcurrency",PropertyValueV3.IntegerValue.class),Map.entry("deliveryLatencyMs",PropertyValueV3.IntegerValue.class),Map.entry("ackDelayMs",PropertyValueV3.IntegerValue.class),Map.entry("ackTimeoutMs",PropertyValueV3.IntegerValue.class),Map.entry("maxDeliveryAttempts",PropertyValueV3.IntegerValue.class),Map.entry("redeliveryDelayMs",PropertyValueV3.IntegerValue.class))),
+                "POLICY_INSTANCE",new ResourceType(Set.of("API_SERVICE","CLIENT_GENERIC"),Map.of("timeoutMs",PropertyValueV3.IntegerValue.class,"attemptTimeoutMs",PropertyValueV3.IntegerValue.class,"maxAttempts",PropertyValueV3.IntegerValue.class,"retryDelayMs",PropertyValueV3.IntegerValue.class)),"TOPIC",new ResourceType(Set.of("BROKER_GENERIC"),Map.of("queueIds",PropertyValueV3.Values.class,"acceptanceMs",PropertyValueV3.IntegerValue.class))),Set.of("HTTP_REST","SOAP_HTTP","DATABASE_QUERY","MESSAGING","TELEMETRY"));
     }
 }
