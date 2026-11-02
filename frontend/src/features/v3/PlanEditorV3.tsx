@@ -5,8 +5,8 @@ import { appendStepV3, defaultStepV3, removeStepV3, STEP_KINDS_V3, stepDestinati
 import { CAPABILITIES_V3 } from './graphModel';
 import { StepEditorV3 } from './StepEditorV3';
 import { NumberFieldV3 } from './TypedPropertyFieldsV3';
-export function PlanEditorV3({project,change,locked=false}:{project:ProjectV3;change:(value:ProjectV3)=>void;locked?:boolean}) {
-  const [selectedPlan,setPlan]=useState(''),[selectedStep,setStep]=useState(''),[kind,setKind]=useState<StepV3['kind']>('PROCESS'),[showDiagnostics,setDiagnostics]=useState(false),[error,setError]=useState('');
+export function PlanEditorV3({project,change,locked=false,initialPlanId,initialStepId}:{project:ProjectV3;change:(value:ProjectV3)=>void;locked?:boolean;initialPlanId?:string;initialStepId?:string}) {
+  const [selectedPlan,setPlan]=useState(initialPlanId??''),[selectedStep,setStep]=useState(initialStepId??''),[kind,setKind]=useState<StepV3['kind']>('PROCESS'),[showDiagnostics,setDiagnostics]=useState(false),[error,setError]=useState('');
   const a=project.request.architecture,plan=a.executionPlans.find(p=>p.id===selectedPlan)??a.executionPlans[0],operation=a.operations.find(o=>o.id===plan?.operationId),owner=a.components.find(c=>c.id===operation?.ownerId),step=plan?.steps.find(s=>s.id===selectedStep)??plan?.steps[0],allowed=STEP_KINDS_V3.filter(k=>CAPABILITIES_V3[owner?.typeId??'']?.includes(k));
   const safely=(fn:()=>ProjectV3)=>{try{change(fn());setError('');}catch(e){setError(e instanceof Error?e.message:'Plano inválido.');}};
   if(!plan)return <section className="v3-plan-editor" aria-label="Editor de ExecutionPlan"><h2>ExecutionPlan</h2><p>Crie uma operação com execução ExecutionPlan no painel do componente para editar seus passos.</p></section>;
