@@ -1,0 +1,27 @@
+name: OpenAPI v3 contract checks
+
+on:
+  pull_request:
+    paths:
+      - 'docs/api/openapi-v3.yaml'
+      - 'docs/examples/v3/**'
+      - '.github/workflows/openapi-v3-contract.yml'
+  workflow_dispatch:
+
+jobs:
+  openapi-v3:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Require complete v3 contract
+        run: test -s docs/api/openapi-v3.yaml
+      - name: Validate OpenAPI 3.1
+        run: npx --yes @redocly/cli@1 lint docs/api/openapi-v3.yaml --extends=recommended
+      - name: Generate TypeScript contract
+        run: |
+          mkdir -p /tmp/archlab-openapi-v3
+          npx --yes openapi-typescript@7 docs/api/openapi-v3.yaml -o /tmp/archlab-openapi-v3/schema-v3.d.ts
+          test -s /tmp/archlab-openapi-v3/schema-v3.d.ts
