@@ -26,6 +26,6 @@ public record TypeCatalogV3(Map<String,ComponentType> components,Map<String,Reso
         return new TypeCatalogV3(types,Map.of(
                 "PROCESSING_POOL",new ResourceType(Set.of("API_SERVICE","DATABASE_GENERIC","TELEMETRY_GENERIC"),pools),
                 "MESSAGE_QUEUE",new ResourceType(Set.of("QUEUE_GENERIC"),Map.of("capacity",PropertyValueV3.IntegerValue.class,"ttlMs",PropertyValueV3.IntegerValue.class)),
-                "TOPIC",new ResourceType(Set.of("BROKER_GENERIC"),Map.of())),Set.of("HTTP_REST","SOAP_HTTP","DATABASE_QUERY","MESSAGING","TELEMETRY"));
+                "POLICY_INSTANCE",new ResourceType(Set.of("API_SERVICE","CLIENT_GENERIC"),Map.of("timeoutMs",PropertyValueV3.IntegerValue.class)),"TOPIC",new ResourceType(Set.of("BROKER_GENERIC"),Map.of())),Set.of("HTTP_REST","SOAP_HTTP","DATABASE_QUERY","MESSAGING","TELEMETRY"));
     }
 }

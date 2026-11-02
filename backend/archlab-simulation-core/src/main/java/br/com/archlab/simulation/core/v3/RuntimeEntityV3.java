@@ -2,7 +2,7 @@ package br.com.archlab.simulation.core.v3;
 import java.util.*;
 /** Immutable runtime values. Public snapshot fields are kept typed, with mandatory core versions. */
 public sealed interface RuntimeEntityV3 {
-    enum Kind {ACTIVATION,INTERACTION,ATTEMPT,PARALLEL_GROUP,RESOURCE,QUEUE_ENTRY,PUBLICATION,DELIVERY_ATTEMPT,CURSOR,TIMER,LEASE,WAIT_CLAIM,POLICY_STATE,STEP_RESULT,BRANCH_CURSOR,WORK_ITEM,SCHEDULED_EVENT,ID_COUNTER,COMPONENT,PRINCIPAL,STEP_EXECUTION}
+    enum Kind {ACTIVATION,INTERACTION,ATTEMPT,PARALLEL_GROUP,RESOURCE,QUEUE_ENTRY,PUBLICATION,DELIVERY_ATTEMPT,CURSOR,TIMER,LEASE,WAIT_CLAIM,POLICY_STATE,STEP_RESULT,BRANCH_CURSOR,WORK_ITEM,SCHEDULED_EVENT,ID_COUNTER,COMPONENT,PRINCIPAL,STEP_EXECUTION,CONTROL}
     Kind kind(); IdentifierV3 id(); long version(); String stateName(); RuntimeEntityV3 transition(String target);
     enum ActivationStatus {READY,RUNNING,WAITING,COMPLETED,FAILED,CANCELLED}
     enum InteractionStatus {CREATED,IN_FLIGHT,AWAITING_RESULT,COMPLETED,FAILED,TIMED_OUT,CANCELLED}
@@ -166,5 +166,10 @@ public sealed interface RuntimeEntityV3 {
         public IdentifierV3 id(){return entityId;}
         public String stateName(){return status.name();}
         public RuntimeEntityV3 transition(String target){StateTransitionsV3.require(kind(),stateName(),target);return new StepExecution(entityId,Math.addExact(version,1),StepExecutionStatus.valueOf(target));}
+    }
+    record Control(IdentifierV3 entityId,long version,InterpreterStateV3 data) implements RuntimeEntityV3 {
+        public Control {Objects.requireNonNull(entityId);Objects.requireNonNull(data);if(version<0)throw new IllegalArgumentException("Negative version");}
+        public Kind kind(){return Kind.CONTROL;} public IdentifierV3 id(){return entityId;} public String stateName(){return null;}
+        public RuntimeEntityV3 transition(String target){throw new IllegalStateException("Control has no lifecycle");}
     }
 }

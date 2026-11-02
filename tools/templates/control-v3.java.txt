@@ -1,0 +1,5 @@
+    record Control(IdentifierV3 entityId,long version,InterpreterStateV3 data) implements RuntimeEntityV3 {
+        public Control {Objects.requireNonNull(entityId);Objects.requireNonNull(data);if(version<0)throw new IllegalArgumentException("Negative version");}
+        public Kind kind(){return Kind.CONTROL;} public IdentifierV3 id(){return entityId;} public String stateName(){return null;}
+        public RuntimeEntityV3 transition(String target){throw new IllegalStateException("Control has no lifecycle");}
+    }
