@@ -4,13 +4,19 @@ info:
   version: 0.3.0-draft
   description: Contrato de planejamento API-V3-001. Sem implementação ou persistência. Limites operacionais numéricos
     permanecem provisórios. A semântica de domínio é validada no core.
+# Contrato de planejamento sem esquema de autenticação definido.
+security: []
 servers:
 - url: /
 tags:
 - name: Architectures
+  description: Validação estrutural e de domínio de arquiteturas tipadas.
 - name: ExecutionPlans
+  description: Validação de planos candidatos no contexto da arquitetura.
 - name: Scenarios
+  description: Validação de cenários completos.
 - name: Simulations
+  description: Execução determinística de cenários em memória.
 paths:
   /api/v3/architectures/validate:
     post:
@@ -805,10 +811,14 @@ components:
           required:
           - policy
         then:
+          properties:
+            quorum: {}
           required:
           - quorum
         else:
           not:
+            properties:
+              quorum: {}
             required:
             - quorum
     DelayStepV3:
@@ -1060,10 +1070,14 @@ components:
           required:
           - completionMode
         then:
+          properties:
+            horizonAtMs: {}
           required:
           - horizonAtMs
         else:
           not:
+            properties:
+              horizonAtMs: {}
             required:
             - horizonAtMs
     SimulationRequestV3:
@@ -1921,7 +1935,6 @@ components:
       - $ref: '#/components/schemas/QueueTraceDetailV3'
       - $ref: '#/components/schemas/RuntimeDeltaTraceDetailV3'
       - $ref: '#/components/schemas/SchedulerPositionTraceDetailV3'
-      - $ref: '#/components/schemas/SchedulerPositionTraceDetailV3'
       description: União discriminada pelo campo kind
     TraceContextV3:
       type: object
@@ -2579,20 +2592,6 @@ components:
               properties:
                 kind:
                   const: RUNTIME_DELTA
-              required:
-              - kind
-      - if:
-          properties:
-            kind:
-              const: SCHEDULER_POSITION_CHANGED
-          required:
-          - kind
-        then:
-          properties:
-            detail:
-              properties:
-                kind:
-                  const: SCHEDULER_POSITION
               required:
               - kind
       - if:
