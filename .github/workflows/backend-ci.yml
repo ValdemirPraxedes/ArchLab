@@ -3,6 +3,7 @@ on:
   pull_request:
     paths:
       - 'backend/**'
+      - 'tools/validate-v3-results.cjs'
       - 'docs/api/openapi-v3.yaml'
       - 'docs/examples/v3/**'
       - '.github/workflows/backend-ci.yml'
@@ -23,3 +24,11 @@ jobs:
           cache-dependency-path: 'backend/**/pom.xml'
       - run: chmod +x mvnw
       - run: ./mvnw -B clean verify
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install isolated contract validators
+        run: npm install --prefix "$RUNNER_TEMP/archlab-v3-contract" --no-save --no-package-lock yaml@2.9.1 ajv@8.20.0 ajv-formats@3.0.1
+      - name: Validate actual v3 HTTP and result artifacts
+        run: node ../tools/validate-v3-results.cjs .. "$RUNNER_TEMP/archlab-v3-contract/node_modules"

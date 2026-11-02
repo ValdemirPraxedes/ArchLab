@@ -1,0 +1,56 @@
+{
+  "ce-ref-01": {
+    "principalStatus": "RESPONDED",
+    "principalResponseDurationMs": 120,
+    "globalStatus": "COMPLETED",
+    "observedUntilMs": 210,
+    "timelineCount": 19,
+    "traceCount": 105,
+    "integrity": {
+      "snapshotDigest": "6861482800dccd54e8bbe9f027a41bc5cc5adc080e5fce092fe7ef7254a680ec",
+      "normalizedTraceDigest": "ca26768222bb9164985615a9501929e2cf3ecf531638b9b85403e32024479029",
+      "normalizedResultDigest": "1430d020dbf4d47f1a80ff27c5ee75f937fca47c7755487a36a6d9b12e8bbe01",
+      "digestAlgorithmVersion": "sha256-cjson-v1",
+      "traceCompleteness": "COMPLETE",
+      "playbackReconstructible": false,
+      "publicSnapshotReconstructible": true,
+      "fullRuntimeSnapshotReconstructible": false
+    }
+  },
+  "horizon-150": {
+    "principalStatus": "RESPONDED",
+    "principalResponseDurationMs": 120,
+    "globalStatus": "HORIZON_REACHED",
+    "observedUntilMs": 150,
+    "timelineCount": 18,
+    "traceCount": 91,
+    "integrity": {
+      "snapshotDigest": "6aad951f6b7acec19faeb56e5e122f8a866ef17db3e042aa3febb081dad5b5f4",
+      "normalizedTraceDigest": "d3575635f2e613d91fca53643968e6fbd5c764b4568e41b475b4ce10733a36c2",
+      "normalizedResultDigest": "a2478566b1c5bda65f89a43b231ea9cbe43384c01e1681d13a67d1ecce8fbf9d",
+      "digestAlgorithmVersion": "sha256-cjson-v1",
+      "traceCompleteness": "COMPLETE_UNTIL_STOP",
+      "playbackReconstructible": false,
+      "publicSnapshotReconstructible": true,
+      "fullRuntimeSnapshotReconstructible": false
+    }
+  },
+  "simulated-failure": {
+    "principalStatus": "FAILED",
+    "principalResponseDurationMs": null,
+    "globalStatus": "COMPLETED",
+    "observedUntilMs": 30,
+    "timelineCount": 7,
+    "traceCount": 36,
+    "integrity": {
+      "snapshotDigest": "073928c27b4759ba8549f5c32c0e93467e7a8355a9204827d0056c841850e535",
+      "normalizedTraceDigest": "df4bad8ab4ef2142bf0b3b1d70fce4b01934c18dc9eb6a78c5d64a182dd09f24",
+      "normalizedResultDigest": "bbd8968e1ceb293c101c952dbe71d17a8e63827305ade6278c72003e90dc5a03",
+      "digestAlgorithmVersion": "sha256-cjson-v1",
+      "traceCompleteness": "COMPLETE",
+      "playbackReconstructible": false,
+      "publicSnapshotReconstructible": true,
+      "fullRuntimeSnapshotReconstructible": false
+    }
+  }
+}
