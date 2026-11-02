@@ -1,0 +1,84 @@
+{
+  "id": "arch-simple",
+  "schemaVersion": "3",
+  "components": [
+    {
+      "id": "client-1",
+      "typeId": "CLIENT_GENERIC",
+      "displayName": "Client",
+      "properties": {}
+    },
+    {
+      "id": "api-1",
+      "typeId": "API_SERVICE",
+      "displayName": "API",
+      "properties": {}
+    }
+  ],
+  "resources": [],
+  "endpoints": [
+    {
+      "id": "client-out",
+      "ownerId": "client-1",
+      "direction": "OUTBOUND",
+      "protocolProfileId": "HTTP_REST",
+      "operationIds": []
+    },
+    {
+      "id": "api-in",
+      "ownerId": "api-1",
+      "direction": "INBOUND",
+      "protocolProfileId": "HTTP_REST",
+      "operationIds": [
+        "create-order"
+      ]
+    }
+  ],
+  "operations": [
+    {
+      "id": "create-order",
+      "ownerId": "api-1",
+      "displayName": "Criar pedido",
+      "execution": {
+        "kind": "EXECUTION_PLAN",
+        "referenceId": "plan-create-order"
+      }
+    }
+  ],
+  "relations": [
+    {
+      "id": "client-api",
+      "kind": "COMMUNICATION",
+      "sourceEndpointId": "client-out",
+      "targetEndpointId": "api-in",
+      "protocolProfileId": "HTTP_REST"
+    }
+  ],
+  "executionPlans": [
+    {
+      "id": "plan-create-order",
+      "operationId": "create-order",
+      "entryStepId": "process",
+      "limits": {
+        "maxStepExecutions": 100,
+        "maxIterations": 10
+      },
+      "steps": [
+        {
+          "id": "process",
+          "kind": "PROCESS",
+          "durationMs": 10,
+          "transitions": {
+            "NEXT": "finish"
+          }
+        },
+        {
+          "id": "finish",
+          "kind": "COMPLETE",
+          "scope": "ACTIVATION",
+          "resultProfileId": "order-created"
+        }
+      ]
+    }
+  ]
+}
