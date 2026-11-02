@@ -1,0 +1,3576 @@
+openapi: 3.1.0
+info:
+  title: ArchLab Simulation API v3
+  version: 0.3.0-draft
+  description: Contrato de planejamento API-V3-001. Sem implementação ou persistência. Limites operacionais numéricos
+    permanecem provisórios. A semântica de domínio é validada no core.
+servers:
+- url: /
+tags:
+- name: Architectures
+- name: ExecutionPlans
+- name: Scenarios
+- name: Simulations
+paths:
+  /api/v3/architectures/validate:
+    post:
+      tags:
+      - Architectures
+      operationId: validateArchitectureV3
+      summary: Valida arquitetura tipada
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ArchitectureDefinitionV3'
+      responses:
+        '200':
+          description: Validação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponseV3'
+        '400':
+          description: JSON inválido ou schema incompatível
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '413':
+          description: Payload excessivo
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '415':
+          description: Media type não suportado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '500':
+          description: Falha interna do ArchLab
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+  /api/v3/execution-plans/validate:
+    post:
+      tags:
+      - ExecutionPlans
+      operationId: validateExecutionPlanV3
+      summary: Valida um plano candidato no contexto da arquitetura
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExecutionPlanValidationRequestV3'
+      responses:
+        '200':
+          description: Validação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponseV3'
+        '400':
+          description: JSON inválido ou schema incompatível
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '413':
+          description: Payload excessivo
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '415':
+          description: Media type não suportado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '500':
+          description: Falha interna do ArchLab
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+  /api/v3/scenarios/validate:
+    post:
+      tags:
+      - Scenarios
+      operationId: validateScenarioV3
+      summary: Valida cenário completo
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequestV3'
+      responses:
+        '200':
+          description: Validação concluída
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationResponseV3'
+        '400':
+          description: JSON inválido ou schema incompatível
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '413':
+          description: Payload excessivo
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '415':
+          description: Media type não suportado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '500':
+          description: Falha interna do ArchLab
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+  /api/v3/simulations:
+    post:
+      tags:
+      - Simulations
+      operationId: executeSimulationV3
+      summary: Executa cenário determinístico em memória
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulationRequestV3'
+      responses:
+        '200':
+          description: Simulação concluída ou encerrada pelo motor
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SimulationResponseV3'
+        '400':
+          description: JSON inválido ou schema incompatível
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '413':
+          description: Payload excessivo
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '415':
+          description: Media type não suportado
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '500':
+          description: Falha interna do ArchLab
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+        '422':
+          description: Domínio/cenário inválido
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemV3'
+components:
+  schemas:
+    IdentifierV3:
+      type: string
+      minLength: 1
+      maxLength: 128
+      pattern: .*\S.*
+    DurationMsV3:
+      type: integer
+      minimum: 0
+      format: int64
+      description: Milissegundos virtuais, limites de servidor provisórios
+    Integer64V3:
+      type: integer
+      format: int64
+    NullableDurationV3:
+      oneOf:
+      - $ref: '#/components/schemas/DurationMsV3'
+      - type: 'null'
+    NullableIdentifierV3:
+      oneOf:
+      - $ref: '#/components/schemas/IdentifierV3'
+      - type: 'null'
+    JsonPointerV3:
+      type: string
+      pattern: ^(/.*)?$
+    StringValueV3:
+      type: object
+      properties:
+        kind:
+          const: STRING
+        value:
+          type: string
+          minLength: 0
+      required:
+      - kind
+      - value
+      additionalProperties: false
+    IntegerValueV3:
+      type: object
+      properties:
+        kind:
+          const: INTEGER
+        value:
+          $ref: '#/components/schemas/Integer64V3'
+      required:
+      - kind
+      - value
+      additionalProperties: false
+    DecimalValueV3:
+      type: object
+      properties:
+        kind:
+          const: DECIMAL
+        value:
+          type: string
+          pattern: ^-?(0|[1-9][0-9]*)(\.[0-9]+)?$
+      required:
+      - kind
+      - value
+      additionalProperties: false
+    BooleanValueV3:
+      type: object
+      properties:
+        kind:
+          const: BOOLEAN
+        value:
+          type: boolean
+      required:
+      - kind
+      - value
+      additionalProperties: false
+    EnumValueV3:
+      type: object
+      properties:
+        kind:
+          const: ENUM
+        value:
+          type: string
+          minLength: 1
+      required:
+      - kind
+      - value
+      additionalProperties: false
+    ReferenceValueV3:
+      type: object
+      properties:
+        kind:
+          const: REFERENCE
+        targetId:
+          $ref: '#/components/schemas/IdentifierV3'
+        expectedTypeId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - kind
+      - targetId
+      - expectedTypeId
+      additionalProperties: false
+    ListValueV3:
+      type: object
+      properties:
+        kind:
+          const: LIST
+        values:
+          type: array
+          items:
+            $ref: '#/components/schemas/PropertyValueV3'
+          maxItems: 1000
+      required:
+      - kind
+      - values
+      additionalProperties: false
+    ObjectValueV3:
+      type: object
+      properties:
+        kind:
+          const: OBJECT
+        fields:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/PropertyValueV3'
+          maxProperties: 200
+      required:
+      - kind
+      - fields
+      additionalProperties: false
+    PropertyValueV3:
+      oneOf:
+      - $ref: '#/components/schemas/StringValueV3'
+      - $ref: '#/components/schemas/IntegerValueV3'
+      - $ref: '#/components/schemas/DecimalValueV3'
+      - $ref: '#/components/schemas/BooleanValueV3'
+      - $ref: '#/components/schemas/EnumValueV3'
+      - $ref: '#/components/schemas/ListValueV3'
+      - $ref: '#/components/schemas/ObjectValueV3'
+      - $ref: '#/components/schemas/ReferenceValueV3'
+      description: União discriminada pelo campo kind
+    PropertiesV3:
+      type: object
+      additionalProperties:
+        $ref: '#/components/schemas/PropertyValueV3'
+    ComponentDefinitionV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        typeId:
+          $ref: '#/components/schemas/IdentifierV3'
+        displayName:
+          type: string
+          minLength: 1
+        properties:
+          $ref: '#/components/schemas/PropertiesV3'
+      required:
+      - id
+      - typeId
+      - displayName
+      - properties
+      additionalProperties: false
+    ResourceDefinitionV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        typeId:
+          $ref: '#/components/schemas/IdentifierV3'
+        ownerId:
+          $ref: '#/components/schemas/IdentifierV3'
+        properties:
+          $ref: '#/components/schemas/PropertiesV3'
+      required:
+      - id
+      - typeId
+      - ownerId
+      - properties
+      additionalProperties: false
+    EndpointDefinitionV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        ownerId:
+          $ref: '#/components/schemas/IdentifierV3'
+        direction:
+          type: string
+          enum:
+          - INBOUND
+          - OUTBOUND
+          - BIDIRECTIONAL
+        protocolProfileId:
+          $ref: '#/components/schemas/IdentifierV3'
+        operationIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentifierV3'
+        properties:
+          $ref: '#/components/schemas/PropertiesV3'
+      required:
+      - id
+      - ownerId
+      - direction
+      - protocolProfileId
+      - operationIds
+      additionalProperties: false
+    ExecutionPlanBindingV3:
+      type: object
+      properties:
+        kind:
+          const: EXECUTION_PLAN
+        referenceId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - kind
+      - referenceId
+      additionalProperties: false
+    NativeBehaviorBindingV3:
+      type: object
+      properties:
+        kind:
+          const: NATIVE_BEHAVIOR
+        referenceId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - kind
+      - referenceId
+      additionalProperties: false
+    OperationExecutionV3:
+      oneOf:
+      - $ref: '#/components/schemas/ExecutionPlanBindingV3'
+      - $ref: '#/components/schemas/NativeBehaviorBindingV3'
+      description: União discriminada pelo campo kind
+    OperationDefinitionV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        ownerId:
+          $ref: '#/components/schemas/IdentifierV3'
+        displayName:
+          type: string
+          minLength: 1
+        inputContractId:
+          $ref: '#/components/schemas/IdentifierV3'
+        outputContractId:
+          $ref: '#/components/schemas/IdentifierV3'
+        execution:
+          $ref: '#/components/schemas/OperationExecutionV3'
+        requiredCapabilities:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - id
+      - ownerId
+      - displayName
+      - execution
+      additionalProperties: false
+    CommunicationRelationV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        kind:
+          const: COMMUNICATION
+        sourceEndpointId:
+          $ref: '#/components/schemas/IdentifierV3'
+        targetEndpointId:
+          $ref: '#/components/schemas/IdentifierV3'
+        protocolProfileId:
+          $ref: '#/components/schemas/IdentifierV3'
+        properties:
+          $ref: '#/components/schemas/PropertiesV3'
+      required:
+      - id
+      - kind
+      - sourceEndpointId
+      - targetEndpointId
+      - protocolProfileId
+      additionalProperties: false
+    StructuralRelationV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        kind:
+          type: string
+          enum:
+          - HOSTING
+          - CONTAINMENT
+          - MANAGEMENT
+          - POLICY_ATTACHMENT
+          - RESOURCE_OWNERSHIP
+        sourceId:
+          $ref: '#/components/schemas/IdentifierV3'
+        targetId:
+          $ref: '#/components/schemas/IdentifierV3'
+        properties:
+          $ref: '#/components/schemas/PropertiesV3'
+      required:
+      - id
+      - kind
+      - sourceId
+      - targetId
+      additionalProperties: false
+    RelationDefinitionV3:
+      oneOf:
+      - $ref: '#/components/schemas/CommunicationRelationV3'
+      - $ref: '#/components/schemas/StructuralRelationV3'
+      description: União discriminada pelo campo kind
+    StepTransitionsV3:
+      type: object
+      minProperties: 1
+      propertyNames:
+        type: string
+        enum:
+        - NEXT
+        - DISPATCHED
+        - SUCCESS
+        - BUSINESS_REJECTION
+        - ACCEPTED
+        - REJECTED
+        - FAILURE
+        - TIMEOUT
+        - CANCELLED
+        - 'TRUE'
+        - 'FALSE'
+        - ERROR
+        - SATISFIED
+        - UNSATISFIABLE
+      additionalProperties:
+        $ref: '#/components/schemas/IdentifierV3'
+    PlanLimitsV3:
+      type: object
+      properties:
+        maxStepExecutions:
+          type: integer
+          minimum: 1
+        maxIterations:
+          type: integer
+          minimum: 1
+      required:
+      - maxStepExecutions
+      - maxIterations
+      additionalProperties: false
+    LiteralOperandV3:
+      type: object
+      properties:
+        kind:
+          const: LITERAL
+        value:
+          oneOf:
+          - type: string
+          - type: boolean
+          - type: integer
+          - type: 'null'
+      required:
+      - kind
+      - value
+      additionalProperties: false
+    ReferenceOperandV3:
+      type: object
+      properties:
+        kind:
+          const: REFERENCE
+        path:
+          type: string
+          minLength: 1
+      required:
+      - kind
+      - path
+      additionalProperties: false
+    ConditionOperandV3:
+      oneOf:
+      - $ref: '#/components/schemas/LiteralOperandV3'
+      - $ref: '#/components/schemas/ReferenceOperandV3'
+      description: União discriminada pelo campo kind
+    CompareConditionV3:
+      type: object
+      properties:
+        op:
+          type: string
+          enum:
+          - EQ
+          - NE
+          - GT
+          - GTE
+          - LT
+          - LTE
+        left:
+          $ref: '#/components/schemas/ConditionOperandV3'
+        right:
+          $ref: '#/components/schemas/ConditionOperandV3'
+      required:
+      - op
+      - left
+      - right
+      additionalProperties: false
+    ExistsConditionV3:
+      type: object
+      properties:
+        op:
+          const: EXISTS
+        operand:
+          $ref: '#/components/schemas/ConditionOperandV3'
+      required:
+      - op
+      - operand
+      additionalProperties: false
+    AndOrConditionV3:
+      type: object
+      properties:
+        op:
+          type: string
+          enum:
+          - AND
+          - OR
+        conditions:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/ConditionExpressionV3'
+      required:
+      - op
+      - conditions
+      additionalProperties: false
+    NotConditionV3:
+      type: object
+      properties:
+        op:
+          const: NOT
+        condition:
+          $ref: '#/components/schemas/ConditionExpressionV3'
+      required:
+      - op
+      - condition
+      additionalProperties: false
+    ConditionExpressionV3:
+      oneOf:
+      - $ref: '#/components/schemas/CompareConditionV3'
+      - $ref: '#/components/schemas/ExistsConditionV3'
+      - $ref: '#/components/schemas/AndOrConditionV3'
+      - $ref: '#/components/schemas/NotConditionV3'
+      description: União discriminada pelo campo op
+    ProcessStepV3:
+      type: object
+      properties:
+        id: &id001
+          $ref: '#/components/schemas/IdentifierV3'
+        kind:
+          const: PROCESS
+        durationMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        resourceProfileId:
+          $ref: '#/components/schemas/IdentifierV3'
+        transitions:
+          $ref: '#/components/schemas/StepTransitionsV3'
+      required:
+      - id
+      - kind
+      - durationMs
+      - transitions
+      additionalProperties: false
+    CallStepV3:
+      type: object
+      properties:
+        id: *id001
+        kind:
+          const: CALL
+        connectionId:
+          $ref: '#/components/schemas/IdentifierV3'
+        targetOperationId:
+          $ref: '#/components/schemas/IdentifierV3'
+        awaitMode:
+          type: string
+          enum:
+          - NONE
+          - RESPONSE
+        policyRef:
+          $ref: '#/components/schemas/IdentifierV3'
+        transitions:
+          $ref: '#/components/schemas/StepTransitionsV3'
+      required:
+      - id
+      - kind
+      - connectionId
+      - targetOperationId
+      - awaitMode
+      - transitions
+      additionalProperties: false
+    PublishStepV3:
+      type: object
+      properties:
+        id: *id001
+        kind:
+          const: PUBLISH
+        targetResourceId:
+          $ref: '#/components/schemas/IdentifierV3'
+        payloadProfileId:
+          $ref: '#/components/schemas/IdentifierV3'
+        awaitMode:
+          type: string
+          enum:
+          - NONE
+          - BROKER_ACK
+          - CONSUMER_ACK
+        policyRef:
+          $ref: '#/components/schemas/IdentifierV3'
+        transitions:
+          $ref: '#/components/schemas/StepTransitionsV3'
+      required:
+      - id
+      - kind
+      - targetResourceId
+      - awaitMode
+      - transitions
+      additionalProperties: false
+    ConditionStepV3:
+      type: object
+      properties:
+        id: *id001
+        kind:
+          const: CONDITION
+        expression:
+          $ref: '#/components/schemas/ConditionExpressionV3'
+        onTrue:
+          $ref: '#/components/schemas/IdentifierV3'
+        onFalse:
+          $ref: '#/components/schemas/IdentifierV3'
+        onError:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - id
+      - kind
+      - expression
+      - onTrue
+      - onFalse
+      - onError
+      additionalProperties: false
+    BranchDefinitionV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        entryStepId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - id
+      - entryStepId
+      additionalProperties: false
+    ForkStepV3:
+      type: object
+      properties:
+        id: *id001
+        kind:
+          const: FORK
+        branches:
+          type: array
+          minItems: 2
+          items:
+            $ref: '#/components/schemas/BranchDefinitionV3'
+        joinStepId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - id
+      - kind
+      - branches
+      - joinStepId
+      additionalProperties: false
+    JoinStepV3:
+      type: object
+      properties:
+        id: *id001
+        kind:
+          const: JOIN
+        policy:
+          type: string
+          enum:
+          - ALL
+          - ANY
+          - FIRST_SUCCESS
+          - QUORUM
+        requiredBranchIds:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/IdentifierV3'
+        quorum:
+          type: integer
+          minimum: 1
+        remainingPolicy:
+          type: string
+          enum:
+          - CONTINUE
+          - CANCEL_REQUEST
+          - IGNORE_RESULTS
+        deadlineMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        transitions:
+          $ref: '#/components/schemas/StepTransitionsV3'
+      required:
+      - id
+      - kind
+      - policy
+      - requiredBranchIds
+      - remainingPolicy
+      - transitions
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            policy:
+              const: QUORUM
+          required:
+          - policy
+        then:
+          required:
+          - quorum
+        else:
+          not:
+            required:
+            - quorum
+    DelayStepV3:
+      type: object
+      properties:
+        id: *id001
+        kind:
+          const: DELAY
+        durationMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        nextStepId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - id
+      - kind
+      - durationMs
+      - nextStepId
+      additionalProperties: false
+    CompleteStepV3:
+      type: object
+      properties:
+        id: *id001
+        kind:
+          const: COMPLETE
+        scope:
+          type: string
+          enum:
+          - BRANCH
+          - ACTIVATION
+        resultProfileId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - id
+      - kind
+      - scope
+      - resultProfileId
+      additionalProperties: false
+    FailStepV3:
+      type: object
+      properties:
+        id: *id001
+        kind:
+          const: FAIL
+        scope:
+          type: string
+          enum:
+          - BRANCH
+          - ACTIVATION
+        errorProfileId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - id
+      - kind
+      - scope
+      - errorProfileId
+      additionalProperties: false
+    ExecutionStepV3:
+      oneOf:
+      - $ref: '#/components/schemas/ProcessStepV3'
+      - $ref: '#/components/schemas/CallStepV3'
+      - $ref: '#/components/schemas/PublishStepV3'
+      - $ref: '#/components/schemas/ConditionStepV3'
+      - $ref: '#/components/schemas/ForkStepV3'
+      - $ref: '#/components/schemas/JoinStepV3'
+      - $ref: '#/components/schemas/DelayStepV3'
+      - $ref: '#/components/schemas/CompleteStepV3'
+      - $ref: '#/components/schemas/FailStepV3'
+      description: União discriminada pelo campo kind
+    ExecutionPlanV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        operationId:
+          $ref: '#/components/schemas/IdentifierV3'
+        entryStepId:
+          $ref: '#/components/schemas/IdentifierV3'
+        limits:
+          $ref: '#/components/schemas/PlanLimitsV3'
+        steps:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/ExecutionStepV3'
+      required:
+      - id
+      - operationId
+      - entryStepId
+      - limits
+      - steps
+      additionalProperties: false
+    ArchitectureDefinitionV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        schemaVersion:
+          const: '3'
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComponentDefinitionV3'
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceDefinitionV3'
+        endpoints:
+          type: array
+          items:
+            $ref: '#/components/schemas/EndpointDefinitionV3'
+        operations:
+          type: array
+          items:
+            $ref: '#/components/schemas/OperationDefinitionV3'
+        relations:
+          type: array
+          items:
+            $ref: '#/components/schemas/RelationDefinitionV3'
+        executionPlans:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExecutionPlanV3'
+      required:
+      - id
+      - schemaVersion
+      - components
+      - resources
+      - endpoints
+      - operations
+      - relations
+      - executionPlans
+      additionalProperties: false
+    ComponentInitialStateV3:
+      type: object
+      properties:
+        kind:
+          const: COMPONENT
+        componentId:
+          $ref: '#/components/schemas/IdentifierV3'
+        available:
+          type: boolean
+      required:
+      - kind
+      - componentId
+      additionalProperties: false
+    ResourceInitialStateV3:
+      type: object
+      properties:
+        kind:
+          const: RESOURCE
+        resourceId:
+          $ref: '#/components/schemas/IdentifierV3'
+        available:
+          type: boolean
+      required:
+      - kind
+      - resourceId
+      additionalProperties: false
+    PolicyInitialStateV3:
+      type: object
+      properties:
+        kind:
+          const: POLICY
+        policyInstanceId:
+          $ref: '#/components/schemas/IdentifierV3'
+        state:
+          type: string
+          minLength: 1
+      required:
+      - kind
+      - policyInstanceId
+      additionalProperties: false
+    QueueInitialStateV3:
+      type: object
+      properties:
+        kind:
+          const: QUEUE
+        queueId:
+          $ref: '#/components/schemas/IdentifierV3'
+        initialMessageCount:
+          type: integer
+          minimum: 0
+      required:
+      - kind
+      - queueId
+      additionalProperties: false
+    InitialStateV3:
+      oneOf:
+      - $ref: '#/components/schemas/ComponentInitialStateV3'
+      - $ref: '#/components/schemas/ResourceInitialStateV3'
+      - $ref: '#/components/schemas/PolicyInitialStateV3'
+      - $ref: '#/components/schemas/QueueInitialStateV3'
+      description: União discriminada pelo campo kind
+    ScenarioEntryV3:
+      type: object
+      properties:
+        componentId:
+          $ref: '#/components/schemas/IdentifierV3'
+        operationId:
+          $ref: '#/components/schemas/IdentifierV3'
+        connectionId:
+          $ref: '#/components/schemas/IdentifierV3'
+        inputProfileId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - componentId
+      - operationId
+      additionalProperties: false
+    ScenarioV3:
+      type: object
+      properties:
+        id:
+          $ref: '#/components/schemas/IdentifierV3'
+        entry:
+          $ref: '#/components/schemas/ScenarioEntryV3'
+        initialStates:
+          type: array
+          items:
+            $ref: '#/components/schemas/InitialStateV3'
+        parameters:
+          $ref: '#/components/schemas/PropertiesV3'
+      required:
+      - id
+      - entry
+      - initialStates
+      - parameters
+      additionalProperties: false
+    SimulationOptionsV3:
+      type: object
+      properties:
+        seed:
+          $ref: '#/components/schemas/Integer64V3'
+        completionMode:
+          type: string
+          enum:
+          - DRAIN_ALL
+          - UNTIL_HORIZON
+        horizonAtMs:
+          $ref: '#/components/schemas/DurationMsV3'
+      required:
+      - seed
+      - completionMode
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            completionMode:
+              const: UNTIL_HORIZON
+          required:
+          - completionMode
+        then:
+          required:
+          - horizonAtMs
+        else:
+          not:
+            required:
+            - horizonAtMs
+    SimulationRequestV3:
+      type: object
+      properties:
+        architecture:
+          $ref: '#/components/schemas/ArchitectureDefinitionV3'
+        scenario:
+          $ref: '#/components/schemas/ScenarioV3'
+        options:
+          $ref: '#/components/schemas/SimulationOptionsV3'
+      required:
+      - architecture
+      - scenario
+      - options
+      additionalProperties: false
+    ExecutionPlanValidationRequestV3:
+      type: object
+      properties:
+        architecture:
+          $ref: '#/components/schemas/ArchitectureDefinitionV3'
+        executionPlan:
+          $ref: '#/components/schemas/ExecutionPlanV3'
+      required:
+      - architecture
+      - executionPlan
+      additionalProperties: false
+    ViolationV3:
+      type: object
+      properties:
+        code:
+          type: string
+          minLength: 1
+        path:
+          $ref: '#/components/schemas/JsonPointerV3'
+        message:
+          type: string
+          minLength: 1
+        severity:
+          type: string
+          enum:
+          - ERROR
+          - WARNING
+        relatedIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - code
+      - path
+      - message
+      - severity
+      additionalProperties: false
+    ValidationResponseV3:
+      type: object
+      properties:
+        valid:
+          type: boolean
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ViolationV3'
+      required:
+      - valid
+      - violations
+      additionalProperties: false
+    ProblemV3:
+      type: object
+      properties:
+        type:
+          type: string
+          minLength: 1
+        title:
+          type: string
+          minLength: 1
+        status:
+          type: integer
+          minimum: 100
+        detail:
+          type: string
+          minLength: 0
+        code:
+          type: string
+          minLength: 1
+        instance:
+          type: string
+          minLength: 1
+        violations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ViolationV3'
+      required:
+      - type
+      - title
+      - status
+      - code
+      additionalProperties: false
+    ExecutionMetadataV3:
+      type: object
+      properties:
+        executionId:
+          $ref: '#/components/schemas/IdentifierV3'
+        rootOperationId:
+          $ref: '#/components/schemas/IdentifierV3'
+        architectureId:
+          $ref: '#/components/schemas/IdentifierV3'
+        scenarioId:
+          $ref: '#/components/schemas/IdentifierV3'
+        simulationModelVersion:
+          type: string
+          minLength: 1
+        schedulerVersion:
+          type: string
+          minLength: 1
+        catalogVersion:
+          type: string
+          minLength: 1
+        compatibilityVersion:
+          type: string
+          minLength: 1
+        randomAlgorithmVersion:
+          type: string
+          minLength: 1
+        seed:
+          $ref: '#/components/schemas/Integer64V3'
+      required:
+      - executionId
+      - rootOperationId
+      - architectureId
+      - scenarioId
+      - simulationModelVersion
+      - schedulerVersion
+      - catalogVersion
+      - compatibilityVersion
+      - randomAlgorithmVersion
+      - seed
+      additionalProperties: false
+    OperationOutcomeV3:
+      type: object
+      properties:
+        category:
+          type: string
+          enum:
+          - SUCCESS
+          - BUSINESS_REJECTION
+          - SERVICE_ERROR
+          - TRANSPORT_ERROR
+          - TIMEOUT
+          - CANCELLED
+          - UNKNOWN
+        code:
+          type: string
+          minLength: 1
+        message:
+          type: string
+          minLength: 0
+        protocolStatus:
+          oneOf:
+          - type: integer
+            minimum: 100
+            maximum: 599
+          - type: 'null'
+        payloadProfileId:
+          $ref: '#/components/schemas/IdentifierV3'
+      required:
+      - category
+      - code
+      additionalProperties: false
+    PrincipalResultV3:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - IN_PROGRESS
+          - RESPONDED
+          - FAILED
+          - TIMED_OUT
+          - CANCELLED
+        initiatorComponentId:
+          $ref: '#/components/schemas/IdentifierV3'
+        operationId:
+          $ref: '#/components/schemas/IdentifierV3'
+        startedAtMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        terminalAtMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        responseArrivedAtMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        responseDurationMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        terminalDurationMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        outcome:
+          oneOf:
+          - $ref: '#/components/schemas/OperationOutcomeV3'
+          - type: 'null'
+      required:
+      - status
+      - initiatorComponentId
+      - operationId
+      - startedAtMs
+      - terminalAtMs
+      - responseArrivedAtMs
+      - responseDurationMs
+      - terminalDurationMs
+      - outcome
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            status:
+              const: RESPONDED
+          required:
+          - status
+        then:
+          properties:
+            startedAtMs:
+              $ref: '#/components/schemas/DurationMsV3'
+            terminalAtMs:
+              $ref: '#/components/schemas/DurationMsV3'
+            responseArrivedAtMs:
+              $ref: '#/components/schemas/DurationMsV3'
+            responseDurationMs:
+              $ref: '#/components/schemas/DurationMsV3'
+            terminalDurationMs:
+              $ref: '#/components/schemas/DurationMsV3'
+      - if:
+          properties:
+            status:
+              enum:
+              - FAILED
+              - TIMED_OUT
+              - CANCELLED
+          required:
+          - status
+        then:
+          properties:
+            terminalAtMs:
+              $ref: '#/components/schemas/DurationMsV3'
+            terminalDurationMs:
+              $ref: '#/components/schemas/DurationMsV3'
+            responseArrivedAtMs:
+              type: 'null'
+            responseDurationMs:
+              type: 'null'
+      - if:
+          properties:
+            status:
+              const: IN_PROGRESS
+          required:
+          - status
+        then:
+          properties:
+            terminalAtMs:
+              type: 'null'
+            responseArrivedAtMs:
+              type: 'null'
+            responseDurationMs:
+              type: 'null'
+            terminalDurationMs:
+              type: 'null'
+    PendingWorkSummaryV3:
+      type: object
+      properties:
+        entityKind:
+          type: string
+          minLength: 1
+        entityId:
+          $ref: '#/components/schemas/IdentifierV3'
+        ownerId:
+          $ref: '#/components/schemas/IdentifierV3'
+        status:
+          type: string
+          minLength: 1
+        waitingReason:
+          oneOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+        nextScheduledAtMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+      required:
+      - entityKind
+      - entityId
+      - ownerId
+      - status
+      - waitingReason
+      - nextScheduledAtMs
+      additionalProperties: false
+    ExecutionCountersV3:
+      type: object
+      properties:
+        processedEvents:
+          type: integer
+          minimum: 0
+        scheduledEvents:
+          type: integer
+          minimum: 0
+        activationCount:
+          type: integer
+          minimum: 0
+        interactionCount:
+          type: integer
+          minimum: 0
+        messageCount:
+          type: integer
+          minimum: 0
+        traceRecordCount:
+          type: integer
+          minimum: 0
+      required:
+      - processedEvents
+      - scheduledEvents
+      - activationCount
+      - interactionCount
+      - messageCount
+      - traceRecordCount
+      additionalProperties: false
+    GlobalResultV3:
+      type: object
+      properties:
+        status:
+          type: string
+          enum:
+          - COMPLETED
+          - FAILED
+          - LIMIT_REACHED
+          - HORIZON_REACHED
+          - ABORTED
+        terminationReasonCode:
+          type: string
+          minLength: 1
+        observedUntilMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        completionAtMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        completionDurationMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        pendingWork:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingWorkSummaryV3'
+        counters:
+          $ref: '#/components/schemas/ExecutionCountersV3'
+      required:
+      - status
+      - terminationReasonCode
+      - observedUntilMs
+      - completionAtMs
+      - completionDurationMs
+      - pendingWork
+      - counters
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            status:
+              const: COMPLETED
+          required:
+          - status
+        then:
+          properties:
+            completionAtMs:
+              $ref: '#/components/schemas/DurationMsV3'
+            completionDurationMs:
+              $ref: '#/components/schemas/DurationMsV3'
+            pendingWork:
+              maxItems: 0
+      - if:
+          properties:
+            status:
+              enum:
+              - FAILED
+              - LIMIT_REACHED
+              - HORIZON_REACHED
+              - ABORTED
+          required:
+          - status
+        then:
+          properties:
+            completionAtMs:
+              type: 'null'
+            completionDurationMs:
+              type: 'null'
+    ActivationSnapshotV3:
+      type: object
+      properties:
+        activationId:
+          $ref: '#/components/schemas/IdentifierV3'
+        componentId:
+          $ref: '#/components/schemas/IdentifierV3'
+        status:
+          type: string
+          enum:
+          - READY
+          - RUNNING
+          - WAITING
+          - COMPLETED
+          - FAILED
+          - CANCELLED
+        currentStepId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        version:
+          type: integer
+          minimum: 0
+          description: Versão de reconstrução da entidade. Obrigatória para entidades incluídas em journal reconstruível.
+      required:
+      - activationId
+      - componentId
+      - status
+      - currentStepId
+      additionalProperties: false
+    InteractionSnapshotV3:
+      type: object
+      properties:
+        interactionId:
+          $ref: '#/components/schemas/IdentifierV3'
+        status:
+          type: string
+          enum:
+          - CREATED
+          - IN_FLIGHT
+          - AWAITING_RESULT
+          - COMPLETED
+          - FAILED
+          - TIMED_OUT
+          - CANCELLED
+        attemptIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentifierV3'
+        version:
+          type: integer
+          minimum: 0
+          description: Versão de reconstrução da entidade. Obrigatória para entidades incluídas em journal reconstruível.
+      required:
+      - interactionId
+      - status
+      - attemptIds
+      additionalProperties: false
+    AttemptSnapshotV3:
+      type: object
+      properties:
+        attemptId:
+          $ref: '#/components/schemas/IdentifierV3'
+        interactionId:
+          $ref: '#/components/schemas/IdentifierV3'
+        status:
+          type: string
+          enum:
+          - SCHEDULED
+          - IN_FLIGHT
+          - AWAITING_RESULT
+          - COMPLETED
+          - FAILED
+          - TIMED_OUT
+          - CANCELLED
+        version:
+          type: integer
+          minimum: 0
+          description: Versão de reconstrução da entidade. Obrigatória para entidades incluídas em journal reconstruível.
+      required:
+      - attemptId
+      - interactionId
+      - status
+      additionalProperties: false
+    ParallelGroupSnapshotV3:
+      type: object
+      properties:
+        parallelGroupId:
+          $ref: '#/components/schemas/IdentifierV3'
+        status:
+          type: string
+          enum:
+          - CREATED
+          - RUNNING
+          - JOIN_SATISFIED
+          - JOIN_UNSATISFIABLE
+          - COMPLETED
+          - CANCELLED
+        branchIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentifierV3'
+        version:
+          type: integer
+          minimum: 0
+          description: Versão de reconstrução da entidade. Obrigatória para entidades incluídas em journal reconstruível.
+      required:
+      - parallelGroupId
+      - status
+      - branchIds
+      additionalProperties: false
+    ResourceSnapshotV3:
+      type: object
+      properties:
+        resourceId:
+          $ref: '#/components/schemas/IdentifierV3'
+        status:
+          type: string
+          minLength: 1
+        capacity:
+          oneOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        inUse:
+          oneOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        version:
+          type: integer
+          minimum: 0
+          description: Versão de reconstrução da entidade. Obrigatória para entidades incluídas em journal reconstruível.
+      required:
+      - resourceId
+      - status
+      - capacity
+      - inUse
+      additionalProperties: false
+    QueueEntrySnapshotV3:
+      type: object
+      properties:
+        queueEntryId:
+          $ref: '#/components/schemas/IdentifierV3'
+        queueId:
+          $ref: '#/components/schemas/IdentifierV3'
+        messageId:
+          $ref: '#/components/schemas/IdentifierV3'
+        status:
+          type: string
+          enum:
+          - READY
+          - IN_DELIVERY
+          - ACKNOWLEDGED
+          - EXPIRED
+          - DEAD_LETTERED
+          - DISCARDED
+        version:
+          type: integer
+          minimum: 0
+          description: Versão de reconstrução da entidade. Obrigatória para entidades incluídas em journal reconstruível.
+      required:
+      - queueEntryId
+      - queueId
+      - messageId
+      - status
+      additionalProperties: false
+    PublicationSnapshotV3:
+      type: object
+      properties:
+        publicationId:
+          $ref: '#/components/schemas/IdentifierV3'
+        messageId:
+          $ref: '#/components/schemas/IdentifierV3'
+        status:
+          type: string
+          enum:
+          - CREATED
+          - IN_TRANSIT
+          - ACCEPTED
+          - REJECTED
+          - FAILED
+          - TIMED_OUT
+        version:
+          type: integer
+          minimum: 0
+          description: Versão de reconstrução da entidade. Obrigatória para entidades incluídas em journal reconstruível.
+      required:
+      - publicationId
+      - messageId
+      - status
+      additionalProperties: false
+    DeliveryAttemptSnapshotV3:
+      type: object
+      properties:
+        deliveryAttemptId:
+          $ref: '#/components/schemas/IdentifierV3'
+        queueEntryId:
+          $ref: '#/components/schemas/IdentifierV3'
+        status:
+          type: string
+          enum:
+          - SCHEDULED
+          - IN_TRANSIT
+          - DELIVERED
+          - AWAITING_ACK
+          - ACKNOWLEDGED
+          - REJECTED
+          - TIMED_OUT
+          - FAILED
+          - CANCELLED
+        version:
+          type: integer
+          minimum: 0
+          description: Versão de reconstrução da entidade. Obrigatória para entidades incluídas em journal reconstruível.
+      required:
+      - deliveryAttemptId
+      - queueEntryId
+      - status
+      additionalProperties: false
+    ExecutionStateSnapshotV3:
+      type: object
+      properties:
+        virtualTimeMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        activations:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActivationSnapshotV3'
+        interactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/InteractionSnapshotV3'
+        attempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/AttemptSnapshotV3'
+        parallelGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParallelGroupSnapshotV3'
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceSnapshotV3'
+        queueEntries:
+          type: array
+          items:
+            $ref: '#/components/schemas/QueueEntrySnapshotV3'
+        publications:
+          type: array
+          items:
+            $ref: '#/components/schemas/PublicationSnapshotV3'
+        deliveryAttempts:
+          type: array
+          items:
+            $ref: '#/components/schemas/DeliveryAttemptSnapshotV3'
+      required:
+      - virtualTimeMs
+      - activations
+      - interactions
+      - attempts
+      - parallelGroups
+      - resources
+      - queueEntries
+      - publications
+      - deliveryAttempts
+      additionalProperties: false
+    StateChangeTraceDetailV3:
+      type: object
+      properties:
+        kind:
+          const: STATECHANGE
+        entityKind:
+          type: string
+          minLength: 1
+        entityId:
+          $ref: '#/components/schemas/IdentifierV3'
+        previousStatus:
+          oneOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+        nextStatus:
+          type: string
+          minLength: 1
+        reasonCode:
+          type: string
+          minLength: 1
+        previousVersion:
+          type: integer
+          minimum: 0
+        nextVersion:
+          type: integer
+          minimum: 0
+      required:
+      - kind
+      - entityKind
+      - entityId
+      - previousStatus
+      - nextStatus
+      - reasonCode
+      - previousVersion
+      - nextVersion
+      additionalProperties: false
+    MessageTraceDetailV3:
+      type: object
+      properties:
+        kind:
+          const: MESSAGE
+        messageId:
+          $ref: '#/components/schemas/IdentifierV3'
+        action:
+          type: string
+          minLength: 1
+        endpointId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        attemptId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+      required:
+      - kind
+      - messageId
+      - action
+      - endpointId
+      - attemptId
+      additionalProperties: false
+    StepTraceDetailV3:
+      type: object
+      properties:
+        kind:
+          const: STEP
+        stepExecutionId:
+          $ref: '#/components/schemas/IdentifierV3'
+        stepId:
+          $ref: '#/components/schemas/IdentifierV3'
+        action:
+          type: string
+          minLength: 1
+        outcomeCode:
+          oneOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+      required:
+      - kind
+      - stepExecutionId
+      - stepId
+      - action
+      - outcomeCode
+      additionalProperties: false
+    JoinTraceDetailV3:
+      type: object
+      properties:
+        kind:
+          const: JOIN
+        parallelGroupId:
+          $ref: '#/components/schemas/IdentifierV3'
+        action:
+          type: string
+          minLength: 1
+        policy:
+          type: string
+          enum:
+          - ALL
+          - ANY
+          - FIRST_SUCCESS
+          - QUORUM
+      required:
+      - kind
+      - parallelGroupId
+      - action
+      - policy
+      additionalProperties: false
+    ResourceTraceDetailV3:
+      type: object
+      properties:
+        kind:
+          const: RESOURCE
+        resourceId:
+          $ref: '#/components/schemas/IdentifierV3'
+        action:
+          type: string
+          minLength: 1
+        occupancy:
+          oneOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+      required:
+      - kind
+      - resourceId
+      - action
+      - occupancy
+      additionalProperties: false
+    TerminationTraceDetailV3:
+      type: object
+      properties:
+        kind:
+          const: TERMINATION
+        reasonCode:
+          type: string
+          minLength: 1
+        status:
+          type: string
+          minLength: 1
+      required:
+      - kind
+      - reasonCode
+      - status
+      additionalProperties: false
+    ExecutionTraceDetailV3:
+      type: object
+      properties:
+        kind:
+          const: EXECUTION
+        action:
+          type: string
+          minLength: 1
+        operationId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+      required:
+      - kind
+      - action
+      - operationId
+      additionalProperties: false
+    RetryTraceDetailV3:
+      type: object
+      properties:
+        kind:
+          const: RETRY
+        interactionId:
+          $ref: '#/components/schemas/IdentifierV3'
+        attemptId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        action:
+          type: string
+          minLength: 1
+      required:
+      - kind
+      - interactionId
+      - attemptId
+      - action
+      additionalProperties: false
+    QueueTraceDetailV3:
+      type: object
+      properties:
+        kind:
+          const: QUEUE
+        queueEntryId:
+          $ref: '#/components/schemas/IdentifierV3'
+        action:
+          type: string
+          minLength: 1
+        deliveryAttemptId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+      required:
+      - kind
+      - queueEntryId
+      - action
+      - deliveryAttemptId
+      additionalProperties: false
+    TraceDetailV3:
+      oneOf:
+      - $ref: '#/components/schemas/StateChangeTraceDetailV3'
+      - $ref: '#/components/schemas/MessageTraceDetailV3'
+      - $ref: '#/components/schemas/StepTraceDetailV3'
+      - $ref: '#/components/schemas/JoinTraceDetailV3'
+      - $ref: '#/components/schemas/ResourceTraceDetailV3'
+      - $ref: '#/components/schemas/TerminationTraceDetailV3'
+      - $ref: '#/components/schemas/ExecutionTraceDetailV3'
+      - $ref: '#/components/schemas/RetryTraceDetailV3'
+      - $ref: '#/components/schemas/QueueTraceDetailV3'
+      - $ref: '#/components/schemas/RuntimeDeltaTraceDetailV3'
+      description: União discriminada pelo campo kind
+    TraceContextV3:
+      type: object
+      properties:
+        rootOperationId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        componentId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        activationId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        branchExecutionId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        stepExecutionId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        interactionId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        attemptId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        messageId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        causationRecordId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        sourceEventId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+      required: []
+      additionalProperties: false
+    TraceRecordV3:
+      type: object
+      properties:
+        recordId:
+          $ref: '#/components/schemas/IdentifierV3'
+        sequence:
+          type: integer
+          minimum: 0
+        timestampMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        kind:
+          $ref: '#/components/schemas/TraceKindV3'
+        executionId:
+          $ref: '#/components/schemas/IdentifierV3'
+        context:
+          $ref: '#/components/schemas/TraceContextV3'
+        detail:
+          $ref: '#/components/schemas/TraceDetailV3'
+      required:
+      - recordId
+      - sequence
+      - timestampMs
+      - kind
+      - executionId
+      - context
+      - detail
+      additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            kind:
+              const: EXECUTION_STARTED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: EXECUTION
+                action:
+                  const: STARTED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: ROOT_OPERATION_STARTED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: EXECUTION
+                action:
+                  const: ROOT_STARTED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: ACTIVATION_CREATED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: STATECHANGE
+              required:
+              - kind
+      - if:
+          properties:
+            kind:
+              const: ACTIVATION_STATE_CHANGED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: STATECHANGE
+              required:
+              - kind
+      - if:
+          properties:
+            kind:
+              const: INTERACTION_STATE_CHANGED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: STATECHANGE
+              required:
+              - kind
+      - if:
+          properties:
+            kind:
+              const: ATTEMPT_STATE_CHANGED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: STATECHANGE
+              required:
+              - kind
+      - if:
+          properties:
+            kind:
+              const: STEP_STARTED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: STEP
+                action:
+                  const: STARTED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: STEP_FINISHED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: STEP
+                action:
+                  const: FINISHED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: STEP_TRANSITION_SELECTED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: STEP
+                action:
+                  const: TRANSITION_SELECTED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: MESSAGE_SENT
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: MESSAGE
+                action:
+                  const: SENT
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: MESSAGE_ARRIVED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: MESSAGE
+                action:
+                  const: ARRIVED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: MESSAGE_DELIVERY_FAILED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: MESSAGE
+                action:
+                  const: DELIVERY_FAILED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: RESPONSE_SENT
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: MESSAGE
+                action:
+                  const: RESPONSE_SENT
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: RESPONSE_ARRIVED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: MESSAGE
+                action:
+                  const: RESPONSE_ARRIVED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: RESPONSE_ARRIVED_LATE
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: MESSAGE
+                action:
+                  const: RESPONSE_ARRIVED_LATE
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: JOIN_EVALUATED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: JOIN
+                action:
+                  const: EVALUATED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: JOIN_SATISFIED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: JOIN
+                action:
+                  const: SATISFIED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: JOIN_UNSATISFIABLE
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: JOIN
+                action:
+                  const: UNSATISFIABLE
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: RESOURCE_ACQUIRED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: RESOURCE
+                action:
+                  const: ACQUIRED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: RESOURCE_RELEASED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: RESOURCE
+                action:
+                  const: RELEASED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: RESOURCE_WAIT_STARTED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: RESOURCE
+                action:
+                  const: WAIT_STARTED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: RESOURCE_STATE_CHANGED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: RESOURCE
+                action:
+                  const: STATE_CHANGED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: RETRY_SCHEDULED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: RETRY
+                action:
+                  const: SCHEDULED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: RETRY_STARTED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: RETRY
+                action:
+                  const: STARTED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: BROKER_ACCEPTED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: QUEUE
+                action:
+                  const: BROKER_ACCEPTED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: BROKER_REJECTED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: QUEUE
+                action:
+                  const: BROKER_REJECTED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: QUEUE_MESSAGE_ENQUEUED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: QUEUE
+                action:
+                  const: ENQUEUED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: QUEUE_DELIVERY_STARTED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: QUEUE
+                action:
+                  const: DELIVERY_STARTED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: CONSUMER_ACKNOWLEDGED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: QUEUE
+                action:
+                  const: CONSUMER_ACKNOWLEDGED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: QUEUE_MESSAGE_ACKNOWLEDGED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: QUEUE
+                action:
+                  const: MESSAGE_ACKNOWLEDGED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: QUEUE_MESSAGE_EXPIRED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: QUEUE
+                action:
+                  const: EXPIRED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: PRINCIPAL_RESPONDED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: EXECUTION
+                action:
+                  const: PRINCIPAL_RESPONDED
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: PRINCIPAL_TIMED_OUT
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: EXECUTION
+                action:
+                  const: PRINCIPAL_TIMED_OUT
+              required:
+              - kind
+              - action
+      - if:
+          properties:
+            kind:
+              const: GLOBAL_COMPLETED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: TERMINATION
+              required:
+              - kind
+      - if:
+          properties:
+            kind:
+              const: HORIZON_REACHED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: TERMINATION
+              required:
+              - kind
+      - if:
+          properties:
+            kind:
+              const: LIMIT_REACHED
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: TERMINATION
+              required:
+              - kind
+      - if:
+          properties:
+            kind:
+              const: RUNTIME_STATE_DELTA
+          required:
+          - kind
+        then:
+          properties:
+            detail:
+              properties:
+                kind:
+                  const: RUNTIME_DELTA
+              required:
+              - kind
+      description: kind determina obrigatoriamente a família detail.kind e, quando aplicável, detail.action. Trace
+        preserva sequence crescente; monotonicidade é validação semântica.
+    TraceResultV3:
+      type: object
+      properties:
+        completeness:
+          type: string
+          enum:
+          - COMPLETE
+          - COMPLETE_UNTIL_STOP
+          - TRUNCATED
+        recordCount:
+          type: integer
+          minimum: 0
+          description: Contagem de registros efetivamente presentes em records; igualdade com len(records) é invariante
+            semântico.
+        records:
+          type: array
+          items:
+            $ref: '#/components/schemas/TraceRecordV3'
+      required:
+      - completeness
+      - recordCount
+      - records
+      additionalProperties: false
+    TimelineActivityV3:
+      type: object
+      properties:
+        activityId:
+          $ref: '#/components/schemas/IdentifierV3'
+        parentActivityId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        componentId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        activationId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+        kind:
+          type: string
+          minLength: 1
+        startedAtMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        endedAtMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        status:
+          type: string
+          minLength: 1
+        sourceTraceRecordId:
+          $ref: '#/components/schemas/IdentifierV3'
+        endTraceRecordId:
+          $ref: '#/components/schemas/NullableIdentifierV3'
+      required:
+      - activityId
+      - parentActivityId
+      - componentId
+      - activationId
+      - kind
+      - startedAtMs
+      - endedAtMs
+      - status
+      - sourceTraceRecordId
+      - endTraceRecordId
+      additionalProperties: false
+    ComponentMetricsV3:
+      type: object
+      properties:
+        componentId:
+          $ref: '#/components/schemas/IdentifierV3'
+        activationCount:
+          type: integer
+          minimum: 0
+        completedActivationCount:
+          type: integer
+          minimum: 0
+        failedActivationCount:
+          type: integer
+          minimum: 0
+        totalProcessingWorkMs:
+          type: integer
+          minimum: 0
+        totalWaitingWorkMs:
+          type: integer
+          minimum: 0
+        totalCommunicationWorkMs:
+          type: integer
+          minimum: 0
+      required:
+      - componentId
+      - activationCount
+      - completedActivationCount
+      - failedActivationCount
+      - totalProcessingWorkMs
+      - totalWaitingWorkMs
+      - totalCommunicationWorkMs
+      additionalProperties: false
+    InteractionMetricsV3:
+      type: object
+      properties:
+        interactionId:
+          $ref: '#/components/schemas/IdentifierV3'
+        sourceComponentId:
+          $ref: '#/components/schemas/IdentifierV3'
+        targetComponentId:
+          $ref: '#/components/schemas/IdentifierV3'
+        startedAtMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        terminalAtMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        durationMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        attemptCount:
+          type: integer
+          minimum: 0
+        transportWorkMs:
+          type: integer
+          minimum: 0
+        remoteProcessingWorkMs:
+          type: integer
+          minimum: 0
+        waitingWorkMs:
+          type: integer
+          minimum: 0
+      required:
+      - interactionId
+      - sourceComponentId
+      - targetComponentId
+      - startedAtMs
+      - terminalAtMs
+      - durationMs
+      - attemptCount
+      - transportWorkMs
+      - remoteProcessingWorkMs
+      - waitingWorkMs
+      additionalProperties: false
+    ResourceMetricsV3:
+      type: object
+      properties:
+        resourceId:
+          $ref: '#/components/schemas/IdentifierV3'
+        acquiredCount:
+          type: integer
+          minimum: 0
+        rejectedCount:
+          type: integer
+          minimum: 0
+        timeoutCount:
+          type: integer
+          minimum: 0
+        totalWaitingMs:
+          type: integer
+          minimum: 0
+        totalBusyCapacityMs:
+          type: integer
+          minimum: 0
+        maxObservedInUse:
+          type: integer
+          minimum: 0
+      required:
+      - resourceId
+      - acquiredCount
+      - rejectedCount
+      - timeoutCount
+      - totalWaitingMs
+      - totalBusyCapacityMs
+      - maxObservedInUse
+      additionalProperties: false
+    ParallelGroupMetricsV3:
+      type: object
+      properties:
+        parallelGroupId:
+          $ref: '#/components/schemas/IdentifierV3'
+        startedAtMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        joinSatisfiedAtMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        allBranchesTerminalAtMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+      required:
+      - parallelGroupId
+      - startedAtMs
+      - joinSatisfiedAtMs
+      - allBranchesTerminalAtMs
+      additionalProperties: false
+    CriticalPathMetricV3:
+      type: object
+      properties:
+        target:
+          type: string
+          enum:
+          - PRINCIPAL_RESPONSE
+          - PRINCIPAL_TERMINAL
+          - GLOBAL_COMPLETION
+        durationMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        activityIds:
+          type: array
+          items:
+            $ref: '#/components/schemas/IdentifierV3'
+        calculationVersion:
+          type: string
+          minLength: 1
+        unavailableReason:
+          oneOf:
+          - type: string
+            minLength: 1
+          - type: 'null'
+      required:
+      - target
+      - durationMs
+      - activityIds
+      - calculationVersion
+      - unavailableReason
+      additionalProperties: false
+    SimulationMetricsV3:
+      type: object
+      properties:
+        principalResponseDurationMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        principalTerminalDurationMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        globalCompletionDurationMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        observationDurationMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        backgroundDurationAfterResponseMs:
+          $ref: '#/components/schemas/NullableDurationV3'
+        components:
+          type: array
+          items:
+            $ref: '#/components/schemas/ComponentMetricsV3'
+        interactions:
+          type: array
+          items:
+            $ref: '#/components/schemas/InteractionMetricsV3'
+        resources:
+          type: array
+          items:
+            $ref: '#/components/schemas/ResourceMetricsV3'
+        parallelGroups:
+          type: array
+          items:
+            $ref: '#/components/schemas/ParallelGroupMetricsV3'
+        criticalPaths:
+          type: array
+          items:
+            $ref: '#/components/schemas/CriticalPathMetricV3'
+      required:
+      - principalResponseDurationMs
+      - principalTerminalDurationMs
+      - globalCompletionDurationMs
+      - observationDurationMs
+      - backgroundDurationAfterResponseMs
+      - components
+      - interactions
+      - resources
+      - parallelGroups
+      - criticalPaths
+      additionalProperties: false
+    ResultIntegrityV3:
+      type: object
+      properties:
+        snapshotDigest:
+          type: string
+          minLength: 1
+        normalizedTraceDigest:
+          type: string
+          minLength: 1
+        normalizedResultDigest:
+          type: string
+          minLength: 1
+        digestAlgorithmVersion:
+          type: string
+          minLength: 1
+          description: 'sha256-cjson-v1: SHA-256 sobre JSON canonizado UTF-8, sort_keys, separators sem espaços;
+            digest do resultado omite integrity; digests de snapshot usam objeto finalState; trace usa records.
+            IDs externos devem ser normalizados em reexecuções.'
+        traceCompleteness:
+          type: string
+          enum:
+          - COMPLETE
+          - COMPLETE_UNTIL_STOP
+          - TRUNCATED
+        playbackReconstructible:
+          type: boolean
+          description: true exige histórico de estado de runtime integral, incluindo dados internos não contidos
+            em ExecutionStateSnapshotV3. Um journal PUBLIC_SNAPSHOT por si só não justifica true.
+        publicSnapshotReconstructible:
+          type: boolean
+          description: true somente se replay completo dos deltas PUBLIC_SNAPSHOT reproduz finalState; não implica
+            playback integral de runtime.
+        fullRuntimeSnapshotReconstructible:
+          type: boolean
+          description: Verdadeiro somente apos validacao integral dos deltas FULL_RUNTIME com envelopes TraceRecordV3.
+            Nao prova reexecucao do motor.
+      required:
+      - snapshotDigest
+      - normalizedTraceDigest
+      - normalizedResultDigest
+      - digestAlgorithmVersion
+      - traceCompleteness
+      - playbackReconstructible
+      additionalProperties: false
+    SimulationResponseV3:
+      type: object
+      properties:
+        metadata:
+          $ref: '#/components/schemas/ExecutionMetadataV3'
+        principal:
+          $ref: '#/components/schemas/PrincipalResultV3'
+        global:
+          $ref: '#/components/schemas/GlobalResultV3'
+        initialState:
+          $ref: '#/components/schemas/ExecutionStateSnapshotV3'
+        finalState:
+          $ref: '#/components/schemas/ExecutionStateSnapshotV3'
+        trace:
+          $ref: '#/components/schemas/TraceResultV3'
+        timeline:
+          type: array
+          items:
+            $ref: '#/components/schemas/TimelineActivityV3'
+        metrics:
+          $ref: '#/components/schemas/SimulationMetricsV3'
+        integrity:
+          $ref: '#/components/schemas/ResultIntegrityV3'
+        reconstruction:
+          $ref: '#/components/schemas/StateReconstructionV3'
+        fullRuntimeReconstruction:
+          $ref: '#/components/schemas/FullRuntimeReconstructionV3'
+      required:
+      - metadata
+      - principal
+      - global
+      - initialState
+      - finalState
+      - trace
+      - timeline
+      - metrics
+      - integrity
+      additionalProperties: false
+      description: 'Regras semânticas adicionais: trace.recordCount=len(trace.records), counters.traceRecordCount>=recordCount,
+        trace.completeness=integrity.traceCompleteness, tempo observado consistente, métricas compatíveis com principal/global,
+        sequências de trace estritamente crescentes. API-V3-005 permite reconstruction opcional, com prova de equivalência
+        apenas do PUBLIC_SNAPSHOT. playbackReconstructible permanece false sem cobertura FULL_RUNTIME. API-V3-006:
+        fullRuntimeReconstruction opcional; nao e suficiente para declarar reexecucao deterministica validada. API-V3-006:
+        fullRuntimeReconstruction opcional; nao e suficiente para declarar reexecucao deterministica validada.'
+    TraceKindV3:
+      type: string
+      enum:
+      - EXECUTION_STARTED
+      - ROOT_OPERATION_STARTED
+      - ACTIVATION_CREATED
+      - ACTIVATION_STATE_CHANGED
+      - INTERACTION_STATE_CHANGED
+      - ATTEMPT_STATE_CHANGED
+      - STEP_STARTED
+      - STEP_FINISHED
+      - STEP_TRANSITION_SELECTED
+      - MESSAGE_SENT
+      - MESSAGE_ARRIVED
+      - MESSAGE_DELIVERY_FAILED
+      - RESPONSE_SENT
+      - RESPONSE_ARRIVED
+      - RESPONSE_ARRIVED_LATE
+      - JOIN_EVALUATED
+      - JOIN_SATISFIED
+      - JOIN_UNSATISFIABLE
+      - RESOURCE_ACQUIRED
+      - RESOURCE_RELEASED
+      - RESOURCE_WAIT_STARTED
+      - RESOURCE_STATE_CHANGED
+      - RETRY_SCHEDULED
+      - RETRY_STARTED
+      - BROKER_ACCEPTED
+      - BROKER_REJECTED
+      - QUEUE_MESSAGE_ENQUEUED
+      - QUEUE_DELIVERY_STARTED
+      - CONSUMER_ACKNOWLEDGED
+      - QUEUE_MESSAGE_ACKNOWLEDGED
+      - QUEUE_MESSAGE_EXPIRED
+      - PRINCIPAL_RESPONDED
+      - PRINCIPAL_TIMED_OUT
+      - GLOBAL_COMPLETED
+      - HORIZON_REACHED
+      - LIMIT_REACHED
+      - RUNTIME_STATE_DELTA
+      description: Catálogo público inicial de fatos, diferente dos 32 eventos internos de agendamento. Acrescentar
+        novos kinds requer revisão contratual.
+    SnapshotEntityV3:
+      oneOf:
+      - $ref: '#/components/schemas/ActivationSnapshotV3'
+      - $ref: '#/components/schemas/InteractionSnapshotV3'
+      - $ref: '#/components/schemas/AttemptSnapshotV3'
+      - $ref: '#/components/schemas/ParallelGroupSnapshotV3'
+      - $ref: '#/components/schemas/ResourceSnapshotV3'
+      - $ref: '#/components/schemas/QueueEntrySnapshotV3'
+      - $ref: '#/components/schemas/PublicationSnapshotV3'
+      - $ref: '#/components/schemas/DeliveryAttemptSnapshotV3'
+      description: União de projeções públicas de entidade. Tipo e ID são validados contra entityKind/entityId durante
+        replay.
+    StateDeltaV3:
+      type: object
+      additionalProperties: false
+      required:
+      - deltaId
+      - sequence
+      - timestampMs
+      - sourceTraceRecordId
+      - entityKind
+      - entityId
+      - operation
+      - expectedVersion
+      - nextVersion
+      - before
+      - after
+      properties:
+        deltaId:
+          $ref: '#/components/schemas/IdentifierV3'
+        sequence:
+          type: integer
+          minimum: 0
+        timestampMs:
+          $ref: '#/components/schemas/DurationMsV3'
+        sourceTraceRecordId:
+          $ref: '#/components/schemas/IdentifierV3'
+        entityKind:
+          type: string
+          enum:
+          - ACTIVATION
+          - INTERACTION
+          - ATTEMPT
+          - PARALLEL_GROUP
+          - RESOURCE
+          - QUEUE_ENTRY
+          - PUBLICATION
+          - DELIVERY_ATTEMPT
+        entityId:
+          $ref: '#/components/schemas/IdentifierV3'
+        operation:
+          type: string
+          enum:
+          - CREATE
+          - UPDATE
+          - REMOVE
+        expectedVersion:
+          oneOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        nextVersion:
+          oneOf:
+          - type: integer
+            minimum: 0
+          - type: 'null'
+        before:
+          oneOf:
+          - $ref: '#/components/schemas/SnapshotEntityV3'
+          - type: 'null'
+        after:
+          oneOf:
+          - $ref: '#/components/schemas/SnapshotEntityV3'
+          - type: 'null'
+      allOf:
+      - if:
+          properties:
+            operation:
+              const: CREATE
+          required:
+          - operation
+        then:
+          properties:
+            before:
+              type: 'null'
+            expectedVersion:
+              type: 'null'
+            nextVersion:
+              const: 0
+            after:
+              $ref: '#/components/schemas/SnapshotEntityV3'
+      - if:
+          properties:
+            operation:
+              const: UPDATE
+          required:
+          - operation
+        then:
+          properties:
+            before:
+              $ref: '#/components/schemas/SnapshotEntityV3'
+            after:
+              $ref: '#/components/schemas/SnapshotEntityV3'
+            expectedVersion:
+              type: integer
+              minimum: 0
+            nextVersion:
+              type: integer
+              minimum: 1
+      - if:
+          properties:
+            operation:
+              const: REMOVE
+          required:
+          - operation
+        then:
+          properties:
+            before:
+              $ref: '#/components/schemas/SnapshotEntityV3'
+            after:
+              type: 'null'
+            expectedVersion:
+              type: integer
+              minimum: 0
+            nextVersion:
+              type: 'null'
+      description: Contrato para projeção PUBLIC_SNAPSHOT. Validador de replay exige identidade, versão exata, nextVersion=expectedVersion+1,
+        before idêntico ao estado corrente e ordem monotônica. DELETE não é permitido para entidade com dependências
+        pendentes. Referência a TraceRecord é obrigatória.
+    StateReconstructionV3:
+      type: object
+      additionalProperties: false
+      required:
+      - scope
+      - completeness
+      - deltas
+      - observedUntilMs
+      properties:
+        scope:
+          const: PUBLIC_SNAPSHOT
+        completeness:
+          type: string
+          enum:
+          - COMPLETE
+          - COMPLETE_UNTIL_STOP
+          - TRUNCATED
+        deltas:
+          type: array
+          items:
+            $ref: '#/components/schemas/StateDeltaV3'
+        observedUntilMs:
+          $ref: '#/components/schemas/DurationMsV3'
+          description: Marco terminal de observação, inclusive sem mudanças de entidade nesse instante.
+      description: Reconstroi somente ExecutionStateSnapshotV3 (campos públicos existentes), não o estado interno
+        completo do agendador, cursores, leases, timers ou resultados. Para isso será necessário perfil FULL_RUNTIME
+        futuro.
+    CursorRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - activationId
+      - stepExecutionId
+      - currentStepId
+      - status
+      - waitingFor
+      properties:
+        entityKind:
+          const: CURSOR
+        entityId: &id002
+          $ref: '#/components/schemas/IdentifierV3'
+        version:
+          type: integer
+          minimum: 0
+        activationId: *id002
+        stepExecutionId: *id002
+        currentStepId: *id002
+        status:
+          enum:
+          - READY
+          - RUNNING
+          - WAITING
+          - COMPLETED
+          - FAILED
+          - CANCELLED
+        waitingFor:
+          oneOf:
+          - *id002
+          - type: 'null'
+    TimerRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - ownerId
+      - deadlineAtMs
+      - status
+      - timerKind
+      properties:
+        entityKind:
+          const: TIMER
+        entityId: *id002
+        version:
+          type: integer
+          minimum: 0
+        ownerId: *id002
+        deadlineAtMs: &id003
+          $ref: '#/components/schemas/DurationMsV3'
+        status:
+          enum:
+          - SCHEDULED
+          - CONSUMED
+          - CANCELLED
+        timerKind:
+          type: string
+          minLength: 1
+    LeaseRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - resourceId
+      - claimId
+      - status
+      - units
+      properties:
+        entityKind:
+          const: LEASE
+        entityId: *id002
+        version:
+          type: integer
+          minimum: 0
+        resourceId: *id002
+        claimId: *id002
+        status:
+          enum:
+          - HELD
+          - RELEASED
+        units:
+          type: integer
+          minimum: 1
+    WaitClaimRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - resourceId
+      - ownerId
+      - queueOrdinal
+      - status
+      properties:
+        entityKind:
+          const: WAIT_CLAIM
+        entityId: *id002
+        version:
+          type: integer
+          minimum: 0
+        resourceId: *id002
+        ownerId: *id002
+        queueOrdinal:
+          type: integer
+          minimum: 0
+        status:
+          enum:
+          - WAITING
+          - ACQUIRED
+          - TIMED_OUT
+          - REJECTED
+    PolicyStateRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - policyInstanceId
+      - status
+      - counter
+      properties:
+        entityKind:
+          const: POLICY_STATE
+        entityId: *id002
+        version:
+          type: integer
+          minimum: 0
+        policyInstanceId: *id002
+        status:
+          type: string
+          minLength: 1
+        counter:
+          type: integer
+          minimum: 0
+    StepResultRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - stepExecutionId
+      - outcome
+      - profileId
+      properties:
+        entityKind:
+          const: STEP_RESULT
+        entityId: *id002
+        version:
+          type: integer
+          minimum: 0
+        stepExecutionId: *id002
+        outcome:
+          type: string
+          minLength: 1
+        profileId:
+          oneOf:
+          - *id002
+          - type: 'null'
+    BranchCursorRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - parallelGroupId
+      - branchExecutionId
+      - stepId
+      - status
+      properties:
+        entityKind:
+          const: BRANCH_CURSOR
+        entityId: *id002
+        version:
+          type: integer
+          minimum: 0
+        parallelGroupId: *id002
+        branchExecutionId: *id002
+        stepId: *id002
+        status:
+          enum:
+          - READY
+          - RUNNING
+          - WAITING
+          - COMPLETED
+          - FAILED
+          - CANCELLED
+    WorkItemRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - ownerId
+      - workKind
+      - status
+      - observationMode
+      properties:
+        entityKind:
+          const: WORK_ITEM
+        entityId: *id002
+        version:
+          type: integer
+          minimum: 0
+        ownerId: *id002
+        workKind:
+          type: string
+          minLength: 1
+        status:
+          enum:
+          - PENDING
+          - RESOLVED
+        observationMode:
+          type: string
+          minLength: 1
+    ScheduledEventRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - eventId
+      - scheduledAtMs
+      - phase
+      - sequence
+      - causalEpoch
+      - eventType
+      - payload
+      properties:
+        entityKind:
+          const: SCHEDULED_EVENT
+        entityId: *id002
+        version:
+          type: integer
+          minimum: 0
+        eventId: *id002
+        scheduledAtMs: *id003
+        phase:
+          enum:
+          - ENVIRONMENT_CHANGE
+          - DELIVERY_OR_COMPLETION
+          - CONTINUATION
+          - DEADLINE
+          - TERMINATION_CHECK
+        sequence:
+          type: integer
+          minimum: 0
+        causalEpoch:
+          enum:
+          - BEFORE_DEADLINE
+          - AFTER_DEADLINE
+        eventType:
+          type: string
+          minLength: 1
+        payload:
+          type: object
+          additionalProperties:
+            $ref: '#/components/schemas/PropertyValueV3'
+    IdCounterRuntimeEntityV3:
+      type: object
+      additionalProperties: false
+      required:
+      - entityKind
+      - entityId
+      - version
+      - counterKind
+      - nextValue
+      properties:
+        entityKind:
+          const: ID_COUNTER
+        entityId: *id002
+        version:
+          type: integer
+          minimum: 0
+        counterKind:
+          type: string
+          minLength: 1
+        nextValue:
+          type: integer
+          minimum: 0
+    FullRuntimeEntityV3:
+      oneOf:
+      - $ref: '#/components/schemas/CursorRuntimeEntityV3'
+      - $ref: '#/components/schemas/TimerRuntimeEntityV3'
+      - $ref: '#/components/schemas/LeaseRuntimeEntityV3'
+      - $ref: '#/components/schemas/WaitClaimRuntimeEntityV3'
+      - $ref: '#/components/schemas/PolicyStateRuntimeEntityV3'
+      - $ref: '#/components/schemas/StepResultRuntimeEntityV3'
+      - $ref: '#/components/schemas/BranchCursorRuntimeEntityV3'
+      - $ref: '#/components/schemas/WorkItemRuntimeEntityV3'
+      - $ref: '#/components/schemas/ScheduledEventRuntimeEntityV3'
+      - $ref: '#/components/schemas/IdCounterRuntimeEntityV3'
+      discriminator:
+        propertyName: entityKind
+      description: Projetor interno versionado; nao e uma promessa de reexecucao do motor.
+    RuntimeJournalDeltaV3:
+      type: object
+      additionalProperties: false
+      required:
+      - deltaId
+      - sequence
+      - timestampMs
+      - sourceEventId
+      - sourceTraceRecordId
+      - entityKind
+      - entityId
+      - operation
+      - expectedVersion
+      - nextVersion
+      - before
+      - after
+      properties:
+        deltaId: *id002
+        sequence:
+          type: integer
+          minimum: 0
+        timestampMs: *id003
+        sourceEventId: *id002
+        sourceTraceRecordId: *id002
+        entityKind:
+          enum:
+          - CURSOR
+          - TIMER
+          - LEASE
+          - WAIT_CLAIM
+          - POLICY_STATE
+          - STEP_RESULT
+          - BRANCH_CURSOR
+          - WORK_ITEM
+          - SCHEDULED_EVENT
+          - ID_COUNTER
+        entityId: *id002
+        operation:
+          enum:
+          - CREATE
+          - UPDATE
+          - REMOVE
+        expectedVersion:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+        nextVersion:
+          type:
+          - integer
+          - 'null'
+          minimum: 0
+        before:
+          oneOf:
+          - $ref: '#/components/schemas/FullRuntimeEntityV3'
+          - type: 'null'
+        after:
+          oneOf:
+          - $ref: '#/components/schemas/FullRuntimeEntityV3'
+          - type: 'null'
+    FullRuntimeSnapshotV3:
+      type: object
+      additionalProperties: false
+      required:
+      - virtualTimeMs
+      - stage
+      - round
+      - entities
+      properties:
+        virtualTimeMs: *id003
+        stage:
+          enum:
+          - ENVIRONMENT
+          - BEFORE_DEADLINES
+          - DEADLINES
+          - AFTER_DEADLINES
+          - TERMINATION
+        round:
+          type: integer
+          minimum: 0
+        entities:
+          type: array
+          items:
+            $ref: '#/components/schemas/FullRuntimeEntityV3'
+    FullRuntimeReconstructionV3:
+      type: object
+      additionalProperties: false
+      required:
+      - scope
+      - initialRuntime
+      - finalRuntime
+      - deltas
+      - completeness
+      - observedUntilMs
+      properties:
+        scope:
+          const: FULL_RUNTIME
+        initialRuntime:
+          $ref: '#/components/schemas/FullRuntimeSnapshotV3'
+        finalRuntime:
+          $ref: '#/components/schemas/FullRuntimeSnapshotV3'
+        deltas:
+          type: array
+          items:
+            $ref: '#/components/schemas/RuntimeJournalDeltaV3'
+        completeness:
+          enum:
+          - COMPLETE
+          - COMPLETE_UNTIL_STOP
+          - TRUNCATED
+        observedUntilMs: *id003
+      description: Proposta de estado interno para reconstruir projecao do runtime. Prova de reexecucao requer schemas
+        dos 32 payloads, registry e verificacao Java adicionais.
+    RuntimeDeltaTraceDetailV3:
+      type: object
+      additionalProperties: false
+      required:
+      - kind
+      - entityKind
+      - entityId
+      - operation
+      - deltaId
+      properties:
+        kind:
+          const: RUNTIME_DELTA
+        entityKind:
+          enum:
+          - CURSOR
+          - TIMER
+          - LEASE
+          - WAIT_CLAIM
+          - POLICY_STATE
+          - STEP_RESULT
+          - BRANCH_CURSOR
+          - WORK_ITEM
+          - SCHEDULED_EVENT
+          - ID_COUNTER
+        entityId: *id002
+        operation:
+          enum:
+          - CREATE
+          - UPDATE
+          - REMOVE
+        deltaId: *id002
