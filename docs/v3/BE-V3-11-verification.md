@@ -14,7 +14,7 @@ ExecutionMatrixV3Test mede cobertura nos journals de produção de 14 execuçõe
 | Mensageria | BrokerAcceptanceDue, QueueEnqueueDue, QueueDeliveryDue, ConsumerAckArrivalDue, MessageTtlExpirationDue, RedeliveryDue — seis componentes, ACK timeout e TTL |
 | Recursos | ResourceAcquisitionDue, ResourceReleaseDue, ResourceStateChangeDue, ResourceWaitTimeoutDue, ResourceWakeupDue — pool ocupado, indisponível e capacidade zero |
 
-Complementam a matriz os testes já existentes: cinco políticas JOIN, quorum/timeout/nested FORK, fanout, FIFO, rejeição, expiração versus ACK no instante exato, retry e resposta tardia, eventos duplicados, cancelamento e limites. V3PublicContractTest usa HTTP/servidor/core reais sem mocks, incluindo horizontes0/10/50/119/150 e principal IN_PROGRESS sem tempos terminais inventados. Decoder testa os 32 payloads com campos ausentes/desconhecidos e tipos inválidos.
+Complementam a matriz os testes já existentes: quatro políticas JOIN, quorum/timeout/nested FORK, fanout, FIFO, rejeição, expiração versus ACK no instante exato, retry e resposta tardia, eventos duplicados, cancelamento e limites. V3PublicContractTest usa HTTP/servidor/core reais sem mocks, incluindo horizontes0/10/50/119/150 e principal IN_PROGRESS sem tempos terminais inventados. Decoder testa os 32 payloads com campos ausentes/desconhecidos e tipos inválidos.
 
 GoldenResultsV3Test compara três digests (snapshot/trace/resultado completo), contagens e durações com docs/examples/v3/golden-results.json versionado. Os testes nunca atualizam os esperados automaticamente. O resultado canônico é comparado no formato JSON de transporte, eliminando diferenças irrelevantes entre IntNode e LongNode sem alterar asserções de valor ou hashes.
 

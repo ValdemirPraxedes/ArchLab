@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "typegen": "npm run typegen:v1 && npm run typegen:v2",
+    "typegen": "npm run typegen:v1 && npm run typegen:v2 && npm run typegen:v3",
     "typegen:v1": "openapi-typescript ../docs/api/openapi.yaml -o src/api/generated/schema.d.ts",
     "typegen:v2": "openapi-typescript ../docs/api/openapi-v2.yaml -o src/api/generated/schema-v2.d.ts",
     "prebuild": "npm run typegen",
@@ -14,7 +14,9 @@
     "test": "vitest run",
     "test:integration": "node scripts/integration.mjs",
     "test:watch": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "typegen:v3": "openapi-typescript ../docs/api/openapi-v3.yaml -o src/api/generated/schema-v3.d.ts",
+    "test:integration:v3": "node scripts/integration-v3.mjs"
   },
   "dependencies": {
     "@xyflow/react": "^12.9.0",

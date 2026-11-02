@@ -4,11 +4,15 @@ on:
     paths:
       - 'frontend/**'
       - 'docs/api/openapi.yaml'
+      - 'docs/api/openapi-v2.yaml'
+      - 'docs/api/openapi-v3.yaml'
       - '.github/workflows/frontend-ci.yml'
   pull_request:
     paths:
       - 'frontend/**'
       - 'docs/api/openapi.yaml'
+      - 'docs/api/openapi-v2.yaml'
+      - 'docs/api/openapi-v3.yaml'
       - '.github/workflows/frontend-ci.yml'
 jobs:
   frontend:

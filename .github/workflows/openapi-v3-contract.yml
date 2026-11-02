@@ -4,6 +4,8 @@ on:
   pull_request:
     paths:
       - 'docs/api/openapi-v3.yaml'
+      - 'frontend/src/api/archlabV3Client*'
+      - 'frontend/package.json'
       - 'docs/examples/v3/**'
       - '.github/workflows/openapi-v3-contract.yml'
   workflow_dispatch:

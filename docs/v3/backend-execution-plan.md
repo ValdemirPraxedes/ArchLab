@@ -1,5 +1,14 @@
 # Backend v0.3 — plano e evidências
 
+## Estado final
+
+O plano foi executado em ordem01→02→03→04→05→06→07→08→09→10→11→12. Relatório atual: [backend-v0.3-report.md](backend-v0.3-report.md), com PRs/commits, critérios de aceite, testes e limitações explícitas. Diagramas/revisão: [BE-V3-12-architecture-review.md](BE-V3-12-architecture-review.md).
+
+As seções abaixo preservam o histórico dos marcos iniciais; menções a tarefas pendentes nelas são históricas e foram substituídas pelo relatório final. main e releases permanecem fora do escopo.
+
+---
+
+
 Base inicial: develop f7503b7. Cards BE-V3-01 a BE-V3-12 consultados em 2026-11-02.
 Fonte de estrutura: docs/api/openapi-v3.yaml. Autorização atual permite decisões técnicas,
 PRs e merges em develop após verificações; main e releases fora do escopo.
