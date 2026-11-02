@@ -1,0 +1,9 @@
+import { describe, expect, it } from 'vitest';
+import { newProjectV3, toRequestV3 } from './project';
+import { COMPONENTS_V3, componentTypeV3 } from './catalog';
+import { addComponentV3, moveComponentV3, removeComponentV3 } from './components';
+describe('six component catalog', () => {
+  it('creates only six server types with stable unique IDs and supported defaults', () => { let project = newProjectV3(); for (const type of COMPONENTS_V3) project = addComponentV3(project, type.typeId); expect(project.request.architecture.components.map(c => c.typeId)).toEqual(COMPONENTS_V3.map(c => c.typeId)); expect(new Set(project.request.architecture.components.map(c => c.id)).size).toBe(6); expect(componentTypeV3('CACHE')).toBe(false); expect(JSON.stringify(toRequestV3(project))).not.toContain('positions'); });
+  it('movement preserves identity and removal does not reuse a deleted ID', () => { let project = addComponentV3(newProjectV3(), 'API_SERVICE'); const id = project.request.architecture.components[0].id; project = moveComponentV3(project, id, { x: 123, y: 456 }); expect(project.positions[id]).toEqual({ x: 123, y: 456 }); expect(project.request.architecture.components[0].id).toBe(id); project = removeComponentV3(project, id); project = addComponentV3(project, 'API_SERVICE'); expect(project.request.architecture.components[0].id).not.toBe(id); });
+  it('refuses destructive deletion while references are owned by the component', () => { const project = addComponentV3(newProjectV3(), 'API_SERVICE'); const id = project.request.architecture.components[0].id; project.request.architecture.resources.push({ id: 'pool', typeId: 'PROCESSING_POOL', ownerId: id, properties: {} }); expect(() => removeComponentV3(project, id)).toThrow('referenciam'); expect(project.request.architecture.components).toHaveLength(1); });
+});

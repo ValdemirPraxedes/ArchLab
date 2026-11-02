@@ -9,3 +9,5 @@ Cada marco: branch de develop, critérios/testes pertinentes, Em desenvolvimento
 FE01: módulo features/v3 independente com tipos derivados do schema, projeto sem dados de layout no wire request, navegação entre versões preservando projetos montados. Cliente existente reutilizado com distinção explícita de erro de rede/HTTP e AbortSignal. Estado atual dos cards será atualizado após execução real dos checks/PRs; demais cards ainda pendentes.
 
 Verificação FE01: lint/typegen/v1v2v3/test/build executados; regressão de troca de versão mantém os dois rascunhos. Integração real v1/v3 contra jar Java25 executada antes da PR. O backend não foi alterado.
+
+FE02: catálogo limitado aos seis tipos do TypeCatalogV3 real. ReactFlow com drag/drop, clique, seleção, movimento e alternativa acessível de lista. IDs independem do nome/posição, remoção bloqueada quando há referências. Nenhum estado de execução inferido antes de existir resultado. Testes do modelo e adaptador ReactFlow cobrem todos os tipos e rejeição de tipo desconhecido.
