@@ -215,3 +215,6 @@ body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
 
 /* FE-V3-03: typed forms share existing theme tokens. */
 .v3-properties fieldset{min-width:0;margin:10px 0;padding:9px;border:1px solid var(--border);border-radius:6px}.v3-properties legend,.v3-properties summary{font-size:.82rem;font-weight:600;color:var(--text);overflow-wrap:anywhere}.v3-properties details{margin:10px 0}.v3-properties input[type=checkbox]{display:inline-block;width:auto;margin:0 6px 0 0}.v3-properties select[multiple]{min-height:85px}.v3-properties [role=alert]{color:var(--error,#a51e35);font-size:.85rem}.v3-properties p{overflow-wrap:anywhere}
+
+/* FE-V3-04: actual endpoint handles, semantics shown on connections. */
+.v3-node .react-flow__handle{opacity:1;pointer-events:auto;width:9px;height:9px;border:2px solid var(--surface);background:var(--accent)}.v3-workspace .properties fieldset{min-width:0;border:1px solid var(--border);border-radius:6px;margin:10px 0;padding:8px}.v3-workspace .properties legend,.v3-workspace .properties summary{font-size:.82rem;color:var(--text);overflow-wrap:anywhere}.v3-workspace .properties input[type=checkbox]{display:inline-block;width:auto;margin:0 5px}.v3-workspace .properties select[multiple]{min-height:85px}.v3-workspace .properties [role=alert]{color:var(--error,#a51e35)}
