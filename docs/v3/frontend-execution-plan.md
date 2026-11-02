@@ -11,3 +11,5 @@ FE01: módulo features/v3 independente com tipos derivados do schema, projeto se
 Verificação FE01: lint/typegen/v1v2v3/test/build executados; regressão de troca de versão mantém os dois rascunhos. Integração real v1/v3 contra jar Java25 executada antes da PR. O backend não foi alterado.
 
 FE02: catálogo limitado aos seis tipos do TypeCatalogV3 real. ReactFlow com drag/drop, clique, seleção, movimento e alternativa acessível de lista. IDs independem do nome/posição, remoção bloqueada quando há referências. Nenhum estado de execução inferido antes de existir resultado. Testes do modelo e adaptador ReactFlow cobrem todos os tipos e rejeição de tipo desconhecido.
+
+FE03: formulários de propriedades/recurso refletem TypeCatalogV3, com campos restritos por owner/tipo; referências explícitas e estado inicial COMPONENT/RESOURCE/POLICY/QUEUE. Undo/redo limitado a50estados preserva high-water de IDs. Edição inválida não altera valor válido anterior; mensagens por campo e exclusão protegida de recursos referenciados. Valores tipados hierárquicos têm parser que rejeita campos desconhecidos sem descartá-los.
