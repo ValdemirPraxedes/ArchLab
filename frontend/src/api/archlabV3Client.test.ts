@@ -30,4 +30,5 @@ describe('Contrato do cliente HTTP v3', () => {
   });
   it('trata erro HTTP sem JSON sem ocultar o status', async () => { server.use(http.post('/api/v3/simulations', () => new HttpResponse('proxy failure', { status: 502 }))); await expect(client.simulate(request)).rejects.toMatchObject({ status: 502, problem: null }); });
   it('distingue falha de rede de Problem HTTP', async () => { server.use(http.post('/api/v3/simulations', () => HttpResponse.error())); await expect(client.simulate(request)).rejects.toMatchObject({ name: 'ArchlabV3NetworkError' }); });
+  it('distingue JSON HTTP200 inválido de erro de rede e de falha simulada',async()=>{server.use(http.post('/api/v3/simulations',()=>new HttpResponse('{invalid',{status:200,headers:{'Content-Type':'application/json'}})));await expect(client.simulate(request)).rejects.toMatchObject({name:'ArchlabV3ResponseError'});});
 });

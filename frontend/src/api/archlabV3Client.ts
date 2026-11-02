@@ -12,12 +12,13 @@ export type ViolationV3 = Schemas['ViolationV3'];
 export class ArchlabV3NetworkError extends Error {
   constructor(public readonly cause: unknown) { super('Não foi possível conectar à API v3. Confira a conexão e tente novamente.'); this.name = 'ArchlabV3NetworkError'; }
 }
+export class ArchlabV3ResponseError extends Error { constructor(public readonly cause:unknown) { super('A API v3 retornou um corpo JSON inválido.'); this.name='ArchlabV3ResponseError'; } }
 export class ArchlabV3HttpError extends Error {
   constructor(public readonly status: number, public readonly problem: ProblemV3 | null) {
     super(problem?.detail ?? problem?.title ?? `Falha HTTP ${status} na API ArchLab v3`);
     this.name = 'ArchlabV3HttpError';
   }
-  get violations(): ViolationV3[] { return this.problem?.violations ?? []; }
+  get violations(): ViolationV3[] { return Array.isArray(this.problem?.violations) ? this.problem.violations : []; }
 }
 function readProblem(value: unknown): ProblemV3 | null {
   if (typeof value !== 'object' || value === null) return null;
@@ -40,7 +41,7 @@ export class ArchlabV3Client {
       try { value = await response.json(); } catch { /* Non-JSON HTTP errors have no Problem. */ }
       throw new ArchlabV3HttpError(response.status, readProblem(value));
     }
-    return await response.json() as T;
+    try { return await response.json() as T; } catch (error) { throw new ArchlabV3ResponseError(error); }
   }
   validateArchitecture(input: ArchitectureV3, signal?: AbortSignal): Promise<ValidationResponseV3> { return this.post('/api/v3/architectures/validate', input, signal); }
   validateExecutionPlan(input: ExecutionPlanValidationRequestV3, signal?: AbortSignal): Promise<ValidationResponseV3> { return this.post('/api/v3/execution-plans/validate', input, signal); }
