@@ -1,3 +1,4 @@
+import { PublicReplayV3 } from '../src/features/v3/replayV3';
 import assert from 'node:assert/strict';import process from 'node:process';import { ArchlabV3Client,ArchlabV3HttpError } from '../src/api/archlabV3Client';import { referenceProjectV3 } from '../src/features/v3/referenceV3';import { adaptResultV3 } from '../src/features/v3/resultAdapterV3';import type { RequestV3 } from '../src/features/v3/types';
 const client=new ArchlabV3Client(process.env.ARCHLAB_API_URL??'http://localhost:8080'),request=referenceProjectV3().request;
 assert.equal((await client.validateArchitecture(request.architecture)).valid,true);for(const plan of request.architecture.executionPlans)assert.equal((await client.validateExecutionPlan({architecture:request.architecture,executionPlan:plan})).valid,true);assert.equal((await client.validateScenario(request)).valid,true);
@@ -6,3 +7,5 @@ const partialRequest:RequestV3={...request,options:{seed:7,completionMode:'UNTIL
 const invalid=structuredClone(request);invalid.scenario.entry.componentId='missing';assert.equal((await client.validateScenario(invalid)).valid,false);await assert.rejects(()=>client.simulate(invalid),(error:unknown)=>error instanceof ArchlabV3HttpError&&error.status===422&&error.violations.length>0);
 const failed=structuredClone(request);failed.scenario.initialStates=[{kind:'COMPONENT',componentId:'db',available:false}];assert.equal(adaptResultV3(failed,await client.simulate(failed)).principal.status,'FAILED');
 console.log('PASS typed frontend client + result adapter against real Java v3: four endpoints,120/210/90,determinism,horizon150,422 and simulated failure200.');
+
+const replay=new PublicReplayV3(result,request);assert.deepEqual(replay.stateAt({timeMs:210,sequence:Infinity}).snapshot,result.finalState);assert.equal(replay.stateAt({timeMs:120,sequence:Infinity}).snapshot.queueEntries[0].status,'IN_DELIVERY');assert.deepEqual(new PublicReplayV3(partial,partialRequest).stateAt({timeMs:150,sequence:Infinity}).snapshot,partial.finalState);console.log('PASS actual Java PUBLIC_SNAPSHOT replay: final equality, async state120 and horizon150.');
