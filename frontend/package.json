@@ -9,14 +9,16 @@
     "typegen:v1": "openapi-typescript ../docs/api/openapi.yaml -o src/api/generated/schema.d.ts",
     "typegen:v2": "openapi-typescript ../docs/api/openapi-v2.yaml -o src/api/generated/schema-v2.d.ts",
     "prebuild": "npm run typegen",
-    "build": "tsc -b && vite build",
+    "build": "tsc -b && npm run typecheck:integration && vite build",
     "pretest": "npm run typegen",
     "test": "vitest run",
     "test:integration": "node scripts/integration.mjs",
     "test:watch": "vitest",
     "lint": "eslint .",
     "typegen:v3": "openapi-typescript ../docs/api/openapi-v3.yaml -o src/api/generated/schema-v3.d.ts",
-    "test:integration:v3": "node scripts/integration-v3.mjs"
+    "test:integration:v3": "node scripts/integration-v3.mjs",
+    "test:integration:v3-client": "node scripts/integration-v3-client.mjs",
+    "typecheck:integration": "tsc -p tsconfig.integration.json"
   },
   "dependencies": {
     "@xyflow/react": "^12.9.0",
