@@ -88,7 +88,7 @@ public final class ArchitectureValidatorV3 {
                     protocol(c.protocolProfileId(),p+"/protocolProfileId",errors);
                     if(source!=null && !source.protocolProfileId().equals(c.protocolProfileId()) || target!=null && !target.protocolProfileId().equals(c.protocolProfileId()))
                         error(errors,"PROTOCOL_MISMATCH",p+"/protocolProfileId",c.protocolProfileId());
-                    properties(c.properties(),Map.of("latencyMs",PropertyValueV3.IntegerValue.class),all,p+"/properties",errors);
+                    properties(c.properties(),Map.of("latencyMs",PropertyValueV3.IntegerValue.class,"timeoutMs",PropertyValueV3.IntegerValue.class),all,p+"/properties",errors);
                 }
                 case Structural s -> {
                     if(!all.containsKey(s.sourceId()))error(errors,"ENTITY_NOT_FOUND",p+"/sourceId",s.sourceId());
