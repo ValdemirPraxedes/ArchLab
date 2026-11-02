@@ -100,3 +100,12 @@ apenas por conformidade estrutural do YAML.
 - Trade-off: value objects no core, strings no DTO HTTP, evitando acoplar serialização
   ao domínio. Compatibilidade semântica de motor v3 ainda não implementada.
 - BE-V3-01: critérios de bootstrap verificados. BE-V3-02 a BE-V3-12 permanecem pendentes.
+
+## Retomada após ADR consolidado
+
+Em 2026-11-02, o usuário indicou docs/architecture/ADR-v0.3.md, incorporado em develop
+3df2b74 via PR #51. O trabalho foi retomado usando esse documento e o OpenAPI, com
+as escolhas de catálogo registradas em BE-V3-02-domain.md. O inventário de ausência
+acima descreve a primeira execução; não é bloqueio atual. BE-V3-01 integrado por PR #50.
+BE-V3-02: domínio e decoder verificados com 168 testes; evidências no documento específico.
+BE-V3-03..12: pendentes; tipos dos nove steps preparados, sem execução implementada.
