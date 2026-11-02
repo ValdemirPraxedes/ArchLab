@@ -1,0 +1,8 @@
+package br.com.archlab.simulation.core.v3;
+import java.util.*;import static br.com.archlab.simulation.core.v3.RuntimeEntityV3.*;
+public record PublicSnapshotV3(long virtualTimeMs,List<Activation> activations,List<Interaction> interactions,List<Attempt> attempts,List<ParallelGroup> parallelGroups,List<Resource> resources,List<QueueEntry> queueEntries,List<Publication> publications,List<DeliveryAttempt> deliveryAttempts){
+    public PublicSnapshotV3 {if(virtualTimeMs<0)throw new IllegalArgumentException("Negative time");activations=List.copyOf(activations);interactions=List.copyOf(interactions);attempts=List.copyOf(attempts);parallelGroups=List.copyOf(parallelGroups);resources=List.copyOf(resources);queueEntries=List.copyOf(queueEntries);publications=List.copyOf(publications);deliveryAttempts=List.copyOf(deliveryAttempts);}
+    public static PublicSnapshotV3 from(RuntimeStateV3 state,long time){return new PublicSnapshotV3(time,of(state,Activation.class),of(state,Interaction.class),of(state,Attempt.class),of(state,ParallelGroup.class),of(state,Resource.class),of(state,QueueEntry.class),of(state,Publication.class),of(state,DeliveryAttempt.class));}
+    private static <T> List<T> of(RuntimeStateV3 state,Class<T> type){return state.entities().values().stream().filter(type::isInstance).map(type::cast).toList();}
+    public Map<IdentifierV3,RuntimeEntityV3> entities(){var result=new LinkedHashMap<IdentifierV3,RuntimeEntityV3>();for(var list:List.of(activations,interactions,attempts,parallelGroups,resources,queueEntries,publications,deliveryAttempts))for(var entity:list)if(result.put(entity.id(),entity)!=null)throw new IllegalStateException("Duplicate snapshot ID");return Collections.unmodifiableMap(result);}
+}

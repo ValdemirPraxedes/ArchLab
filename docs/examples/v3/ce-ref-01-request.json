@@ -1,0 +1,295 @@
+{
+  "architecture": {
+    "id": "ce-ref-01",
+    "schemaVersion": "3",
+    "components": [
+      {
+        "id": "client",
+        "typeId": "CLIENT_GENERIC",
+        "displayName": "client",
+        "properties": {}
+      },
+      {
+        "id": "api",
+        "typeId": "API_SERVICE",
+        "displayName": "api",
+        "properties": {}
+      },
+      {
+        "id": "db",
+        "typeId": "DATABASE_GENERIC",
+        "displayName": "db",
+        "properties": {
+          "processingMs": {
+            "kind": "INTEGER",
+            "value": 40
+          }
+        }
+      },
+      {
+        "id": "broker",
+        "typeId": "BROKER_GENERIC",
+        "displayName": "broker",
+        "properties": {}
+      },
+      {
+        "id": "queue",
+        "typeId": "QUEUE_GENERIC",
+        "displayName": "queue",
+        "properties": {}
+      },
+      {
+        "id": "telemetry",
+        "typeId": "TELEMETRY_GENERIC",
+        "displayName": "telemetry",
+        "properties": {
+          "processingMs": {
+            "kind": "INTEGER",
+            "value": 90
+          }
+        }
+      }
+    ],
+    "resources": [
+      {
+        "id": "db-pool",
+        "typeId": "PROCESSING_POOL",
+        "ownerId": "db",
+        "properties": {
+          "capacity": {
+            "kind": "INTEGER",
+            "value": 1
+          }
+        }
+      },
+      {
+        "id": "topic",
+        "typeId": "TOPIC",
+        "ownerId": "broker",
+        "properties": {
+          "queueIds": {
+            "kind": "LIST",
+            "values": [
+              {
+                "kind": "REFERENCE",
+                "targetId": "messages",
+                "expectedTypeId": "MESSAGE_QUEUE"
+              }
+            ]
+          }
+        }
+      },
+      {
+        "id": "messages",
+        "typeId": "MESSAGE_QUEUE",
+        "ownerId": "queue",
+        "properties": {
+          "capacity": {
+            "kind": "INTEGER",
+            "value": 10
+          },
+          "consumerEndpointId": {
+            "kind": "REFERENCE",
+            "targetId": "telemetry-in",
+            "expectedTypeId": "ENDPOINT"
+          }
+        }
+      },
+      {
+        "id": "telemetry-pool",
+        "typeId": "PROCESSING_POOL",
+        "ownerId": "telemetry",
+        "properties": {
+          "capacity": {
+            "kind": "INTEGER",
+            "value": 1
+          }
+        }
+      }
+    ],
+    "endpoints": [
+      {
+        "id": "client-out",
+        "ownerId": "client",
+        "direction": "OUTBOUND",
+        "protocolProfileId": "HTTP_REST",
+        "operationIds": [],
+        "properties": {}
+      },
+      {
+        "id": "api-in",
+        "ownerId": "api",
+        "direction": "INBOUND",
+        "protocolProfileId": "HTTP_REST",
+        "operationIds": [
+          "api-op"
+        ],
+        "properties": {}
+      },
+      {
+        "id": "api-out",
+        "ownerId": "api",
+        "direction": "OUTBOUND",
+        "protocolProfileId": "DATABASE_QUERY",
+        "operationIds": [],
+        "properties": {}
+      },
+      {
+        "id": "db-in",
+        "ownerId": "db",
+        "direction": "INBOUND",
+        "protocolProfileId": "DATABASE_QUERY",
+        "operationIds": [
+          "db-op"
+        ],
+        "properties": {}
+      },
+      {
+        "id": "telemetry-in",
+        "ownerId": "telemetry",
+        "direction": "INBOUND",
+        "protocolProfileId": "TELEMETRY",
+        "operationIds": [
+          "collect"
+        ],
+        "properties": {}
+      }
+    ],
+    "operations": [
+      {
+        "id": "api-op",
+        "ownerId": "api",
+        "displayName": "api-op",
+        "execution": {
+          "kind": "EXECUTION_PLAN",
+          "referenceId": "api-plan"
+        },
+        "requiredCapabilities": []
+      },
+      {
+        "id": "db-op",
+        "ownerId": "db",
+        "displayName": "db-op",
+        "execution": {
+          "kind": "NATIVE_BEHAVIOR",
+          "referenceId": "DATABASE_QUERY"
+        },
+        "requiredCapabilities": []
+      },
+      {
+        "id": "collect",
+        "ownerId": "telemetry",
+        "displayName": "collect",
+        "execution": {
+          "kind": "NATIVE_BEHAVIOR",
+          "referenceId": "TELEMETRY_COLLECT"
+        },
+        "requiredCapabilities": []
+      }
+    ],
+    "relations": [
+      {
+        "id": "client-api",
+        "kind": "COMMUNICATION",
+        "sourceEndpointId": "client-out",
+        "targetEndpointId": "api-in",
+        "protocolProfileId": "HTTP_REST",
+        "properties": {
+          "latencyMs": {
+            "kind": "INTEGER",
+            "value": 0
+          }
+        }
+      },
+      {
+        "id": "api-db",
+        "kind": "COMMUNICATION",
+        "sourceEndpointId": "api-out",
+        "targetEndpointId": "db-in",
+        "protocolProfileId": "DATABASE_QUERY",
+        "properties": {
+          "latencyMs": {
+            "kind": "INTEGER",
+            "value": 10
+          }
+        }
+      }
+    ],
+    "executionPlans": [
+      {
+        "id": "api-plan",
+        "operationId": "api-op",
+        "entryStepId": "pre",
+        "limits": {
+          "maxStepExecutions": 100,
+          "maxIterations": 10
+        },
+        "steps": [
+          {
+            "id": "pre",
+            "kind": "PROCESS",
+            "durationMs": 20,
+            "transitions": {
+              "NEXT": "call"
+            }
+          },
+          {
+            "id": "call",
+            "kind": "CALL",
+            "connectionId": "api-db",
+            "targetOperationId": "db-op",
+            "awaitMode": "RESPONSE",
+            "transitions": {
+              "SUCCESS": "post",
+              "FAILURE": "fail"
+            }
+          },
+          {
+            "id": "post",
+            "kind": "PROCESS",
+            "durationMs": 40,
+            "transitions": {
+              "NEXT": "publish"
+            }
+          },
+          {
+            "id": "publish",
+            "kind": "PUBLISH",
+            "targetResourceId": "topic",
+            "awaitMode": "NONE",
+            "transitions": {
+              "DISPATCHED": "done",
+              "FAILURE": "fail"
+            }
+          },
+          {
+            "id": "done",
+            "kind": "COMPLETE",
+            "scope": "ACTIVATION",
+            "resultProfileId": "ok"
+          },
+          {
+            "id": "fail",
+            "kind": "FAIL",
+            "scope": "ACTIVATION",
+            "errorProfileId": "error"
+          }
+        ]
+      }
+    ]
+  },
+  "scenario": {
+    "id": "ce-ref-01",
+    "entry": {
+      "componentId": "client",
+      "operationId": "api-op",
+      "connectionId": "client-api"
+    },
+    "initialStates": [],
+    "parameters": {}
+  },
+  "options": {
+    "seed": 7,
+    "completionMode": "DRAIN_ALL"
+  }
+}

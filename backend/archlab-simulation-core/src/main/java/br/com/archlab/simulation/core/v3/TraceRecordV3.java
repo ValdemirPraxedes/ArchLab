@@ -69,7 +69,7 @@ public record TraceRecordV3(IdentifierV3 recordId,long sequence,long timestampMs
         public Join {Objects.requireNonNull(parallelGroupId);if(action==null || action.isEmpty())throw new IllegalArgumentException("action required");Objects.requireNonNull(policy);}
         public String kind(){return "JOIN";}
     }
-    public record Resource(IdentifierV3 resourceId,String action,IdentifierV3 occupancy) implements Detail {
+    public record Resource(IdentifierV3 resourceId,String action,Long occupancy) implements Detail {
         public Resource {Objects.requireNonNull(resourceId);if(action==null || action.isEmpty())throw new IllegalArgumentException("action required");}
         public String kind(){return "RESOURCE";}
     }

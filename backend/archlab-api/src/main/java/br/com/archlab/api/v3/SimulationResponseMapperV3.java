@@ -1,0 +1,22 @@
+package br.com.archlab.api.v3;
+import br.com.archlab.simulation.core.v3.*;import java.util.*;import java.nio.charset.StandardCharsets;import java.security.*;import tools.jackson.databind.json.JsonMapper;
+import static br.com.archlab.api.v3.WireValuesV3.*;
+/** Hashes canonical UTF-8 JSON; integrity itself is excluded from the result digest. */
+public final class SimulationResponseMapperV3 {
+    private final JsonMapper json=JsonMapper.builder().build();
+    public Map<String,Object> map(ResultProjectorV3.Projection p){
+        var cp=p.checkpoint();var current=cp.current();var req=cp.request();var control=p.control();long observed=p.finalState().virtualTimeMs();boolean completed="COMPLETED".equals(control.globalStop());
+        String completeness=completed?"COMPLETE":"COMPLETE_UNTIL_STOP";
+        var principal=current.state().entities().values().stream().filter(e->e instanceof RuntimeEntityV3.Principal).map(e->(RuntimeEntityV3.Principal)e).findFirst().orElseThrow();
+        var counters=object("processedEvents",current.nextDispatchSequence(),"scheduledEvents",current.nextDispatchSequence()+current.agenda().pending().size(),"activationCount",control.activations().size(),"interactionCount",p.finalState().interactions().size(),"messageCount",control.attemptCalls().values().stream().flatMap(c->java.util.stream.Stream.of(c.requestMessage(),c.responseMessage())).filter(Objects::nonNull).distinct().count()+control.publications().size(),"traceRecordCount",current.trace().size());
+        var pending=current.state().entities().values().stream().filter(e->e instanceof RuntimeEntityV3.WorkItem w && w.status()==RuntimeEntityV3.WorkItemStatus.PENDING).map(e->{var w=(RuntimeEntityV3.WorkItem)e;return object("entityKind",w.workKind(),"entityId",w.id(),"ownerId",w.ownerId(),"status",w.status(),"waitingReason",w.observationMode(),"nextScheduledAtMs",null);}).toList();
+        String category=switch(principal.status()){case RESPONDED->"SUCCESS";case TIMED_OUT->"TIMEOUT";case CANCELLED->"CANCELLED";case FAILED->"SERVICE_ERROR";case IN_PROGRESS->"UNKNOWN";};
+        var result=object("metadata",object("executionId",current.executionId(),"rootOperationId",req.scenario().entry().operationId(),"architectureId",req.architecture().id(),"scenarioId",req.scenario().id(),"simulationModelVersion","v0.3.0","schedulerVersion","deterministic-v1","catalogVersion","initial-v3-1","compatibilityVersion","v3","randomAlgorithmVersion","splitmix64-v1","seed",req.options().seed()),
+            "principal",object("status",principal.status(),"initiatorComponentId",req.scenario().entry().componentId(),"operationId",req.scenario().entry().operationId(),"startedAtMs",current.trace().isEmpty()?null:0L,"terminalAtMs",control.principalTerminalAt(),"responseArrivedAtMs",control.principalResponseAt(),"responseDurationMs",control.principalResponseAt(),"terminalDurationMs",control.principalTerminalAt(),"outcome",control.principalOutcome()==null?null:object("category",category,"code",control.principalOutcome())),
+            "global",object("status",control.globalStop()==null?"ABORTED":control.globalStop(),"terminationReasonCode",completed?"ALL_WORK_RESOLVED":control.globalStop()==null?"NOT_TERMINATED":control.globalStop(),"observedUntilMs",observed,"completionAtMs",completed?observed:null,"completionDurationMs",completed?observed:null,"pendingWork",pending,"counters",counters),
+            "initialState",p.initialState(),"finalState",p.finalState(),"trace",object("completeness",completeness,"recordCount",current.trace().size(),"records",current.trace()),"timeline",p.timeline(),"metrics",p.metrics(),
+            "reconstruction",object("scope","PUBLIC_SNAPSHOT","completeness",completeness,"deltas",p.deltas(),"observedUntilMs",observed));
+        result.put("integrity",object("snapshotDigest",digest(result.get("finalState")),"normalizedTraceDigest",digest(current.trace()),"normalizedResultDigest",digest(result),"digestAlgorithmVersion","sha256-cjson-v1","traceCompleteness",completeness,"playbackReconstructible",false,"publicSnapshotReconstructible",true,"fullRuntimeSnapshotReconstructible",false));return result;
+    }
+    public String digest(Object value){try{return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(json.writeValueAsString(plain(value)).getBytes(StandardCharsets.UTF_8)));}catch(NoSuchAlgorithmException e){throw new IllegalStateException(e);}}
+}
