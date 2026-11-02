@@ -109,3 +109,12 @@ as escolhas de catálogo registradas em BE-V3-02-domain.md. O inventário de aus
 acima descreve a primeira execução; não é bloqueio atual. BE-V3-01 integrado por PR #50.
 BE-V3-02: domínio e decoder verificados com 168 testes; evidências no documento específico.
 BE-V3-03..12: pendentes; tipos dos nove steps preparados, sem execução implementada.
+
+## Estado após implementação da fundação e dispatcher
+
+BE-V3-01..05 integrados em develop (PRs #50, #52, #53, #54, #55). BE-V3-06 tem
+implementação local verificada com 265 testes e segue para PR/CI. Evidências por card
+em BE-V3-02-domain.md, BE-V3-03-execution-plans.md, BE-V3-04-scheduler.md,
+BE-V3-05-runtime-events.md e BE-V3-06-atomic-dispatch.md.
+BE-V3-07..12 continuam pendentes: não há interpretador completo, mensageria executável,
+CE-REF-01, métricas/resultados completos, endpoints v3 ou aceite integrado final.

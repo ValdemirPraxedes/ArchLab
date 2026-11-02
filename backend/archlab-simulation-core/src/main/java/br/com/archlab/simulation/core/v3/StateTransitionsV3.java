@@ -23,5 +23,6 @@ public final class StateTransitionsV3 {
     private static Map<String,Set<String>> table(String... rows){var result=new LinkedHashMap<String,Set<String>>();for(var row:rows){var parts=row.split(":",-1);result.put(parts[0],parts[1].isEmpty()?Set.of():Set.of(parts[1].split(",")));}return Map.copyOf(result);}
     public static boolean known(Kind kind,String status){if(status==null)return !TABLES.containsKey(kind);if(kind==Kind.POLICY_STATE)return !status.isEmpty();return TABLES.getOrDefault(kind,Map.of()).containsKey(status);}
     public static boolean allowed(Kind kind,String from,String to){return TABLES.getOrDefault(kind,Map.of()).getOrDefault(from,Set.of()).contains(to);}
+    public static boolean terminal(Kind kind,String status){var table=TABLES.get(kind);return table!=null && table.containsKey(status) && table.get(status).isEmpty();}
     public static void require(Kind kind,String from,String to){if(to==null || !allowed(kind,from,to))throw new IllegalStateException("Illegal "+kind+" transition: "+from+" -> "+to);}
 }
