@@ -21,7 +21,7 @@ vi.mock('@xyflow/react', async () => {
     ),
     Background: () => null, Controls: () => null, MiniMap: () => null,
     Handle: () => null, Position: { Left: 'left', Right: 'right' },
-    useReactFlow: () => ({ screenToFlowPosition: (position: { x: number; y: number }) => position }),
+    useNodesInitialized: () => true, useReactFlow: () => ({ screenToFlowPosition: (position: { x: number; y: number }) => position }),
     useNodesState: (initial: unknown[]) => {
       const [nodes, setNodes] = React.useState(initial);
       return [nodes, setNodes, () => undefined];
@@ -273,3 +273,4 @@ describe('Editor visual', () => {
     window.history.replaceState(null, '', '#legacy');
   });
 });
+
