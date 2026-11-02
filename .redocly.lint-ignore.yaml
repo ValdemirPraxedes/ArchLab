@@ -1,0 +1,8 @@
+# Schemas normativos internos: preservados para o futuro motor v3, sem exposição HTTP.
+docs/api/openapi-v3.yaml:
+  # O repositório não declara licença; este ajuste não concede direitos de uso.
+  info-license:
+    - "#/info"
+  no-unused-components:
+    - "#/components/schemas/ScheduledEventEnvelopeV3"
+    - "#/components/schemas/EventEffectTraceCoverageV3"
