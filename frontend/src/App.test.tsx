@@ -273,4 +273,3 @@ describe('Editor visual', () => {
     window.history.replaceState(null, '', '#legacy');
   });
 });
-
