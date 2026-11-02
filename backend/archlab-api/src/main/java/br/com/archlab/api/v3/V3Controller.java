@@ -1,0 +1,11 @@
+package br.com.archlab.api.v3;
+import br.com.archlab.simulation.core.v3.*;import org.springframework.http.*;import org.springframework.web.bind.annotation.*;import tools.jackson.databind.JsonNode;import jakarta.servlet.http.HttpServletRequest;import java.util.*;
+@RestController
+@RequestMapping(path="/api/v3",consumes=MediaType.APPLICATION_JSON_VALUE,produces=MediaType.APPLICATION_JSON_VALUE)
+public final class V3Controller {
+    private final ArchitectureRequestMapperV3 architectures=new ArchitectureRequestMapperV3();private final SimulationRequestMapperV3 requests=new SimulationRequestMapperV3();private final ScenarioValidatorV3 validator=new ScenarioValidatorV3();private final SimulationResponseMapperV3 responses=new SimulationResponseMapperV3();
+    @PostMapping("/architectures/validate") public ValidationResponseV3 architecture(@RequestBody JsonNode input){return ValidationResponseV3.from(validator.architecture(architectures.architecture(input)));}
+    @PostMapping("/execution-plans/validate") public ValidationResponseV3 plan(@RequestBody JsonNode input){var request=requests.candidate(input);var errors=new ArrayList<>(new ArchitectureValidatorV3(TypeCatalogV3.initial()).validate(request.architecture()).violations());errors.addAll(new ExecutionPlanValidatorV3(TypeCatalogV3.initial()).validate(request.architecture(),request.plan()).violations());return ValidationResponseV3.from(new ValidationResultV3(errors));}
+    @PostMapping("/scenarios/validate") public ValidationResponseV3 scenario(@RequestBody JsonNode input){return ValidationResponseV3.from(validator.validate(requests.map(input)));}
+    @PostMapping("/simulations") public Object simulate(@RequestBody JsonNode input,HttpServletRequest servlet){var request=requests.map(input);var validation=validator.validate(request);if(!validation.valid()){var problem=WireValuesV3.object("type","/problems/invalid-simulation","title","Simulação inválida","status",422,"code","SIMULATION_INVALID","instance",servlet.getRequestURI(),"detail","A arquitetura ou o cenário não atende ao catálogo v3.","violations",ValidationResponseV3.from(validation).violations());return ResponseEntity.status(422).contentType(MediaType.APPLICATION_PROBLEM_JSON).body(problem);}var engine=new SimulationEngineV3(request);engine.run();return responses.map(ResultProjectorV3.project(engine.checkpoint()));}
+}
