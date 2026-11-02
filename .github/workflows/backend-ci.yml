@@ -10,6 +10,7 @@ on:
       - 'frontend/src/features/v3/replayV3.ts'
       - 'frontend/src/features/v3/contractChecksV3.ts'
       - 'frontend/scripts/integration-v3-client.ts'
+      - 'frontend/src/features/v3/__fixtures__/**'
       - 'docs/api/openapi-v3.yaml'
       - 'docs/examples/v3/**'
       - '.github/workflows/backend-ci.yml'
