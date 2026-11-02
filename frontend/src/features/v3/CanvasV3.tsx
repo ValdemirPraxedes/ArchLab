@@ -1,3 +1,4 @@
+import type { SnapshotViewV3 } from './replayV3';
 import type { EndpointV3 } from './types';
 import { relationEdgesV3 } from './graphModel';
 import { memo, useMemo } from 'react';
@@ -16,10 +17,10 @@ const ComponentNodeV3 = memo(function ComponentNodeV3({ data, selected }: NodePr
   </div>;
 });
 const nodeTypes = { componentV3: ComponentNodeV3 };
-interface Props { project: ProjectV3; selected: string | null; locked?: boolean; select: (id: string | null) => void; add: (typeId: ComponentTypeV3, position?: { x: number; y: number }) => void; move: (id: string, position: { x: number; y: number }) => void; connect?: (sourceEndpointId: string, targetEndpointId: string) => void; selectRelation?: (id: string) => void; invalidIds?: Set<string> }
-function Canvas({ project, selected, locked = false, select, add, move, connect, selectRelation, invalidIds }: Props) {
+interface Props { project: ProjectV3; selected: string | null; locked?: boolean; select: (id: string | null) => void; add: (typeId: ComponentTypeV3, position?: { x: number; y: number }) => void; move: (id: string, position: { x: number; y: number }) => void; connect?: (sourceEndpointId: string, targetEndpointId: string) => void; selectRelation?: (id: string) => void; invalidIds?: Set<string>; snapshot?: SnapshotViewV3 }
+function Canvas({ project, selected, locked = false, select, add, move, connect, selectRelation, invalidIds, snapshot }: Props) {
   const { screenToFlowPosition } = useReactFlow();
-  const nodes = useMemo<ComponentNode[]>(() => project.request.architecture.components.map(component => ({ id: component.id, type: 'componentV3', selected: selected === component.id, position: project.positions[component.id] ?? { x: 0, y: 0 }, data: { label: component.displayName, typeId: component.typeId, invalid:invalidIds?.has(component.id)??false, ports: project.request.architecture.endpoints.filter(e => e.ownerId === component.id), locked } })), [project, selected, locked, invalidIds]);
+  const nodes = useMemo<ComponentNode[]>(() => project.request.architecture.components.map(component => ({ id: component.id, type: 'componentV3', selected: selected === component.id, position: project.positions[component.id] ?? { x: 0, y: 0 }, data: { label: component.displayName, typeId: component.typeId, state:snapshot?(snapshot.activations.filter(a=>a.componentId===component.id).map(a=>a.status).join(' · ')||'Sem ativação pública no cursor'):undefined, invalid:invalidIds?.has(component.id)??false, ports: project.request.architecture.endpoints.filter(e => e.ownerId === component.id), locked } })), [project, selected, locked, invalidIds, snapshot]);
   const edges:Edge[]=relationEdgesV3(project.request.architecture);
   return <div className="editor-canvas" role="region" aria-label="Canvas v3" onDragOver={event => { if (!locked) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} onDrop={event => { event.preventDefault(); const type = event.dataTransfer.getData(DRAG_V3); if (!locked && componentTypeV3(type)) add(type, screenToFlowPosition({ x: event.clientX, y: event.clientY })); }}>
     <ReactFlow<ComponentNode> nodes={nodes} edges={edges} onConnect={connection => { if (!locked && connection.sourceHandle && connection.targetHandle) connect?.(connection.sourceHandle,connection.targetHandle); }} onEdgeClick={(_,edge)=>selectRelation?.(edge.id)} nodeTypes={nodeTypes} nodesDraggable={!locked} nodesConnectable={!locked} deleteKeyCode={null} onNodeClick={(_, node) => select(node.id)} onPaneClick={() => select(null)} onNodeDragStop={(_, node) => { if (!locked) move(node.id, node.position); }} fitView aria-label="Grafo da arquitetura v3"><Background /><Controls /><MiniMap /></ReactFlow>

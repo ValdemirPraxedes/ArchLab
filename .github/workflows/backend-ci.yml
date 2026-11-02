@@ -7,6 +7,7 @@ on:
       - 'frontend/scripts/integration*.mjs'
       - 'frontend/src/api/archlabV3Client*'
       - 'frontend/src/features/v3/resultAdapterV3.ts'
+      - 'frontend/src/features/v3/replayV3.ts'
       - 'frontend/src/features/v3/contractChecksV3.ts'
       - 'frontend/scripts/integration-v3-client.ts'
       - 'docs/api/openapi-v3.yaml'
