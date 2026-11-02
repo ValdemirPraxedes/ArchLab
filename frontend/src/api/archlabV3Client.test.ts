@@ -29,4 +29,5 @@ describe('Contrato do cliente HTTP v3', () => {
     try { await client.simulate(request); throw new Error('Expected HTTP error'); } catch (error) { expect(error).toBeInstanceOf(ArchlabV3HttpError); const actual = error as ArchlabV3HttpError; expect(actual.status).toBe(status); expect(actual.problem).toEqual(problem); expect(actual.violations).toEqual(problem.violations); }
   });
   it('trata erro HTTP sem JSON sem ocultar o status', async () => { server.use(http.post('/api/v3/simulations', () => new HttpResponse('proxy failure', { status: 502 }))); await expect(client.simulate(request)).rejects.toMatchObject({ status: 502, problem: null }); });
+  it('distingue falha de rede de Problem HTTP', async () => { server.use(http.post('/api/v3/simulations', () => HttpResponse.error())); await expect(client.simulate(request)).rejects.toMatchObject({ name: 'ArchlabV3NetworkError' }); });
 });
