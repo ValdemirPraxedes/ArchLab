@@ -9,6 +9,9 @@ export type ValidationResponseV3 = Schemas['ValidationResponseV3'];
 export type ProblemV3 = Schemas['ProblemV3'];
 export type ViolationV3 = Schemas['ViolationV3'];
 
+export class ArchlabV3NetworkError extends Error {
+  constructor(public readonly cause: unknown) { super('Não foi possível conectar à API v3. Confira a conexão e tente novamente.'); this.name = 'ArchlabV3NetworkError'; }
+}
 export class ArchlabV3HttpError extends Error {
   constructor(public readonly status: number, public readonly problem: ProblemV3 | null) {
     super(problem?.detail ?? problem?.title ?? `Falha HTTP ${status} na API ArchLab v3`);
@@ -27,10 +30,11 @@ function readProblem(value: unknown): ProblemV3 | null {
 export class ArchlabV3Client {
   constructor(private readonly baseUrl = import.meta.env.VITE_API_BASE_URL ?? '') {}
   private async post<T>(path: string, payload: ArchitectureV3 | ExecutionPlanValidationRequestV3 | SimulationRequestV3, signal?: AbortSignal): Promise<T> {
-    const response = await fetch(this.baseUrl + path, {
+    let response: Response;
+    try { response = await fetch(this.baseUrl + path, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Accept: 'application/json, application/problem+json' },
       body: JSON.stringify(payload), signal,
-    });
+    }); } catch (error) { if (signal?.aborted) throw error; throw new ArchlabV3NetworkError(error); }
     if (!response.ok) {
       let value: unknown = null;
       try { value = await response.json(); } catch { /* Non-JSON HTTP errors have no Problem. */ }

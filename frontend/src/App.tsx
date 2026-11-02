@@ -1,8 +1,12 @@
+import { useEffect, useState } from 'react';
+import WorkspaceV3 from './features/v3/WorkspaceV3';
 import ArchitectureEditor from './features/editor/ArchitectureEditor';
 import { useTheme } from './features/editor/useTheme';
 
 export default function App() {
   const { theme, setTheme } = useTheme();
+  const [version, setVersion] = useState(() => window.location.hash === '#v3' ? 'v3' : 'legacy');
+  useEffect(() => { const navigate = () => setVersion(window.location.hash === '#v3' ? 'v3' : 'legacy'); window.addEventListener('hashchange', navigate); return () => window.removeEventListener('hashchange', navigate); }, []);
   return (
     <main className="workspace">
       <header className="workspace-header">
@@ -10,9 +14,10 @@ export default function App() {
           <p className="eyebrow">ArchLab · MVP v0.1</p>
           <h1>Laboratório de arquiteturas</h1>
         </div>
-        <div className="workspace-actions"><span className="workspace-status">Editor visual · MVP v0.1</span><label htmlFor="archlab-theme">Tema</label><select id="archlab-theme" aria-label="Tema" value={theme} onChange={(event) => setTheme(event.target.value as "light" | "dark")}><option value="light">Claro</option><option value="dark">Escuro</option></select></div>
+        <div className="workspace-actions"><label htmlFor="archlab-version">Versão</label><select id="archlab-version" value={version} onChange={event => { setVersion(event.target.value); window.history.replaceState(null, '', event.target.value === 'v3' ? '#v3' : '#legacy'); }}><option value="legacy">v0.1 / v0.2</option><option value="v3">v0.3</option></select><span className="workspace-status">Editor visual · MVP v0.1</span><label htmlFor="archlab-theme">Tema</label><select id="archlab-theme" aria-label="Tema" value={theme} onChange={(event) => setTheme(event.target.value as "light" | "dark")}><option value="light">Claro</option><option value="dark">Escuro</option></select></div>
       </header>
-      <ArchitectureEditor />
+      <div className="version-workspace" hidden={version !== 'legacy'}><ArchitectureEditor /></div>
+      <div className="version-workspace" hidden={version !== 'v3'}><WorkspaceV3 /></div>
     </main>
   );
 }

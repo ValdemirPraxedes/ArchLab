@@ -1,0 +1,17 @@
+import type { components } from '../../api/generated/schema-v3';
+export type SchemaV3 = components['schemas'];
+export type ArchitectureV3 = SchemaV3['ArchitectureDefinitionV3'];
+export type ComponentV3 = SchemaV3['ComponentDefinitionV3'];
+export type ResourceV3 = SchemaV3['ResourceDefinitionV3'];
+export type EndpointV3 = SchemaV3['EndpointDefinitionV3'];
+export type OperationV3 = SchemaV3['OperationDefinitionV3'];
+export type RelationV3 = SchemaV3['RelationDefinitionV3'];
+export type PlanV3 = SchemaV3['ExecutionPlanV3'];
+export type StepV3 = SchemaV3['ExecutionStepV3'];
+export type PropertyV3 = SchemaV3['PropertyValueV3'];
+export type PropertiesV3 = SchemaV3['PropertiesV3'];
+export type InitialStateV3 = SchemaV3['InitialStateV3'];
+export type SnapshotV3 = SchemaV3['ExecutionStateSnapshotV3'];
+export type ResultV3 = SchemaV3['SimulationResponseV3'];
+export type RequestV3 = SchemaV3['SimulationRequestV3'];
+export type ViolationV3 = SchemaV3['ViolationV3'];
