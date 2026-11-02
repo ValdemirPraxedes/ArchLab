@@ -1,3 +1,6 @@
+import { http, HttpResponse } from 'msw';
+import { server } from '../../test/server';
+import referenceResult from './__fixtures__/ce-ref-01-result.json';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import WorkspaceV3 from './WorkspaceV3';
@@ -6,4 +9,5 @@ describe('v3 workspace', () => {
   it('edits an independent project with a labelled input', () => { render(<WorkspaceV3 />); const input = screen.getByLabelText('Identificador da arquitetura'); fireEvent.change(input, { target: { value: 'my-v3' } }); expect(input).toHaveValue('my-v3'); });
   it('adds, selects, moves and removes all six types through the React Flow adapter', () => { render(<WorkspaceV3 />); for (const label of ['Client', 'API', 'Database', 'Broker', 'Queue', 'Telemetry']) { fireEvent.click(screen.getByRole('button', { name: label })); const node = screen.getByRole('button', { name: 'Nó v3: ' + label + ' 1' }); fireEvent.click(node); fireEvent.doubleClick(node); expect(screen.getByRole('heading', { name: label + ' 1' })).toBeInTheDocument(); fireEvent.click(screen.getByRole('button', { name: 'Remover componente' })); expect(node).not.toBeInTheDocument(); } });
   it('accepts drag/drop and refuses unknown types', () => { render(<WorkspaceV3 />); const canvas = screen.getByRole('region', { name: 'Canvas v3' }); fireEvent.drop(canvas, { clientX: 150, clientY: 220, dataTransfer: { getData: () => 'BROKER_GENERIC' } }); expect(screen.getByRole('button', { name: 'Nó v3: Broker 1' })).toBeInTheDocument(); fireEvent.drop(canvas, { dataTransfer: { getData: () => 'CACHE' } }); expect(screen.getAllByRole('listitem')).toHaveLength(1); });
+  it('executes the reference through HTTP, locks editing and resets only the execution', async () => { server.use(http.post('/api/v3/simulations', () => HttpResponse.json(referenceResult))); render(<WorkspaceV3 />); fireEvent.click(screen.getByRole('button', { name: 'Carregar CE-REF-01' })); fireEvent.click(screen.getByRole('button', { name: 'Executar simulação v3' })); expect(screen.getByLabelText('Identificador da arquitetura')).toBeDisabled(); expect(await screen.findByText(/Principal: RESPONDED/)).toHaveTextContent('Conclusão: 210 ms'); expect(screen.getByRole('button', { name: 'Client' })).toBeDisabled(); fireEvent.click(screen.getByRole('button', { name: 'Reiniciar execução' })); expect(screen.getByLabelText('Identificador da arquitetura')).toHaveValue('ce-ref-01'); expect(screen.getByLabelText('Identificador da arquitetura')).not.toBeDisabled(); });
 });

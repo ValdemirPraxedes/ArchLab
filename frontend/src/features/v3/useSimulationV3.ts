@@ -1,0 +1,13 @@
+import { useEffect,useRef,useState } from 'react';
+import { archlabV3Client,ArchlabV3HttpError,ArchlabV3NetworkError } from '../../api/archlabV3Client';
+import type { ProjectV3 } from './project';import type { RequestV3,ResultV3 } from './types';import { toRequestV3 } from './project';
+export type PhaseV3='idle'|'requesting'|'result'|'error';
+export function useSimulationV3(project:ProjectV3) {
+  const [phase,setPhase]=useState<PhaseV3>('idle'),[received,setReceived]=useState<{request:RequestV3;result:ResultV3}|null>(null),[error,setError]=useState<Error|null>(null),[message,setMessage]=useState('');
+  const generation=useRef(0),active=useRef<AbortController|null>(null);
+  useEffect(()=>()=>{generation.current++;active.current?.abort();},[]);
+  const run=async()=>{if(active.current)return;const token=++generation.current,controller=new AbortController(),request=toRequestV3(project);active.current=controller;setPhase('requesting');setError(null);setReceived(null);setMessage('Solicitando simulação ao backend…');try{const result=await archlabV3Client.simulate(request,controller.signal);if(token!==generation.current)return;setReceived({request,result});setPhase('result');setMessage(result.global.status==='COMPLETED'?'Resultado global concluído.':'Resultado observado até parada: '+result.global.status+'.');}catch(e){if(token!==generation.current)return;const failure=e instanceof Error?e:new Error('Erro inesperado.');setError(failure);setPhase('error');setMessage(failure instanceof ArchlabV3HttpError?'Falha HTTP '+failure.status+'.':failure instanceof ArchlabV3NetworkError?'Falha de conexão com o backend.':'Falha ao receber resultado.');}finally{if(token===generation.current)active.current=null;}};
+  const cancel=()=>{generation.current++;active.current?.abort();active.current=null;setPhase('idle');setError(null);setMessage('Espera interrompida no navegador. A simulação do servidor pode continuar.');};
+  const reset=()=>{const waiting=active.current!==null;generation.current++;active.current?.abort();active.current=null;setPhase('idle');setReceived(null);setError(null);setMessage(waiting?'Espera encerrada no navegador; o servidor pode continuar. O projeto foi preservado.':'Pronto para nova execução; o projeto foi preservado.');};
+  return {phase,received,error,message,run,cancel,reset,locked:phase==='requesting'||phase==='result'};
+}
