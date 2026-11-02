@@ -1,0 +1,5 @@
+{
+  "eventType": "RESOURCE_RELEASE_DUE",
+  "resourceId": "resourceId-1",
+  "leaseId": "leaseId-1"
+}

@@ -1,0 +1,6 @@
+{
+  "eventType": "BRANCH_TERMINATION_DUE",
+  "parallelGroupId": "parallelGroupId-1",
+  "branchExecutionId": "branchExecutionId-1",
+  "branchResultRef": "branchResultRef-1"
+}

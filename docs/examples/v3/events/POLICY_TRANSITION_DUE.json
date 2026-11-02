@@ -1,0 +1,6 @@
+{
+  "eventType": "POLICY_TRANSITION_DUE",
+  "policyInstanceId": "policyInstanceId-1",
+  "transitionId": "transitionId-1",
+  "targetState": "targetState-1"
+}

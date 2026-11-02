@@ -1,0 +1,7 @@
+{
+  "eventType": "ACTIVATION_CONTINUATION_DUE",
+  "activationId": "activationId-1",
+  "cursorId": "cursorId-1",
+  "expectedCursorVersion": 0,
+  "outcomeRef": "outcomeRef-1"
+}

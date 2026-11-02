@@ -1,0 +1,9 @@
+{
+  "eventType": "CANCELLATION_DELIVERY_DUE",
+  "cancellationRequestId": "cancellationRequestId-1",
+  "target": {
+    "kind": "ACTIVATION",
+    "id": "activation-1"
+  },
+  "sourceInteractionId": "sourceInteractionId-1"
+}

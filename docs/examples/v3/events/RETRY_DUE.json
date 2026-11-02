@@ -1,0 +1,7 @@
+{
+  "eventType": "RETRY_DUE",
+  "interactionId": "interactionId-1",
+  "previousAttemptId": "previousAttemptId-1",
+  "retryOrdinal": 1,
+  "policyId": "policyId-1"
+}

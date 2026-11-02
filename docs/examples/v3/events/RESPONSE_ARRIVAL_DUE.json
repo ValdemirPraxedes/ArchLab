@@ -1,0 +1,7 @@
+{
+  "eventType": "RESPONSE_ARRIVAL_DUE",
+  "interactionId": "interactionId-1",
+  "attemptId": "attemptId-1",
+  "responseMessageId": "responseMessageId-1",
+  "callerActivationId": "callerActivationId-1"
+}

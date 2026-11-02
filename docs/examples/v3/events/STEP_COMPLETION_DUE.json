@@ -1,0 +1,5 @@
+{
+  "eventType": "STEP_COMPLETION_DUE",
+  "stepExecutionId": "stepExecutionId-1",
+  "completionToken": "completionToken-1"
+}

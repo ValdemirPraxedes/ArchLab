@@ -1,0 +1,6 @@
+{
+  "eventType": "RESPONSE_SEND_DUE",
+  "interactionId": "interactionId-1",
+  "attemptId": "attemptId-1",
+  "responseMessageId": "responseMessageId-1"
+}

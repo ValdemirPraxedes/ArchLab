@@ -1,0 +1,6 @@
+{
+  "eventType": "QUEUE_ENQUEUE_DUE",
+  "queueId": "queueId-1",
+  "messageId": "messageId-1",
+  "publicationId": "publicationId-1"
+}

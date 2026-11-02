@@ -1,0 +1,6 @@
+{
+  "eventType": "RESOURCE_STATE_CHANGE_DUE",
+  "resourceId": "resourceId-1",
+  "changeId": "changeId-1",
+  "newStateRef": "newStateRef-1"
+}

@@ -1,0 +1,6 @@
+{
+  "eventType": "CONSUMER_ACK_ARRIVAL_DUE",
+  "queueEntryId": "queueEntryId-1",
+  "deliveryAttemptId": "deliveryAttemptId-1",
+  "acknowledgementId": "acknowledgementId-1"
+}

@@ -1,0 +1,6 @@
+{
+  "eventType": "BRANCH_START_DUE",
+  "parallelGroupId": "parallelGroupId-1",
+  "branchExecutionId": "branchExecutionId-1",
+  "entryStepId": "entryStepId-1"
+}

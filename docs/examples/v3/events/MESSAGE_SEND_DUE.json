@@ -1,0 +1,6 @@
+{
+  "eventType": "MESSAGE_SEND_DUE",
+  "messageId": "messageId-1",
+  "attemptId": "attemptId-1",
+  "pathId": "pathId-1"
+}

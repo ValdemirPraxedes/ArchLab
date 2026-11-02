@@ -1,0 +1,9 @@
+{
+  "eventType": "RESOURCE_ACQUISITION_DUE",
+  "resourceId": "resourceId-1",
+  "claimId": "claimId-1",
+  "owner": {
+    "kind": "ACTIVATION",
+    "id": "activation-1"
+  }
+}
