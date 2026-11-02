@@ -4,6 +4,8 @@ on:
     paths:
       - 'backend/**'
       - 'tools/validate-v3-results.cjs'
+      - 'frontend/scripts/integration*.mjs'
+      - 'frontend/src/api/archlabV3Client*'
       - 'docs/api/openapi-v3.yaml'
       - 'docs/examples/v3/**'
       - '.github/workflows/backend-ci.yml'
@@ -32,3 +34,18 @@ jobs:
         run: npm install --prefix "$RUNNER_TEMP/archlab-v3-contract" --no-save --no-package-lock yaml@2.9.1 ajv@8.20.0 ajv-formats@3.0.1
       - name: Validate actual v3 HTTP and result artifacts
         run: node ../tools/validate-v3-results.cjs .. "$RUNNER_TEMP/archlab-v3-contract/node_modules"
+
+      - name: Verify real frontend/backend integration
+        working-directory: .
+        env:
+          ARCHLAB_API_URL: http://localhost:18083
+        run: |
+          java -jar backend/archlab-api/target/archlab-api-0.1.0-SNAPSHOT.jar --server.port=18083 > "$RUNNER_TEMP/archlab-v3-server.log" 2>&1 &
+          API_PID=$!
+          trap 'kill "$API_PID"' EXIT
+          for attempt in $(seq 1 40); do
+            if curl --silent --output /dev/null http://localhost:18083/; then break; fi
+            sleep 0.5
+          done
+          node frontend/scripts/integration.mjs
+          node frontend/scripts/integration-v3.mjs
