@@ -13,6 +13,7 @@ public record RuntimeStateV3(Map<IdentifierV3,RuntimeEntityV3> entities) {
         if(!Objects.equals(previous.stateName(),entity.stateName()))StateTransitionsV3.require(previous.kind(),previous.stateName(),entity.stateName());
         var next=new LinkedHashMap<>(entities);next.put(entity.id(),entity);return new RuntimeStateV3(next);}
     public RuntimeStateV3 transition(IdentifierV3 id,long expectedVersion,String target){var entity=entities.get(id);if(entity==null)throw new IllegalStateException("Missing entity");return replace(expectedVersion,entity.transition(target));}
+    public RuntimeStateV3 remove(IdentifierV3 id,long expectedVersion){var entity=entities.get(id);if(entity==null || entity.version()!=expectedVersion)throw new IllegalStateException("Stale removal");var next=new LinkedHashMap<>(entities);next.remove(id);return new RuntimeStateV3(next);}
     public List<String> invariantViolations(){var errors=new ArrayList<String>();
         for(var entity:entities.values())switch(entity){
             case Activation a -> expect(errors,a.componentId(),Kind.COMPONENT);
