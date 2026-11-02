@@ -1,0 +1,7 @@
+{
+  "eventType": "MESSAGE_ARRIVAL_DUE",
+  "messageId": "messageId-1",
+  "attemptId": "attemptId-1",
+  "destinationEndpointId": "destinationEndpointId-1",
+  "pathSegmentId": "pathSegmentId-1"
+}

@@ -1,0 +1,6 @@
+{
+  "eventType": "ROOT_OPERATION_START_DUE",
+  "rootOperationId": "rootOperationId-1",
+  "entryComponentId": "entryComponentId-1",
+  "entryOperationId": "entryOperationId-1"
+}

@@ -1,0 +1,6 @@
+{
+  "eventType": "RESOURCE_WAKEUP_DUE",
+  "resourceId": "resourceId-1",
+  "claimId": "claimId-1",
+  "resourceVersion": 0
+}

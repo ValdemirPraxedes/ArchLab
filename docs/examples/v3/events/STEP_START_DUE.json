@@ -1,0 +1,7 @@
+{
+  "eventType": "STEP_START_DUE",
+  "activationId": "activationId-1",
+  "stepExecutionId": "stepExecutionId-1",
+  "stepId": "stepId-1",
+  "cursorId": "cursorId-1"
+}

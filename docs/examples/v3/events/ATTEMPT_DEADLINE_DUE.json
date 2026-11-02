@@ -1,0 +1,7 @@
+{
+  "eventType": "ATTEMPT_DEADLINE_DUE",
+  "interactionId": "interactionId-1",
+  "attemptId": "attemptId-1",
+  "timerId": "timerId-1",
+  "deadlineAtMs": 0
+}

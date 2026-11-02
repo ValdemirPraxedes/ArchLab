@@ -1,0 +1,6 @@
+{
+  "eventType": "REDELIVERY_DUE",
+  "queueEntryId": "queueEntryId-1",
+  "previousDeliveryAttemptId": "previousDeliveryAttemptId-1",
+  "nextAttemptNumber": 1
+}

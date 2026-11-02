@@ -1,0 +1,6 @@
+{
+  "eventType": "BROKER_ACCEPTANCE_DUE",
+  "publicationId": "publicationId-1",
+  "brokerId": "brokerId-1",
+  "messageId": "messageId-1"
+}

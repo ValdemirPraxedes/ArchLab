@@ -1,0 +1,6 @@
+{
+  "eventType": "MESSAGE_TTL_EXPIRATION_DUE",
+  "queueEntryId": "queueEntryId-1",
+  "timerId": "timerId-1",
+  "expiresAtMs": 0
+}

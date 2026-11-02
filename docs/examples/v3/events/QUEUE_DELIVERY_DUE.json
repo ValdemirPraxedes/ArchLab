@@ -1,0 +1,6 @@
+{
+  "eventType": "QUEUE_DELIVERY_DUE",
+  "queueEntryId": "queueEntryId-1",
+  "deliveryAttemptId": "deliveryAttemptId-1",
+  "consumerEndpointId": "consumerEndpointId-1"
+}

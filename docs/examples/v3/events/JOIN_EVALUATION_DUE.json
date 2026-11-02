@@ -1,0 +1,6 @@
+{
+  "eventType": "JOIN_EVALUATION_DUE",
+  "parallelGroupId": "parallelGroupId-1",
+  "joinStepId": "joinStepId-1",
+  "expectedGroupVersion": 0
+}
