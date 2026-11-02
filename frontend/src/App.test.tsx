@@ -261,11 +261,11 @@ describe('Editor visual', () => {
     expect(screen.getByRole('textbox', { name: 'Operação SOAP' })).toHaveValue('ConsultarSeguro');
   });
 
-  it('preserva rascunhos legado e v3 ao alternar versões', () => {
+  it('preserva rascunhos legado e v3 ao alternar versões', async () => {
     window.history.replaceState(null, '', '#legacy'); render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'API' }));
     fireEvent.change(screen.getByLabelText('Versão'), { target: { value: 'v3' } });
-    fireEvent.change(screen.getByLabelText('Identificador da arquitetura'), { target: { value: 'projeto-v3' } });
+    fireEvent.change(await screen.findByLabelText('Identificador da arquitetura'), { target: { value: 'projeto-v3' } });
     fireEvent.change(screen.getByLabelText('Versão'), { target: { value: 'legacy' } });
     expect(screen.getByRole('button', { name: 'Nó: API 1' })).toBeInTheDocument();
     fireEvent.change(screen.getByLabelText('Versão'), { target: { value: 'v3' } });
