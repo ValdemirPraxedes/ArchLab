@@ -1,5 +1,7 @@
 # Frontend v0.3 — plano de execução
 
+Registro histórico da execução. Consulte [guia e evidências finais](frontend-v0.3-guide.md) e Trello para o estado consolidado; as notas de etapas abaixo descrevem seu momento de implementação.
+
 Base develop f4e77f7, árvore local limpa antes do início. Todos os14cards completos consultados no Trello. Fontes: ADR-v0.3.md, OpenAPI3.1, backend real V3Controller/mapper/catalog/resultado, UI ReactFlow e temas existentes. Sem novas dependências relevantes. main e releases fora do escopo.
 
 Ordem: FE01 contrato/projeto/versões → FE02 catálogo/canvas → FE03 propriedades/recursos/undo → FE04 endpoints/operations/relations → FE05 nove steps → FE06 cenário/controles → FE07 validações → FE08 simulação → FE09 replay público → FE10 estados → FE11 métricas → FE12 UX/acessibilidade → FE13 integração/regressão → FE14 homologação/documentação.
@@ -33,3 +35,5 @@ FE11: resumo principal/global/background distinto do cursor e telemetria complet
 FE12: layout v3 com altura útil e scroll próprios (sidebar/propriedades/resultados não sobrepõem o canvas), fitView após medição dos nós, vazio orientado, nomes longos, responsividade e estilos restritos ao v3. Tabs têm foco único e navegação Arrow/Home/End; formulários/foco/alertas seguem tokens claro/escuro e reduced-motion. v1/v2 retêm estilos e projetos.
 
 FE13: matriz de fixtures produzidas pelo Java para horizonte antes da resposta (IN_PROGRESS/nulos), limite de loop zero, CONDITION verdadeiro/falso e FAIL; cliente real compara resultados completos e replay final. CI executa esses checks ao alterar fixtures. Sem Playwright instalado no repositório: E2E de navegador realizado por automação conectada; Vitest/RTL e scripts HTTP reproduzíveis, sem dependência Python.
+
+FE14: guia de operação, rastreabilidade FE01..14/ADRs/PRs, diagramas UML/sequência, screenshots reais, decisões e capacidades indisponíveis. README principal/frontend atualizados. Verificação final local:204 testes frontend,327 testes Java (0falhas/erros/skips),64 artefatos/fixtures OpenAPI/Ajv e integração real v1/v2/v3/RF044. Aprovação final do usuário somente após checks e merge da entrega.

@@ -2,7 +2,9 @@
 
 **Desenhe. Simule. Compare. Decida.**
 
-> **Status:** Planejamento técnico — implementação ainda não iniciada.
+> **Status atual:** backend e frontend v0.3 executáveis na branch develop; v0.1/v0.2 preservadas. Consulte o [guia v0.3](docs/v3/frontend-v0.3-guide.md) para executar, modelar, validar, simular e reproduzir os testes.
+
+O conteúdo de planejamento abaixo registra a visão original do produto e inclui evoluções futuras; não é o inventário de funcionalidades entregues. Para o estado implementado, contratos e limites atuais, use o guia acima, os [ADRs v0.3](docs/architecture/ADR-v0.3.md) e o [OpenAPI v3](docs/api/openapi-v3.yaml).
 
 O **ArchLab** é uma plataforma web profissional de **modelagem e simulação de arquiteturas de software**. O objetivo é ajudar arquitetos de software, tech leads e desenvolvedores a construir modelos de sistemas distribuídos, simular cargas de trabalho e comparar alternativas antes de modificar sistemas reais.
 
