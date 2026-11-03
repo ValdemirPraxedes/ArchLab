@@ -48,6 +48,7 @@ describe('Editor visual', () => {
   it('agrupa os seis clientes, API e Database e adiciona por clique', () => {
     render(<App />);
     const clients = screen.getByRole('region', { name: 'Clientes' });
+    expect(screen.queryByRole('button', { name: 'Client', exact: true })).not.toBeInTheDocument();
     for (const name of ['Web Browser', 'Mobile App', 'Desktop App', 'CLI', 'Bot', 'Embedded System']) {
       expect(clients).toContainElement(screen.getByRole('button', { name }));
       fireEvent.click(screen.getByRole('button', { name }));

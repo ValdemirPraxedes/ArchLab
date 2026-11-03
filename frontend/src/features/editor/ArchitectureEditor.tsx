@@ -29,7 +29,7 @@ const DRAG_MIME = 'application/x-archlab-component';
 const CANVAS_WIDTH = 2400;
 const CANVAS_HEIGHT = 1600;
 const PALETTE_CATEGORIES = [
-  { title: 'Clientes', types: ['CLIENT', ...VISUAL_CLIENT_TYPES] },
+  { title: 'Clientes', types: VISUAL_CLIENT_TYPES },
   { title: 'Serviços', types: ['API'] },
   { title: 'Dados', types: ['DATABASE'] },
 ] as const satisfies ReadonlyArray<{ title: string; types: readonly ComponentType[] }>;
