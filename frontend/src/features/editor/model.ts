@@ -24,6 +24,9 @@ export const COMPONENT_LABELS: Record<ComponentType, string> = {
 export function isVisualClientType(type: ComponentType): type is VisualClientType {
   return VISUAL_CLIENT_TYPES.some((clientType) => clientType === type);
 }
+export function isClientType(type: ComponentType): type is VisualClientType | 'CLIENT' {
+  return type === 'CLIENT' || isVisualClientType(type);
+}
 
 export function isComponentType(value: string): value is ComponentType {
   return COMPONENT_TYPES.some((type) => type === value);
@@ -49,7 +52,7 @@ export function validDuration(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0;
 }
 export function allowedProtocols(source: ComponentType, target: ComponentType): Protocol[] {
-  if (source === 'CLIENT' && target === 'API') return ['REST', 'SOAP'];
+  if (isClientType(source) && target === 'API') return ['REST', 'SOAP'];
   if (source === 'API' && target === 'API') return ['REST', 'SOAP'];
   if (source === 'API' && target === 'DATABASE') return ['TCP'];
   return [];
@@ -59,7 +62,6 @@ export function validateConnection(nodes: ArchitectureNode[], edges: Architectur
   const source = nodes.find((node) => node.id === sourceId);
   const target = nodes.find((node) => node.id === targetId);
   if (!source || !target) return 'Selecione componentes existentes.';
-  if (isVisualClientType(source.data.componentType) || isVisualClientType(target.data.componentType)) return 'Este cliente ainda não possui suporte para conexões ou execução.';
   if (!allowedProtocols(source.data.componentType, target.data.componentType).length) return 'Conexão incompatível: use Client → API ou API → Database.';
   if (edges.some((edge) => (edge.source === sourceId && edge.target === targetId) || (edge.source === targetId && edge.target === sourceId))) {
     return 'Já existe uma conexão entre esses componentes.';

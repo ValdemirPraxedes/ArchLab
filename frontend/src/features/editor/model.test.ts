@@ -36,12 +36,14 @@ describe('modelo do editor', () => {
     expect(allowedProtocols('API', 'DATABASE')).toEqual(['TCP']);
     expect(allowedProtocols('DATABASE', 'API')).toEqual([]);
   });
-  it.each(VISUAL_CLIENT_TYPES)('bloqueia conexões envolvendo %s', (type) => {
+  it.each(VISUAL_CLIENT_TYPES)('permite %s → API e bloqueia pares incompatíveis', (type) => {
     const visual = createArchitectureNode(type, { x: 0, y: 0 });
     const api = createArchitectureNode('API', { x: 1, y: 1 });
-    expect(allowedProtocols(type, 'API')).toEqual([]);
-    expect(validateConnection([visual, api], [], visual.id, api.id)).toMatch(/não possui suporte/);
-    expect(validateConnection([visual, api], [], api.id, visual.id)).toMatch(/não possui suporte/);
+    const db = createArchitectureNode('DATABASE', { x: 2, y: 2 });
+    expect(allowedProtocols(type, 'API')).toEqual(['REST', 'SOAP']);
+    expect(validateConnection([visual, api, db], [], visual.id, api.id)).toBeNull();
+    expect(validateConnection([visual, api, db], [], visual.id, db.id)).toMatch(/incompatível/);
+    expect(validateConnection([visual, api, db], [], api.id, visual.id)).toMatch(/incompatível/);
   });
   it('rejeita duração negativa, fracionária ou não finita', () => {
     expect(validDuration(0)).toBe(true);

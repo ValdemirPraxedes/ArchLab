@@ -91,6 +91,22 @@ describe('Editor visual', () => {
     expect(screen.queryByRole('button', { name: 'Nó: Renomeado' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Nó: ${name} 2` })).toBeInTheDocument();
   });
+  it.each(['Web Browser', 'Mobile App', 'Desktop App', 'CLI', 'Bot', 'Embedded System'])('conecta %s a API e edita REST/SOAP', (name) => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name }));
+    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    fireEvent.click(screen.getByRole('button', { name: `Nó: ${name} 1` }));
+    const target = screen.getByRole('combobox', { name: 'Destino' });
+    fireEvent.change(target, { target: { value: (screen.getByRole('option', { name: /API 1/ }) as HTMLOptionElement).value } });
+    expect(screen.getByRole('combobox', { name: 'Protocolo' })).toHaveTextContent('REST');
+    expect(screen.getByRole('combobox', { name: 'Protocolo' })).toHaveTextContent('SOAP');
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+    expect(screen.getByText(/1 conexão\(ões\)/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Conexão: REST' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Editar protocolo' }), { target: { value: 'SOAP' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Confirmar alterações' }));
+    expect(screen.getByRole('button', { name: 'Conexão: SOAP' })).toBeInTheDocument();
+  });
   it('fecha propriedades ao clicar fora e preserva seleção ao interagir no painel', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'API' }));

@@ -1,9 +1,10 @@
 import type { IntegrationV2 } from '../../api/archlabV2Client';
+import { isClientType } from './model';
 import type { ComponentType } from './model';
 
 export type IntegrationKind = IntegrationV2['kind'];
 export function allowedIntegrationKinds(source: ComponentType, target: ComponentType): IntegrationKind[] {
-  if ((source === 'CLIENT' && target === 'API') || (source === 'API' && target === 'API')) return ['HTTP_REST', 'SOAP_HTTP'];
+  if ((isClientType(source) && target === 'API') || (source === 'API' && target === 'API')) return ['HTTP_REST', 'SOAP_HTTP'];
   if (source === 'API' && target === 'DATABASE') return ['DATABASE_QUERY'];
   return [];
 }

@@ -1,9 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import { allowedIntegrationKinds, defaultIntegration, integrationError, parseHeaders } from './integration';
-import { createArchitectureNode, createArchitectureEdge } from './model';
+import { createArchitectureNode, createArchitectureEdge, VISUAL_CLIENT_TYPES } from './model';
 import { toArchitectureV2 } from './architectureV2';
 
 describe('integrações ilustrativas v2', () => {
+  it.each(VISUAL_CLIENT_TYPES)('admite REST e SOAP de %s para API', (type) => {
+    expect(allowedIntegrationKinds(type, 'API')).toEqual(['HTTP_REST', 'SOAP_HTTP']);
+    expect(allowedIntegrationKinds(type, 'DATABASE')).toEqual([]);
+    expect(integrationError(defaultIntegration('HTTP_REST'), type, 'API')).toBeNull();
+    expect(integrationError(defaultIntegration('SOAP_HTTP'), type, 'API')).toBeNull();
+  });
   it('admite HTTP_REST e SOAP_HTTP entre APIs, mas apenas DATABASE_QUERY para DB', () => {
     expect(allowedIntegrationKinds('API','API')).toEqual(['HTTP_REST', 'SOAP_HTTP']);
     expect(allowedIntegrationKinds('API','DATABASE')).toEqual(['DATABASE_QUERY']);
