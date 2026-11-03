@@ -15,6 +15,7 @@ export function toArchitectureV2(nodes: ArchitectureNode[], edges: ArchitectureE
         case 'CLIENT': return { ...base, type: 'CLIENT' as const };
         case 'API': return { ...base, type: 'API' as const, preProcessingMs: n.data.preProcessingMs ?? 0, postProcessingMs: n.data.postProcessingMs ?? 0 };
         case 'DATABASE': return { ...base, type: 'DATABASE' as const, processingMs: n.data.processingMs ?? 0 };
+        default: throw new Error('Cliente visual sem suporte de execução na API v2.');
       }
     }),
     connections: edges.map(e => {

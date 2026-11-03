@@ -24,7 +24,7 @@ vi.mock('@xyflow/react', async () => {
     Handle: () => null, Position: { Left: 'left', Right: 'right' },
     useReactFlow: () => ({ screenToFlowPosition: (position: { x: number; y: number }) => position }),
     useNodesState: (initial: unknown[]) => {
-      const [nodes, setNodes] = React.useState(initial);
+      const [nodes, setNodes] = React.useState(initial as { id: string; position: { x: number; y: number } }[]);
       return [nodes, setNodes, (changes: { id: string; type: string; position?: { x: number; y: number } }[]) => setNodes((current: { id: string; position: { x: number; y: number } }[]) => current.map((node) => {
         const change = changes.find((item) => item.id === node.id && item.type === 'position');
         return change?.position ? { ...node, position: change.position } : node;
@@ -55,6 +55,20 @@ describe('Editor visual', () => {
     expect(screen.getByRole('region', { name: 'Serviços' })).toContainElement(screen.getByRole('button', { name: 'API' }));
     expect(screen.getByRole('region', { name: 'Dados' })).toContainElement(screen.getByRole('button', { name: 'Database' }));
     expect(screen.getByText(/6 componente\(s\)/)).toBeInTheDocument();
+  });
+  it('adiciona cliente por arrastar e soltar no canvas', () => {
+    render(<App />);
+    const data = new Map<string, string>();
+    const dataTransfer = {
+      setData: (format: string, value: string) => data.set(format, value),
+      getData: (format: string) => data.get(format) ?? '',
+      effectAllowed: 'none', dropEffect: 'none',
+    };
+    const canvas = screen.getByLabelText('Canvas da arquitetura');
+    vi.spyOn(canvas, 'getBoundingClientRect').mockReturnValue({ left: 0, top: 0, right: 800, bottom: 600, width: 800, height: 600, x: 0, y: 0, toJSON: () => ({}) });
+    fireEvent.dragStart(screen.getByRole('button', { name: 'Bot' }), { dataTransfer });
+    fireEvent.drop(canvas, { dataTransfer, clientX: 100, clientY: 100 });
+    expect(screen.getByRole('button', { name: 'Nó: Bot 1' })).toHaveAttribute('data-component-type', 'BOT');
   });
   it.each([
     ['Web Browser', 'WEB_BROWSER'], ['Mobile App', 'MOBILE_APP'], ['Desktop App', 'DESKTOP_APP'],
