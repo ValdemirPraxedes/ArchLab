@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { allowedProtocols, createArchitectureEdge, createArchitectureNode, isComponentType, removeComponent, validDuration, validateConnection, validDisplayName, nextDisplayName } from './model';
+import { allowedProtocols, COMPONENT_LABELS, createArchitectureEdge, createArchitectureNode, isComponentType, isVisualClientType, removeComponent, validDuration, validateConnection, validDisplayName, nextDisplayName, VISUAL_CLIENT_TYPES } from './model';
 
 describe('modelo do editor', () => {
   it('aceita somente tipos conhecidos', () => {
@@ -7,6 +7,16 @@ describe('modelo do editor', () => {
     expect(isComponentType('API')).toBe(true);
     expect(isComponentType('DATABASE')).toBe(true);
     expect(isComponentType('CACHE')).toBe(false);
+  });
+  it.each(VISUAL_CLIENT_TYPES)('cria instâncias independentes de %s com nome, tipo e posição', (type) => {
+    expect(isComponentType(type)).toBe(true);
+    expect(isVisualClientType(type)).toBe(true);
+    const first = createArchitectureNode(type, { x: 10, y: 20 }, nextDisplayName(type, []));
+    const second = createArchitectureNode(type, { x: 30, y: 40 }, nextDisplayName(type, [first]));
+    expect(first.id).not.toBe(second.id);
+    expect(first.data).toMatchObject({ componentType: type, label: `${COMPONENT_LABELS[type]} 1`, displayName: `${COMPONENT_LABELS[type]} 1` });
+    expect(second.data.displayName).toBe(`${COMPONENT_LABELS[type]} 2`);
+    expect(second.position).toEqual({ x: 30, y: 40 });
   });
   it('cria instâncias distintas com posição e tempos iniciais', () => {
     const uuid = vi.spyOn(crypto, 'randomUUID')
