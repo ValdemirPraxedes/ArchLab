@@ -11,4 +11,12 @@ describe('Lucide nos componentes', () => {
     expect(screen.getByText(type)).toBeInTheDocument();
     expect(icon?.closest('[aria-hidden="true"]')).not.toBeNull();
   });
+  it.each([
+    ['WEB_BROWSER', 'globe'], ['MOBILE_APP', 'smartphone'], ['DESKTOP_APP', 'monitor'],
+    ['CLI', 'terminal'], ['BOT', 'bot'], ['EMBEDDED_SYSTEM', 'cpu'],
+    ['CLIENT', 'monitor'], ['API', 'server'], ['DATABASE', 'database'],
+  ] as const)('associa %s ao ícone %s', (type, icon) => {
+    const { container } = render(<ComponentIcon type={type} />);
+    expect(container.querySelector(`svg.lucide-${icon}`)).not.toBeNull();
+  });
 });
