@@ -41,6 +41,17 @@ describe('Editor visual', () => {
     expect(screen.getByRole('region', { name: 'Editor visual' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Propriedades' })).toBeInTheDocument();
   });
+  it('agrupa os seis clientes, API e Database e adiciona por clique', () => {
+    render(<App />);
+    const clients = screen.getByRole('region', { name: 'Clientes' });
+    for (const name of ['Web Browser', 'Mobile App', 'Desktop App', 'CLI', 'Bot', 'Embedded System']) {
+      expect(clients).toContainElement(screen.getByRole('button', { name }));
+      fireEvent.click(screen.getByRole('button', { name }));
+    }
+    expect(screen.getByRole('region', { name: 'Serviços' })).toContainElement(screen.getByRole('button', { name: 'API' }));
+    expect(screen.getByRole('region', { name: 'Dados' })).toContainElement(screen.getByRole('button', { name: 'Database' }));
+    expect(screen.getByText(/6 componente\(s\)/)).toBeInTheDocument();
+  });
   it('fecha propriedades ao clicar fora e preserva seleção ao interagir no painel', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'API' }));

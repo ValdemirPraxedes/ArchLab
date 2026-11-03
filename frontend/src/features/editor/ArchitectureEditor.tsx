@@ -20,7 +20,7 @@ import { toArchitectureV2 } from './architectureV2';
 import { archlabV2Client, ArchlabV2HttpError } from '../../api/archlabV2Client';
 import type { ValidationIssue } from './validation';
 import {
-  COMPONENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
+  VISUAL_CLIENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
   isComponentType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
 } from './model';
 import type { ArchitectureNode as ArchitectureNodeType, ArchitectureEdge, ComponentType, Protocol } from './model';
@@ -28,6 +28,11 @@ import type { ArchitectureNode as ArchitectureNodeType, ArchitectureEdge, Compon
 const DRAG_MIME = 'application/x-archlab-component';
 const CANVAS_WIDTH = 2400;
 const CANVAS_HEIGHT = 1600;
+const PALETTE_CATEGORIES = [
+  { title: 'Clientes', types: ['CLIENT', ...VISUAL_CLIENT_TYPES] },
+  { title: 'Serviços', types: ['API'] },
+  { title: 'Dados', types: ['DATABASE'] },
+] as const satisfies ReadonlyArray<{ title: string; types: readonly ComponentType[] }>;
 
 function EditorCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<ArchitectureNodeType>([]);
@@ -269,13 +274,16 @@ function EditorCanvas() {
       <aside className="palette" aria-label="Paleta de componentes">
         <h2>Componentes</h2>
         <p>Arraste para o canvas ou clique para adicionar.</p>
-        {COMPONENT_TYPES.map((type) => (
+        {PALETTE_CATEGORIES.map((category) => <section className="palette-category" aria-label={category.title} key={category.title}>
+          <h3>{category.title}</h3>
+          {category.types.map((type) => (
           <button key={type} type="button" className="palette-item" draggable={!executionLocked} disabled={executionLocked}
             onDragStart={(event) => { if (!executionLocked) onPaletteDragStart(event, type); }}
             onClick={() => addNode(type, { x: 120 + (nodes.length % 4) * 210, y: 110 + Math.floor(nodes.length / 4) * 120 })}>
             <ComponentIcon type={type} /> {COMPONENT_LABELS[type]}
           </button>
-        ))}
+          ))}
+        </section>)}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
         <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
