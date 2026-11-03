@@ -21,7 +21,7 @@ import { archlabV2Client, ArchlabV2HttpError } from '../../api/archlabV2Client';
 import type { ValidationIssue } from './validation';
 import {
   VISUAL_CLIENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
-  isComponentType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
+  isComponentType, isVisualClientType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
 } from './model';
 import type { ArchitectureNode as ArchitectureNodeType, ArchitectureEdge, ComponentType, Protocol } from './model';
 
@@ -113,8 +113,17 @@ function EditorCanvas() {
     setExecutionStatus('READY'); setSimulationResultV2(null); setV2PlaybackStatus('PAUSADA');
     setIssues([]); setValidationStatus('idle'); setError(''); setActionFeedback('Execução reiniciada. A arquitetura foi preservada.');
   };
+  const blockUnsupportedClients = () => {
+    const unsupported = nodes.find((item) => isVisualClientType(item.data.componentType));
+    if (!unsupported) return false;
+    setIssues([{ code: 'UNSUPPORTED_CLIENT', path: '', message: `${COMPONENT_LABELS[unsupported.data.componentType]} ainda não possui suporte de execução na API v2.` }]);
+    setValidationStatus('invalid');
+    return true;
+  };
   const simulate = async () => {
     if (executionStatus !== 'READY' && executionStatus !== 'ERROR') return;
+    setValidationScope('scenario');
+    if (blockUnsupportedClients()) { setExecutionStatus('ERROR'); return; }
     const requestGeneration = ++generation.current;
     setIssues([]); setValidationStatus('checking'); setExecutionStatus('VALIDATING'); setValidationScope('scenario');
     try {
@@ -148,6 +157,7 @@ function EditorCanvas() {
   const validateV2 = async (scope: 'architecture' | 'scenario') => {
     if (executionLocked || validationStatus === 'checking') return;
     setValidationScope(scope);
+    if (blockUnsupportedClients()) return;
     setIssues([]);
     setValidationStatus('checking');
     try {

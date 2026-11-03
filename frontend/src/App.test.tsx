@@ -152,6 +152,19 @@ describe('Editor visual', () => {
     expect(await screen.findByText(/INVALID_DAG/)).toBeInTheDocument();
     expect(screen.getByText('connections[0]', { exact: false })).toBeInTheDocument();
   });
+  it.each(['Validar arquitetura v2', 'Validar cenário v2', 'Simular'])('bloqueia %s com cliente visual antes de chamar a API', (action) => {
+    const calls = vi.fn(() => HttpResponse.json({ valid: true, violations: [] }));
+    server.use(
+      http.post('/api/v2/architectures/validate', calls),
+      http.post('/api/v2/scenarios/validate', calls),
+      http.post('/api/v2/scenarios/simulate', calls),
+    );
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
+    fireEvent.click(screen.getByRole('button', { name: action }));
+    expect(screen.getByText(/Web Browser ainda não possui suporte de execução/)).toBeInTheDocument();
+    expect(calls).not.toHaveBeenCalled();
+  });
   it('valida cenário em rota separada sem executar o motor', async () => {
     server.use(http.post('/api/v2/scenarios/validate', async ({ request }) => {
       const body = await request.json() as { architecture: { components: unknown[] }; scenario: { apiExecutions: unknown[] } };

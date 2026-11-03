@@ -1,9 +1,13 @@
 import type { ArchitectureV2 } from '../../api/archlabV2Client';
+import { isVisualClientType } from './model';
 import type { ArchitectureNode, ArchitectureEdge } from './model';
 import { allowedIntegrationKinds, defaultIntegration, integrationError } from './integration';
 
 /** Produces a contract-compliant illustrative architecture without sending any requests. */
 export function toArchitectureV2(nodes: ArchitectureNode[], edges: ArchitectureEdge[]): ArchitectureV2 {
+  if (nodes.some(n => isVisualClientType(n.data.componentType))) {
+    throw new Error('Clientes de modelagem visual ainda não possuem suporte de execução na API v2.');
+  }
   return {
     components: nodes.map(n => {
       const base = { id: n.id, displayName: n.data.displayName ?? n.data.label };

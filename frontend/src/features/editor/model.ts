@@ -59,6 +59,7 @@ export function validateConnection(nodes: ArchitectureNode[], edges: Architectur
   const source = nodes.find((node) => node.id === sourceId);
   const target = nodes.find((node) => node.id === targetId);
   if (!source || !target) return 'Selecione componentes existentes.';
+  if (isVisualClientType(source.data.componentType) || isVisualClientType(target.data.componentType)) return 'Este cliente ainda não possui suporte para conexões ou execução.';
   if (!allowedProtocols(source.data.componentType, target.data.componentType).length) return 'Conexão incompatível: use Client → API ou API → Database.';
   if (edges.some((edge) => (edge.source === sourceId && edge.target === targetId) || (edge.source === targetId && edge.target === sourceId))) {
     return 'Já existe uma conexão entre esses componentes.';

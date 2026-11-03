@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { ArchitectureNode, ArchitectureEdge } from './model';
 import { toArchitectureV2 } from './architectureV2';
+import { createArchitectureNode, VISUAL_CLIENT_TYPES } from './model';
 
 const nodes = [
   {id:'client',data:{componentType:'CLIENT',label:'Client'},position:{x:0,y:0}},
@@ -13,6 +14,9 @@ const edge = (id:string,source:string,target:string,pre?:number,post?:number):Ar
   id,source,target,data:{protocol:target==='db'?'TCP':'REST',latencyMs:5,...(pre === undefined ? {} : {apiProcessingOverride:{preProcessingMs:pre,postProcessingMs:post!}})},
 });
 describe('RF-044 serialização de processamento por conexão', () => {
+  it.each(VISUAL_CLIENT_TYPES)('rejeita serialização v2 de %s', (type) => {
+    expect(() => toArchitectureV2([createArchitectureNode(type, { x: 0, y: 0 })], [])).toThrow(/não possuem suporte/);
+  });
   it('mantém defaults e overrides diferentes em duas entradas da mesma API',()=>{
     const result=toArchitectureV2(nodes,[edge('a-b','api-a','api-b',40,15),edge('c-b','api-c','api-b',10,5),edge('client-b','client','api-b')]);
     expect(result.connections[0].apiProcessingOverride).toEqual({preProcessingMs:40,postProcessingMs:15});
