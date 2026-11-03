@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createArchitectureEdge, createArchitectureNode } from './model';
+import { createArchitectureEdge, createArchitectureNode, VISUAL_CLIENT_TYPES } from './model';
 import { emptyScenario, reconcileScenario, scenarioIssues, selectedPath } from './scenario';
 
 function fixture() {
@@ -16,6 +16,15 @@ function fixture() {
 }
 
 describe('seleção explícita de cenário v2', () => {
+  it.each(VISUAL_CLIENT_TYPES)('aceita %s como origem e preserva caminho', (type) => {
+    const client = createArchitectureNode(type, { x: 0, y: 0 });
+    const api = createArchitectureNode('API', { x: 1, y: 1 });
+    const input = createArchitectureEdge(client.id, api.id, 'REST', 1);
+    const scenario = { entryComponentId: client.id, entryConnectionId: input.id, apiExecutions: [] };
+    expect(reconcileScenario(scenario, [client, api], [input])).toEqual(scenario);
+    expect(selectedPath(scenario, [client, api], [input]).components).toEqual(new Set([client.id, api.id]));
+    expect(scenarioIssues(scenario, [client, api], [input])).toEqual([]);
+  });
   it('não escolhe automaticamente Client, arestas ou dependências', () => {
     const f = fixture();
     const empty = emptyScenario();

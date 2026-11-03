@@ -94,6 +94,8 @@ button:focus-visible,input:focus-visible,select:focus-visible,[role="tab"]:focus
 .react-flow__minimap-node{fill:#4c759d;stroke:#254968;stroke-width:2}
 .properties input:disabled,.properties select:disabled{background:#edf2f7;color:#52687f;border-color:#b6c5d5;opacity:1;-webkit-text-fill-color:#52687f;cursor:not-allowed}
 .palette-item:disabled{opacity:1;background:#eef2f7;color:#65798d;border-color:#d2deea;cursor:not-allowed}
+.palette{overflow-y:auto}.palette-category{margin:18px 0 24px}.palette-category h3{margin:0 0 8px;color:var(--muted);font-size:.72rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.palette-category .palette-item{margin:7px 0}
+.architecture-node--web_browser,.architecture-node--mobile_app,.architecture-node--desktop_app,.architecture-node--cli,.architecture-node--bot,.architecture-node--embedded_system{border-color:#53bad1}
 .properties button:disabled{opacity:1;background:#edf2f7;color:#647c94;border-color:#c6d5e3;cursor:not-allowed}
 .results-panel__content table{width:100%;max-width:none;table-layout:fixed}
 .results-panel__content th:first-child,.results-panel__content td:first-child{width:70%}
