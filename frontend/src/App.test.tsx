@@ -48,7 +48,7 @@ describe('Editor visual', () => {
   it('agrupa os seis clientes, API e Database e adiciona por clique', () => {
     render(<App />);
     const clients = screen.getByRole('region', { name: 'Clientes' });
-    expect(screen.queryByRole('button', { name: 'Client', exact: true })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /^Client$/ })).not.toBeInTheDocument();
     for (const name of ['Web Browser', 'Mobile App', 'Desktop App', 'CLI', 'Bot', 'Embedded System']) {
       expect(clients).toContainElement(screen.getByRole('button', { name }));
       fireEvent.click(screen.getByRole('button', { name }));
@@ -119,10 +119,10 @@ describe('Editor visual', () => {
   });
   it('adiciona várias instâncias mantendo tipos', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
     fireEvent.click(screen.getByRole('button', { name: 'Database' }));
-    expect(screen.getByTestId('flow')).toHaveTextContent('Nó: Client');
+    expect(screen.getByTestId('flow')).toHaveTextContent('Nó: Web Browser');
     expect(screen.getByText(/3 componente\(s\)/)).toBeInTheDocument();
   });
   it('configura API, conecta ao Database e remove apenas a conexão', () => {
@@ -247,11 +247,11 @@ describe('Editor visual', () => {
       });
     }));
     render(<App />);
-    for (const type of ['Client', 'API']) fireEvent.click(screen.getByRole('button', { name: type }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 1' }));
+    for (const type of ['Web Browser', 'API']) fireEvent.click(screen.getByRole('button', { name: type }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Web Browser 1' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Destino' }), { target: { value: (screen.getByRole('option', { name: /API 1/ }) as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
-    fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (screen.getByRole('option', { name: /Client 1/ }) as HTMLOptionElement).value } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (screen.getByRole('option', { name: /Web Browser 1/ }) as HTMLOptionElement).value } });
     const start = screen.getByRole('combobox', { name: 'Conexão de entrada' });
     fireEvent.change(start, { target: { value: (start.querySelector('option:not([value=""])') as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
@@ -265,22 +265,69 @@ describe('Editor visual', () => {
     fireEvent.click(screen.getByRole('button', { name: /Recolher inspeção/ }));
     expect(screen.queryByRole('separator', { name: 'Redimensionar inspeção' })).not.toBeInTheDocument();
     expect(screen.getByText(/Execução:/)).toHaveTextContent('260 ms');
-    expect(screen.getByRole('button', { name: 'Client' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Web Browser' })).toBeDisabled();
     fireEvent.click(screen.getByRole('button', { name: 'Reiniciar' }));
-    expect(screen.getByRole('button', { name: 'Client' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Web Browser' })).toBeEnabled();
     expect(screen.getByText(/2 componente\(s\)/)).toBeInTheDocument();
+  });
+  it.each(['Web Browser', 'Mobile App', 'Desktop App', 'CLI', 'Bot', 'Embedded System'])('simula %s → API → Database e correlaciona timeline', async (name) => {
+    const protocol = name === 'CLI' ? 'SOAP' : 'REST';
+    server.use(http.post('/api/v2/scenarios/validate', async ({ request }) => {
+      const body = await request.json() as { architecture: { components: { id: string; type: string }[]; connections: { sourceId: string; targetId: string }[] }; scenario: { entryComponentId: string; entryConnectionId: string; apiExecutions: { componentId: string; dependencyConnectionId: string }[] } };
+      expect(body.architecture.components.map(component => component.type)).toEqual(['CLIENT', 'API', 'DATABASE']);
+      expect(body.scenario.entryComponentId).toBe(body.architecture.components[0].id);
+      expect(body.scenario.apiExecutions).toHaveLength(1);
+      expect(body.architecture.connections).toHaveLength(2);
+      return HttpResponse.json({ valid: true, violations: [] });
+    }));
+    server.use(http.post('/api/v2/simulations', async ({ request }) => {
+      const body = await request.json() as { architecture: { components: { id: string; type: string; displayName: string }[]; connections: { id: string; sourceId: string; targetId: string; integration: { kind: string } }[] }; scenario: { entryComponentId: string; entryConnectionId: string } };
+      const [client, api, db] = body.architecture.components;
+      expect(client).toMatchObject({ type: 'CLIENT', displayName: `${name} 1` });
+      expect(body.architecture.connections[0]).toMatchObject({ sourceId: client.id, targetId: api.id, integration: { kind: protocol === 'SOAP' ? 'SOAP_HTTP' : 'HTTP_REST' } });
+      expect(body.architecture.connections[1]).toMatchObject({ sourceId: api.id, targetId: db.id });
+      expect(body.scenario.entryComponentId).toBe(client.id);
+      return HttpResponse.json({
+        execution: { id: 'exec-v2', status: 'COMPLETED', requestId: 'req-v2', entryComponentId: client.id, entryConnectionId: body.scenario.entryConnectionId, totalDurationMs: 20 },
+        initialState: { components: { [client.id]: 'IDLE', [api.id]: 'IDLE', [db.id]: 'IDLE' }, requests: {}, exchanges: {} },
+        trace: [{ type: 'STATE_TRANSITION', sequence: 1, timestampMs: 20, entityKind: 'COMPONENT', entityId: client.id, previousState: 'IDLE', newState: 'COMPLETED', cause: 'RESPONSE_RECEIVED' }],
+        timeline: [{ id: 'activity-1', kind: 'PROCESSING', componentId: api.id, requestId: 'req-v2', phase: 'API_PRE_PROCESSING', startMs: 0, endMs: 20, durationMs: 20 }],
+        metrics: { totalDurationMs: 20, processingByComponent: [{ componentId: api.id, durationMs: 20 }], communicationByConnection: [], waitingByComponent: [], exchanges: [] },
+        messageRepresentations: [],
+      });
+    }));
+    render(<App />);
+    for (const type of [name, 'API', 'Database']) fireEvent.click(screen.getByRole('button', { name: type }));
+    fireEvent.click(screen.getByRole('button', { name: `Nó: ${name} 1` }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Destino' }), { target: { value: (screen.getByRole('option', { name: /API 1/ }) as HTMLOptionElement).value } });
+    fireEvent.change(screen.getByRole('combobox', { name: 'Protocolo' }), { target: { value: protocol } });
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Destino' }), { target: { value: (screen.getByRole('option', { name: /Database 1/ }) as HTMLOptionElement).value } });
+    fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
+    fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (screen.getByRole('option', { name: new RegExp(`${name} 1`) }) as HTMLOptionElement).value } });
+    const start = screen.getByRole('combobox', { name: 'Conexão de entrada' });
+    fireEvent.change(start, { target: { value: (start.querySelector('option:not([value=""])') as HTMLOptionElement).value } });
+    const dependency = screen.getByRole('combobox', { name: 'Dependência de API 1' });
+    fireEvent.change(dependency, { target: { value: (dependency.querySelector('option:not([value=""])') as HTMLOptionElement).value } });
+    fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
+    expect(await screen.findByRole('region', { name: 'Reprodução v2' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Nó: ${name} 1` })).toHaveAttribute('data-component-type');
+    fireEvent.click(screen.getByRole('button', { name: /Abrir inspeção/ }));
+    expect(screen.getByText('Timeline recebida do backend')).toBeInTheDocument();
+    expect(screen.getByRole('region', { name: 'Análise de métricas v2' })).toHaveTextContent('20 ms');
   });
 
   it('permite nomes duplicados sem alterar identidade e rejeita nome vazio', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Web Browser 1' }));
     const name = screen.getByRole('textbox', { name: 'Nome de apresentação' });
     fireEvent.change(name, { target: { value: 'Duplicado' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar nome' }));
     expect(screen.getByText('Nó: Duplicado')).toBeInTheDocument();
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Web Browser 2' }));
     fireEvent.change(name, { target: { value: 'Duplicado' } });
     fireEvent.click(screen.getByRole('button', { name: 'Salvar nome' }));
     expect(screen.getAllByText('Nó: Duplicado')).toHaveLength(2);
@@ -298,12 +345,12 @@ describe('Editor visual', () => {
 
   it('exibe editor de cenário e não seleciona entrada automaticamente', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
     fireEvent.click(screen.getByRole('button', { name: 'API' }));
     expect(screen.getByRole('region', { name: 'Editor de cenário' })).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: 'Client inicial' })).toHaveValue('');
     expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toBeDisabled();
-    const clientOption = screen.getByRole('option', { name: /Client 1/ });
+    const clientOption = screen.getByRole('option', { name: /Web Browser 1/ });
     fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (clientOption as HTMLOptionElement).value } });
     expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toBeEnabled();
     expect(screen.getByRole('combobox', { name: 'Conexão de entrada' })).toHaveValue('');
@@ -314,11 +361,11 @@ describe('Editor visual', () => {
       valid: false, violations: [{ code: 'INVALID_ENTRY_CONNECTION', path: 'scenario.entryConnectionId', message: 'Entrada ausente' }],
     })));
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
     fireEvent.click(screen.getByRole('button', { name: 'API' }));
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
     expect(await screen.findByText(/INVALID_ENTRY_CONNECTION/)).toBeInTheDocument();
-    const clientOption = screen.getByRole('option', { name: /Client 1/ });
+    const clientOption = screen.getByRole('option', { name: /Web Browser 1/ });
     fireEvent.change(screen.getByRole('combobox', { name: 'Client inicial' }), { target: { value: (clientOption as HTMLOptionElement).value } });
     expect(screen.getByText(/Execução:/)).toHaveTextContent('READY');
     expect(screen.queryByText(/INVALID_ENTRY_CONNECTION/)).not.toBeInTheDocument();
@@ -326,9 +373,9 @@ describe('Editor visual', () => {
 
   it('preserva integração SOAP ao confirmar latência da conexão', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Client' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
     fireEvent.click(screen.getByRole('button', { name: 'API' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: Client 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Web Browser 1' }));
     const option = screen.getByRole('option', { name: /API 1/ });
     fireEvent.change(screen.getByRole('combobox', { name: 'Destino' }), { target: { value: (option as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));

@@ -227,7 +227,7 @@ function EditorCanvas() {
     if (!latencyMs.trim() || !validDuration(duration)) { setError('Latência deve ser um inteiro não negativo.'); return; }
     resetValidation();
     const created = createArchitectureEdge(node.id, destination.id, chosenProtocol, duration);
-    const kind = allowedIntegrationKinds(node.data.componentType, destination.data.componentType)[0];
+    const kind = chosenProtocol === 'SOAP' ? 'SOAP_HTTP' : allowedIntegrationKinds(node.data.componentType, destination.data.componentType)[0];
     setEdges((current) => [...current, { ...created, data: { ...created.data!, integration: defaultIntegration(kind) } }]);
     setError(''); setTargetId(''); setActionFeedback('Conexão criada no canvas.');
   };
@@ -244,7 +244,12 @@ function EditorCanvas() {
     const overridePre = Number(overrideDraft?.pre), overridePost = Number(overrideDraft?.post);
     if (overrideDraft?.enabled && (![overrideDraft.pre, overrideDraft.post].every(value => value.trim() !== '') || ![overridePre, overridePost].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000))) { setError('Pré e pós-processamento devem ser inteiros entre 0 e 1000000000 ms.'); return; }
     resetValidation();
-    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, latencyMs: ms, apiProcessingOverride: overrideDraft?.enabled ? { preProcessingMs: overridePre, postProcessingMs: overridePost } : undefined } } : item));
+    setEdges((current) => current.map((item) => {
+      if (item.id !== edge.id) return item;
+      const kind = edgeDraft.protocol === 'SOAP' ? 'SOAP_HTTP' : allowedIntegrationKinds(source.data.componentType, target.data.componentType)[0];
+      const integration = item.data?.protocol === edgeDraft.protocol || item.data?.integration?.kind === kind ? (item.data?.integration ?? defaultIntegration(kind)) : defaultIntegration(kind);
+      return { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, integration, latencyMs: ms, apiProcessingOverride: overrideDraft?.enabled ? { preProcessingMs: overridePre, postProcessingMs: overridePost } : undefined } };
+    }));
     setError(''); setActionFeedback('Alterações da conexão aplicadas.');
   };
   const cancelEdge = () => {
