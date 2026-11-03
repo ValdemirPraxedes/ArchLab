@@ -1,5 +1,8 @@
 # ArchLab — ADR v0.3: Clientes de modelagem visual sem execução
 
+> **ERRATA POSTERIOR (2026-11-03):** as decisões de não permitir conexões/simulações e de não converter os seis tipos para `CLIENT` foram substituídas. Consulte [Errata 01](../requirements/v0.3-errata-client-behavior.md): seis tipos visuais reutilizam o comportamento `CLIENT` por adaptação na fronteira da API v2; `Client` genérico sai da paleta. As seções abaixo permanecem como registro histórico.
+
+
 - **Status:** Aprovado para o planejamento da v0.3
 - **Data:** 2026-11-03
 - **Escopo:** v0.3 — seis clientes e organização da paleta
