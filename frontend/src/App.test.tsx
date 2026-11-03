@@ -8,14 +8,15 @@ vi.mock('@xyflow/react', async () => {
   const React = await import('react');
   return {
     ReactFlowProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
-    ReactFlow: ({ nodes, edges, onNodeClick, onEdgeClick }: {
-      nodes: { id: string; data: { label: string } }[];
+    ReactFlow: ({ nodes, edges, onNodeClick, onEdgeClick, onNodesChange }: {
+      nodes: { id: string; position: { x: number; y: number }; data: { label: string; componentType: string } }[];
       edges: { id: string; label?: React.ReactNode }[];
       onNodeClick: (event: unknown, node: unknown) => void;
       onEdgeClick: (event: unknown, edge: unknown) => void;
+      onNodesChange: (changes: unknown[]) => void;
     }) => (
       <div data-testid="flow">
-        {nodes.map((node) => <button key={node.id} onClick={() => onNodeClick(null, node)}>Nó: {node.data.label}</button>)}
+        {nodes.map((node) => <React.Fragment key={node.id}><button data-position={`${node.position.x},${node.position.y}`} data-component-type={node.data.componentType} onClick={() => onNodeClick(null, node)}>Nó: {node.data.label}</button><button onClick={() => onNodesChange([{ id: node.id, type: 'position', position: { x: 77, y: 88 }, dragging: false }])}>Mover: {node.data.label}</button></React.Fragment>)}
         {edges.map((edge) => <button key={edge.id} onClick={() => onEdgeClick(null, edge)}>Conexão: {edge.label}</button>)}
       </div>
     ),
@@ -24,7 +25,10 @@ vi.mock('@xyflow/react', async () => {
     useReactFlow: () => ({ screenToFlowPosition: (position: { x: number; y: number }) => position }),
     useNodesState: (initial: unknown[]) => {
       const [nodes, setNodes] = React.useState(initial);
-      return [nodes, setNodes, () => undefined];
+      return [nodes, setNodes, (changes: { id: string; type: string; position?: { x: number; y: number } }[]) => setNodes((current: { id: string; position: { x: number; y: number } }[]) => current.map((node) => {
+        const change = changes.find((item) => item.id === node.id && item.type === 'position');
+        return change?.position ? { ...node, position: change.position } : node;
+      }))];
     },
     useEdgesState: (initial: unknown[]) => {
       const [edges, setEdges] = React.useState(initial);
@@ -51,6 +55,26 @@ describe('Editor visual', () => {
     expect(screen.getByRole('region', { name: 'Serviços' })).toContainElement(screen.getByRole('button', { name: 'API' }));
     expect(screen.getByRole('region', { name: 'Dados' })).toContainElement(screen.getByRole('button', { name: 'Database' }));
     expect(screen.getByText(/6 componente\(s\)/)).toBeInTheDocument();
+  });
+  it.each([
+    ['Web Browser', 'WEB_BROWSER'], ['Mobile App', 'MOBILE_APP'], ['Desktop App', 'DESKTOP_APP'],
+    ['CLI', 'CLI'], ['Bot', 'BOT'], ['Embedded System', 'EMBEDDED_SYSTEM'],
+  ])('seleciona, move, renomeia e remove %s sem afetar outra instância', (name, type) => {
+    render(<App />);
+    fireEvent.click(screen.getByRole('button', { name }));
+    fireEvent.click(screen.getByRole('button', { name }));
+    const first = screen.getByRole('button', { name: `Nó: ${name} 1` });
+    expect(first).toHaveAttribute('data-component-type', type);
+    fireEvent.click(screen.getByRole('button', { name: `Mover: ${name} 1` }));
+    expect(first).toHaveAttribute('data-position', '77,88');
+    fireEvent.click(first);
+    fireEvent.change(screen.getByRole('textbox', { name: 'Nome de apresentação' }), { target: { value: 'Renomeado' } });
+    fireEvent.click(screen.getByRole('button', { name: 'Salvar nome' }));
+    expect(screen.getByRole('button', { name: 'Nó: Renomeado' })).toHaveAttribute('data-component-type', type);
+    expect(screen.getByRole('button', { name: `Nó: ${name} 2` })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Remover selecionado' }));
+    expect(screen.queryByRole('button', { name: 'Nó: Renomeado' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: `Nó: ${name} 2` })).toBeInTheDocument();
   });
   it('fecha propriedades ao clicar fora e preserva seleção ao interagir no painel', () => {
     render(<App />);
