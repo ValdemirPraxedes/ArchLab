@@ -14,8 +14,10 @@ const edge = (id:string,source:string,target:string,pre?:number,post?:number):Ar
   id,source,target,data:{protocol:target==='db'?'TCP':'REST',latencyMs:5,...(pre === undefined ? {} : {apiProcessingOverride:{preProcessingMs:pre,postProcessingMs:post!}})},
 });
 describe('RF-044 serialização de processamento por conexão', () => {
-  it.each(VISUAL_CLIENT_TYPES)('rejeita serialização v2 de %s', (type) => {
-    expect(() => toArchitectureV2([createArchitectureNode(type, { x: 0, y: 0 })], [])).toThrow(/não possuem suporte/);
+  it.each(VISUAL_CLIENT_TYPES)('serializa %s como CLIENT preservando id e nome', (type) => {
+    const client = createArchitectureNode(type, { x: 0, y: 0 }, 'Meu cliente');
+    expect(toArchitectureV2([client], []).components).toEqual([{ id: client.id, displayName: 'Meu cliente', type: 'CLIENT' }]);
+    expect(client.data.componentType).toBe(type);
   });
   it('mantém defaults e overrides diferentes em duas entradas da mesma API',()=>{
     const result=toArchitectureV2(nodes,[edge('a-b','api-a','api-b',40,15),edge('c-b','api-c','api-b',10,5),edge('client-b','client','api-b')]);

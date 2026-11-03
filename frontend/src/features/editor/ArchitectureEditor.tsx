@@ -21,7 +21,7 @@ import { archlabV2Client, ArchlabV2HttpError } from '../../api/archlabV2Client';
 import type { ValidationIssue } from './validation';
 import {
   VISUAL_CLIENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
-  isComponentType, isVisualClientType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
+  isComponentType, isClientType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
 } from './model';
 import type { ArchitectureNode as ArchitectureNodeType, ArchitectureEdge, ComponentType, Protocol } from './model';
 
@@ -113,17 +113,9 @@ function EditorCanvas() {
     setExecutionStatus('READY'); setSimulationResultV2(null); setV2PlaybackStatus('PAUSADA');
     setIssues([]); setValidationStatus('idle'); setError(''); setActionFeedback('Execução reiniciada. A arquitetura foi preservada.');
   };
-  const blockUnsupportedClients = () => {
-    const unsupported = nodes.find((item) => isVisualClientType(item.data.componentType));
-    if (!unsupported) return false;
-    setIssues([{ code: 'UNSUPPORTED_CLIENT', path: '', message: `${COMPONENT_LABELS[unsupported.data.componentType]} ainda não possui suporte de execução na API v2.` }]);
-    setValidationStatus('invalid');
-    return true;
-  };
   const simulate = async () => {
     if (executionStatus !== 'READY' && executionStatus !== 'ERROR') return;
     setValidationScope('scenario');
-    if (blockUnsupportedClients()) { setExecutionStatus('ERROR'); return; }
     const requestGeneration = ++generation.current;
     setIssues([]); setValidationStatus('checking'); setExecutionStatus('VALIDATING'); setValidationScope('scenario');
     try {
@@ -157,7 +149,6 @@ function EditorCanvas() {
   const validateV2 = async (scope: 'architecture' | 'scenario') => {
     if (executionLocked || validationStatus === 'checking') return;
     setValidationScope(scope);
-    if (blockUnsupportedClients()) return;
     setIssues([]);
     setValidationStatus('checking');
     try {
@@ -313,7 +304,7 @@ function EditorCanvas() {
             onPaneClick={() => select(null)}
             deleteKeyCode={null} nodesDraggable={!executionLocked} edgesReconnectable={false} nodesConnectable={false}
             nodeExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} translateExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} fitView>
-            <Background /><Controls /><MiniMap pannable zoomable nodeColor={(n) => n.data?.componentType === "CLIENT" ? "#1d9eaf" : n.data?.componentType === "API" ? "#6963d4" : "#cc9440"} nodeStrokeColor="#37506a" nodeStrokeWidth={2} maskColor="rgba(95,126,160,0.18)" />
+            <Background /><Controls /><MiniMap pannable zoomable nodeColor={(n) => isClientType(n.data?.componentType as ComponentType) ? "#1d9eaf" : n.data?.componentType === "API" ? "#6963d4" : "#cc9440"} nodeStrokeColor="#37506a" nodeStrokeWidth={2} maskColor="rgba(95,126,160,0.18)" />
           </ReactFlow>
         </div>
       </section>

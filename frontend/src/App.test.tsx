@@ -183,18 +183,22 @@ describe('Editor visual', () => {
     expect(await screen.findByText(/INVALID_DAG/)).toBeInTheDocument();
     expect(screen.getByText('connections[0]', { exact: false })).toBeInTheDocument();
   });
-  it.each(['Validar arquitetura v2', 'Validar cenário v2', 'Simular'])('bloqueia %s com cliente visual antes de chamar a API', (action) => {
-    const calls = vi.fn(() => HttpResponse.json({ valid: true, violations: [] }));
+  it.each(['Validar arquitetura v2', 'Validar cenário v2'])('envia %s com tipo funcional CLIENT', async (action) => {
+    const calls = vi.fn(async ({ request }: { request: Request }) => {
+      const body = await request.json() as { components?: { type: string }[]; architecture?: { components: { type: string }[] } };
+      expect((body.components ?? body.architecture?.components)?.[0].type).toBe('CLIENT');
+      return HttpResponse.json({ valid: true, violations: [] });
+    });
     server.use(
       http.post('/api/v2/architectures/validate', calls),
       http.post('/api/v2/scenarios/validate', calls),
-      http.post('/api/v2/scenarios/simulate', calls),
     );
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
     fireEvent.click(screen.getByRole('button', { name: action }));
-    expect(screen.getByText(/Web Browser ainda não possui suporte de execução/)).toBeInTheDocument();
-    expect(calls).not.toHaveBeenCalled();
+    expect(await screen.findByText(/v2 válid[ao] pelo backend/)).toBeInTheDocument();
+    expect(calls).toHaveBeenCalledOnce();
+    expect(screen.getByRole('button', { name: 'Nó: Web Browser 1' })).toHaveAttribute('data-component-type', 'WEB_BROWSER');
   });
   it('valida cenário em rota separada sem executar o motor', async () => {
     server.use(http.post('/api/v2/scenarios/validate', async ({ request }) => {
