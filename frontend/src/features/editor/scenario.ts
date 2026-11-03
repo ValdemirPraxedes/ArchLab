@@ -1,11 +1,12 @@
 import type { ScenarioV2 } from '../../api/archlabV2Client';
+import { isClientType } from './model';
 import type { ArchitectureNode, ArchitectureEdge } from './model';
 
 export type ScenarioDraft = ScenarioV2;
 export const emptyScenario = (): ScenarioDraft => ({ entryComponentId: '', entryConnectionId: '', apiExecutions: [] });
 
 export function reconcileScenario(scenario: ScenarioDraft, nodes: ArchitectureNode[], edges: ArchitectureEdge[]): ScenarioDraft {
-  const clients = new Set(nodes.filter(n => n.data.componentType === 'CLIENT').map(n => n.id));
+  const clients = new Set(nodes.filter(n => isClientType(n.data.componentType)).map(n => n.id));
   const apis = new Set(nodes.filter(n => n.data.componentType === 'API').map(n => n.id));
   const entryComponentId = clients.has(scenario.entryComponentId) ? scenario.entryComponentId : '';
   const entryEdge = edges.find(e => e.id === scenario.entryConnectionId && e.source === entryComponentId && apis.has(e.target));

@@ -1,8 +1,10 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { IntegrationV2, ApiProcessingOverrideV2 } from '../../api/archlabV2Client';
 
-export const COMPONENT_TYPES = ['CLIENT', 'API', 'DATABASE'] as const;
+export const VISUAL_CLIENT_TYPES = ['WEB_BROWSER', 'MOBILE_APP', 'DESKTOP_APP', 'CLI', 'BOT', 'EMBEDDED_SYSTEM'] as const;
+export const COMPONENT_TYPES = ['CLIENT', ...VISUAL_CLIENT_TYPES, 'API', 'DATABASE'] as const;
 export type ComponentType = (typeof COMPONENT_TYPES)[number];
+export type VisualClientType = (typeof VISUAL_CLIENT_TYPES)[number];
 export type Protocol = 'REST' | 'SOAP' | 'TCP';
 export type ArchitectureNode = Node<{
   componentType: ComponentType;
@@ -14,7 +16,17 @@ export type ArchitectureNode = Node<{
   processingMs?: number;
 }>;
 export type ArchitectureEdge = Edge<{ protocol: Protocol; latencyMs: number; integration?: IntegrationV2; apiProcessingOverride?: ApiProcessingOverrideV2 }>;
-export const COMPONENT_LABELS: Record<ComponentType, string> = { CLIENT: 'Client', API: 'API', DATABASE: 'Database' };
+export const COMPONENT_LABELS: Record<ComponentType, string> = {
+  CLIENT: 'Client', WEB_BROWSER: 'Web Browser', MOBILE_APP: 'Mobile App', DESKTOP_APP: 'Desktop App',
+  CLI: 'CLI', BOT: 'Bot', EMBEDDED_SYSTEM: 'Embedded System', API: 'API', DATABASE: 'Database',
+};
+
+export function isVisualClientType(type: ComponentType): type is VisualClientType {
+  return VISUAL_CLIENT_TYPES.some((clientType) => clientType === type);
+}
+export function isClientType(type: ComponentType): type is VisualClientType | 'CLIENT' {
+  return type === 'CLIENT' || isVisualClientType(type);
+}
 
 export function isComponentType(value: string): value is ComponentType {
   return COMPONENT_TYPES.some((type) => type === value);
@@ -40,7 +52,7 @@ export function validDuration(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0;
 }
 export function allowedProtocols(source: ComponentType, target: ComponentType): Protocol[] {
-  if (source === 'CLIENT' && target === 'API') return ['REST', 'SOAP'];
+  if (isClientType(source) && target === 'API') return ['REST', 'SOAP'];
   if (source === 'API' && target === 'API') return ['REST', 'SOAP'];
   if (source === 'API' && target === 'DATABASE') return ['TCP'];
   return [];

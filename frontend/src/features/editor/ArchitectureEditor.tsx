@@ -20,14 +20,19 @@ import { toArchitectureV2 } from './architectureV2';
 import { archlabV2Client, ArchlabV2HttpError } from '../../api/archlabV2Client';
 import type { ValidationIssue } from './validation';
 import {
-  COMPONENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
-  isComponentType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
+  VISUAL_CLIENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
+  isComponentType, isClientType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
 } from './model';
 import type { ArchitectureNode as ArchitectureNodeType, ArchitectureEdge, ComponentType, Protocol } from './model';
 
 const DRAG_MIME = 'application/x-archlab-component';
 const CANVAS_WIDTH = 2400;
 const CANVAS_HEIGHT = 1600;
+const PALETTE_CATEGORIES = [
+  { title: 'Clientes', types: VISUAL_CLIENT_TYPES },
+  { title: 'Serviços', types: ['API'] },
+  { title: 'Dados', types: ['DATABASE'] },
+] as const satisfies ReadonlyArray<{ title: string; types: readonly ComponentType[] }>;
 
 function EditorCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<ArchitectureNodeType>([]);
@@ -110,6 +115,7 @@ function EditorCanvas() {
   };
   const simulate = async () => {
     if (executionStatus !== 'READY' && executionStatus !== 'ERROR') return;
+    setValidationScope('scenario');
     const requestGeneration = ++generation.current;
     setIssues([]); setValidationStatus('checking'); setExecutionStatus('VALIDATING'); setValidationScope('scenario');
     try {
@@ -221,7 +227,7 @@ function EditorCanvas() {
     if (!latencyMs.trim() || !validDuration(duration)) { setError('Latência deve ser um inteiro não negativo.'); return; }
     resetValidation();
     const created = createArchitectureEdge(node.id, destination.id, chosenProtocol, duration);
-    const kind = allowedIntegrationKinds(node.data.componentType, destination.data.componentType)[0];
+    const kind = chosenProtocol === 'SOAP' ? 'SOAP_HTTP' : allowedIntegrationKinds(node.data.componentType, destination.data.componentType)[0];
     setEdges((current) => [...current, { ...created, data: { ...created.data!, integration: defaultIntegration(kind) } }]);
     setError(''); setTargetId(''); setActionFeedback('Conexão criada no canvas.');
   };
@@ -238,7 +244,12 @@ function EditorCanvas() {
     const overridePre = Number(overrideDraft?.pre), overridePost = Number(overrideDraft?.post);
     if (overrideDraft?.enabled && (![overrideDraft.pre, overrideDraft.post].every(value => value.trim() !== '') || ![overridePre, overridePost].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000))) { setError('Pré e pós-processamento devem ser inteiros entre 0 e 1000000000 ms.'); return; }
     resetValidation();
-    setEdges((current) => current.map((item) => item.id === edge.id ? { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, latencyMs: ms, apiProcessingOverride: overrideDraft?.enabled ? { preProcessingMs: overridePre, postProcessingMs: overridePost } : undefined } } : item));
+    setEdges((current) => current.map((item) => {
+      if (item.id !== edge.id) return item;
+      const kind = edgeDraft.protocol === 'SOAP' ? 'SOAP_HTTP' : allowedIntegrationKinds(source.data.componentType, target.data.componentType)[0];
+      const integration = item.data?.protocol === edgeDraft.protocol || item.data?.integration?.kind === kind ? (item.data?.integration ?? defaultIntegration(kind)) : defaultIntegration(kind);
+      return { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, integration, latencyMs: ms, apiProcessingOverride: overrideDraft?.enabled ? { preProcessingMs: overridePre, postProcessingMs: overridePost } : undefined } };
+    }));
     setError(''); setActionFeedback('Alterações da conexão aplicadas.');
   };
   const cancelEdge = () => {
@@ -269,13 +280,16 @@ function EditorCanvas() {
       <aside className="palette" aria-label="Paleta de componentes">
         <h2>Componentes</h2>
         <p>Arraste para o canvas ou clique para adicionar.</p>
-        {COMPONENT_TYPES.map((type) => (
+        {PALETTE_CATEGORIES.map((category) => <section className="palette-category" aria-label={category.title} key={category.title}>
+          <h3>{category.title}</h3>
+          {category.types.map((type) => (
           <button key={type} type="button" className="palette-item" draggable={!executionLocked} disabled={executionLocked}
             onDragStart={(event) => { if (!executionLocked) onPaletteDragStart(event, type); }}
             onClick={() => addNode(type, { x: 120 + (nodes.length % 4) * 210, y: 110 + Math.floor(nodes.length / 4) * 120 })}>
             <ComponentIcon type={type} /> {COMPONENT_LABELS[type]}
           </button>
-        ))}
+          ))}
+        </section>)}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
         <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
@@ -295,7 +309,7 @@ function EditorCanvas() {
             onPaneClick={() => select(null)}
             deleteKeyCode={null} nodesDraggable={!executionLocked} edgesReconnectable={false} nodesConnectable={false}
             nodeExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} translateExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} fitView>
-            <Background /><Controls /><MiniMap pannable zoomable nodeColor={(n) => n.data?.componentType === "CLIENT" ? "#1d9eaf" : n.data?.componentType === "API" ? "#6963d4" : "#cc9440"} nodeStrokeColor="#37506a" nodeStrokeWidth={2} maskColor="rgba(95,126,160,0.18)" />
+            <Background /><Controls /><MiniMap pannable zoomable nodeColor={(n) => isClientType(n.data?.componentType as ComponentType) ? "#1d9eaf" : n.data?.componentType === "API" ? "#6963d4" : "#cc9440"} nodeStrokeColor="#37506a" nodeStrokeWidth={2} maskColor="rgba(95,126,160,0.18)" />
           </ReactFlow>
         </div>
       </section>

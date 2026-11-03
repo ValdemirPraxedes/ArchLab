@@ -1,11 +1,12 @@
 import type { ArchitectureNode, ArchitectureEdge } from './model';
 import type { ScenarioDraft } from './scenario';
 import { reconcileScenario, scenarioIssues } from './scenario';
+import { isClientType } from './model';
 
 type Props = { nodes: ArchitectureNode[]; edges: ArchitectureEdge[]; value: ScenarioDraft; onChange: (value: ScenarioDraft) => void; disabled: boolean };
 export function ScenarioEditor({ nodes, edges, value, onChange, disabled }: Props) {
   const scenario = reconcileScenario(value, nodes, edges);
-  const clients = nodes.filter(n => n.data.componentType === 'CLIENT');
+  const clients = nodes.filter(n => isClientType(n.data.componentType));
   const entryConnections = edges.filter(e => e.source === scenario.entryComponentId && nodes.some(n => n.id === e.target && n.data.componentType === 'API'));
   const visited = new Set<string>();
   let target = edges.find(e => e.id === scenario.entryConnectionId)?.target;
