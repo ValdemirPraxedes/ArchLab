@@ -391,9 +391,9 @@ components:
       type: object
       additionalProperties: false
       properties:
-        id: &id001
+        id: 
           $ref: '#/components/schemas/Identifier'
-        displayName: &id002
+        displayName: 
           $ref: '#/components/schemas/DisplayName'
         type:
           type: string
@@ -406,9 +406,9 @@ components:
       type: object
       additionalProperties: false
       properties:
-        id: &id001
+        id: 
           $ref: '#/components/schemas/Identifier'
-        displayName: &id002
+        displayName: 
           $ref: '#/components/schemas/DisplayName'
         type:
           type: string
@@ -421,9 +421,9 @@ components:
       type: object
       additionalProperties: false
       properties:
-        id: &id001
+        id: 
           $ref: '#/components/schemas/Identifier'
-        displayName: &id002
+        displayName: 
           $ref: '#/components/schemas/DisplayName'
         type:
           type: string
@@ -436,9 +436,9 @@ components:
       type: object
       additionalProperties: false
       properties:
-        id: &id001
+        id: 
           $ref: '#/components/schemas/Identifier'
-        displayName: &id002
+        displayName: 
           $ref: '#/components/schemas/DisplayName'
         type:
           type: string
@@ -451,9 +451,9 @@ components:
       type: object
       additionalProperties: false
       properties:
-        id: &id001
+        id: 
           $ref: '#/components/schemas/Identifier'
-        displayName: &id002
+        displayName: 
           $ref: '#/components/schemas/DisplayName'
         type:
           type: string
@@ -466,9 +466,9 @@ components:
       type: object
       additionalProperties: false
       properties:
-        id: &id001
+        id: 
           $ref: '#/components/schemas/Identifier'
-        displayName: &id002
+        displayName: 
           $ref: '#/components/schemas/DisplayName'
         type:
           type: string
@@ -706,24 +706,6 @@ components:
         entryConnectionId: {$ref: '#/components/schemas/Identifier'}
         destinationName: {type: string, minLength: 1, maxLength: 256}
         publishCount: {type: integer, minimum: 1, maximum: 100, default: 1}
-      type: object
-      additionalProperties: false
-      properties:
-        entryComponentId:
-          $ref: '#/components/schemas/Identifier'
-        entryConnectionId:
-          $ref: '#/components/schemas/Identifier'
-        apiExecutions:
-          type: array
-          maxItems: 1000
-          items:
-            $ref: '#/components/schemas/ApiExecution'
-      required:
-      - entryComponentId
-      - entryConnectionId
-      - apiExecutions
-      description: Uma requisição raiz, Client e conexão inicial explícitos, e zero ou uma dependência por
-        API.
     SimulationRequest:
       type: object
       additionalProperties: false
@@ -881,7 +863,11 @@ components:
           $ref: '#/components/schemas/Identifier'
         status:
           type: string
-          const: COMPLETED
+          enum: [COMPLETED, FAILED, TIMED_OUT, COMPLETED_WITH_ERRORS]
+        mainStatus:
+          type: string
+          enum: [COMPLETED, FAILED, TIMED_OUT]
+          description: Resultado terminal da operação principal, independente da conclusão global.
         requestId:
           $ref: '#/components/schemas/Identifier'
         entryComponentId:
@@ -889,10 +875,13 @@ components:
         entryConnectionId:
           $ref: '#/components/schemas/Identifier'
         totalDurationMs:
-          $ref: '#/components/schemas/DurationMs'
+          allOf:
+          - $ref: '#/components/schemas/DurationMs'
+          maximum: 3600000
       required:
       - id
       - status
+      - mainStatus
       - requestId
       - entryComponentId
       - entryConnectionId
@@ -1189,6 +1178,28 @@ components:
       - startMs
       - endMs
       - durationMs
+    WebSocketMetric:
+      type: object
+      additionalProperties: false
+      required: [connectionId, messagesSent, messagesReceived, durationMs]
+      properties:
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        sessionId: {$ref: '#/components/schemas/Identifier'}
+        messagesSent: {type: integer, minimum: 0, maximum: 100}
+        messagesReceived: {type: integer, minimum: 0, maximum: 100}
+        durationMs: {$ref: '#/components/schemas/DurationMs'}
+    MessagingMetric:
+      type: object
+      additionalProperties: false
+      required: [connectionId, published, delivered, processed, pending]
+      properties:
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        published: {type: integer, minimum: 0, maximum: 100}
+        delivered: {type: integer, minimum: 0, maximum: 1000}
+        processed: {type: integer, minimum: 0, maximum: 1000}
+        pending: {type: integer, minimum: 0, maximum: 1000}
+        failures: {type: integer, minimum: 0, maximum: 1000, default: 0}
+        eligibleSubscribers: {type: integer, minimum: 0, maximum: 100, default: 0}
     SimulationMetrics:
       type: object
       additionalProperties: false
@@ -1215,6 +1226,16 @@ components:
           maxItems: 3000
           items:
             $ref: '#/components/schemas/ExchangeMetric'
+        websocket:
+          type: array
+          maxItems: 3000
+          items: {$ref: '#/components/schemas/WebSocketMetric'}
+          default: []
+        messaging:
+          type: array
+          maxItems: 3000
+          items: {$ref: '#/components/schemas/MessagingMetric'}
+          default: []
       required:
       - totalDurationMs
       - processingByComponent
@@ -1234,6 +1255,26 @@ components:
       - connectionId
       - integration
       description: Snapshot imutável da integração efetivamente utilizada para inspeção independente do editor.
+    Correlation:
+      type: object
+      additionalProperties: false
+      properties:
+        operationId: {$ref: '#/components/schemas/Identifier'}
+        parentOperationId:
+          anyOf:
+          - {$ref: '#/components/schemas/Identifier'}
+          - {type: 'null'}
+        sessionId: {$ref: '#/components/schemas/Identifier'}
+        profile: {type: string}
+    ResourceState:
+      type: object
+      additionalProperties: false
+      required: [id, kind, status]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, enum: [REQUEST, WEBSOCKET_SESSION, BROKER_MESSAGE, DELIVERY]}
+        status: {type: string}
+        correlation: {$ref: '#/components/schemas/Correlation'}
     SimulationResponse:
       type: object
       additionalProperties: false
@@ -1259,6 +1300,11 @@ components:
           maxItems: 3000
           items:
             $ref: '#/components/schemas/MessageRepresentation'
+        resourceStates:
+          type: array
+          maxItems: 1000
+          default: []
+          items: {$ref: '#/components/schemas/ResourceState'}
       required:
       - execution
       - initialState
@@ -1345,6 +1391,7 @@ components:
                 statusCode: 200
                 body: '{"disponivel":true}'
         scenario: &id009
+      kind: REQUEST_RESPONSE
           entryComponentId: client-web
           entryConnectionId: conn-1
           apiExecutions:
