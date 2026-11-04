@@ -103,6 +103,8 @@ As estruturas finais e a existência de variantes de compatibilidade serão espe
 
 **Especificação de contrato vinculada:** [API-V4-001 — Contrato canônico da API pública v1](../api/API-V4-001.md), com diretrizes aprovadas e pendências normativas explícitas. A aprovação deste documento **não autoriza alterar imediatamente** `docs/api/openapi.yaml` ou remover rotas existentes.
 
+**Detalhamento aprovado na Etapa 10:** [DM-V4-001 — Modelo de domínio](DM-V4-001.md) e [VAL-V4-001 — Validação e limites](VAL-V4-001.md). Ambos registram invariantes e a separação de estados, mas mantêm classes Java finais, schemas OpenAPI e valores numéricos pendentes.
+
 ## Pendências para a próxima etapa
 
 - Inventário detalhado e reconciliação de esquemas v1/v2, identificando colisões e campos incompatíveis.
