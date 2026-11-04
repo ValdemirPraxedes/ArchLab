@@ -113,6 +113,25 @@ A segunda linha é **sugestão de artefato gerado**, não localização confirma
 
 **Bloqueio de validação externa:** nesta etapa não foi possível transferir o arquivo GitHub para um ambiente com Node/parser e executar os dois comandos acima. Seu resultado **não foi medido**; o contrato continua **NÃO HOMOLOGADO**.
 
+## 3B. Execução externa do Redocly e correções — 2026-11-04
+
+O responsável executou no Windows:
+
+```powershell
+npx --yes @redocly/cli lint docs/api/openapi.yaml
+```
+
+**Resultado reportado:** parser e leitura do documento concluídos em 163 ms, com **3 erros** `security-defined` (um por operação) e **2 avisos**: `info-license` e `no-unused-components` para `validationInvalid`. A execução retornou `Validation failed`. Não houve outros erros nessa execução reportada.
+
+**Correções registradas em `2a8513e`:**
+
+1. `security: []` na raiz: declaração explícita do contrato **sem exigência de autenticação** neste estágio. Isso satisfaz o campo obrigatório de segurança recomendado sem inventar `Bearer`, API key ou OAuth que não foram definidos no produto. Reavaliar se requisitos futuros instituírem autenticação.
+2. Referências a `#/components/examples/validationInvalid` nos dois endpoints `architectures/validate` e `scenarios/validate`, para aproveitar o exemplo existente.
+
+**Aviso `info-license`: ainda pendente.** Não foi encontrado arquivo `LICENSE` ou `LICENSE.md` e o README não declara uma licença. **Não declarar MIT/Apache/Outra sem autorização do mantenedor.** A opção correta é definir a política de licença do projeto; só então preencher `info.license` com valor verdadeiro. Enquanto isso, registrar explicitamente o aviso em vez de silenciá-lo com configuração de lint ou licença inventada.
+
+**Revalidação:** as correções foram feitas no GitHub; o Redocly **não foi novamente executado** após esse commit neste ambiente. O responsável precisa atualizar sua branch e repetir lint e typegen. A existência do aviso de licença não deve ser apresentada como um contrato totalmente livre de warnings.
+
 ## 4. Critério de saída da Etapa 12
 
 Somente declarar o contrato **validado** após parse, validação OpenAPI, exemplos e typegen passarem e eventuais colisões serem resolvidas. Até lá, `docs/api/openapi.yaml` é **rascunho**, e nenhuma implementação deve tratá-lo como contrato homologado.
