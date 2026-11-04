@@ -547,6 +547,10 @@ Os schemas definitivos de DTOs, erros, defaults e limites serão detalhados na e
 
 A especificação [API-V4-002 — Schemas, limites, defaults e erros](../api/API-V4-002.md) fixa os discriminadores, as modalidades de cenário, os dez limites numéricos, os nove valores padrão, resultados globais e códigos HTTP aprovados. **Prevalece sobre as marcações de limites pendentes nos documentos da Etapa 10.** Ainda falta implementar e validar o OpenAPI 3.1 em `docs/api/openapi.yaml`.
 
+### Estado da Etapa 12 — OpenAPI executável (rascunho)
+
+O arquivo [`docs/api/openapi.yaml`](../api/openapi.yaml) foi atualizado nesta branch com o contrato v1 consolidado, perfis, Broker, cenários e resultados. Consulte [o relatório de verificações estáticas e pendências](../api/OPENAPI-V4-VALIDATION.md). **Não declarar o contrato homologado antes do parse OpenAPI 3.1, da validação de exemplos e da geração TypeScript**; nenhuma rota de backend nem frontend foi migrada. A API v2 permanece como referência durante a migração.
+
 ## 12. Questões pendentes para as próximas discussões
 
 1. **Compatibilidade aprovada:** detalhar papéis de produtor, consumidor e assinante e regras de configuração sem alterar a matriz aprovada.
