@@ -425,16 +425,98 @@ Antes de implementar, verificar o backend atual e definir em especificação nor
 
 A DEC-11 **não aprova automaticamente alterações internas na engine nem novos contratos OpenAPI**: essas mudanças devem ser justificadas e detalhadas no desenho técnico.
 
-## 11. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
+## 11. Requisitos funcionais v0.4 e critérios de aceitação — RF-V4-001 a RF-V4-024
 
-| Grupo sugerido | Assuntos a especificar |
-| --- | --- |
-| RF-01 a RF-04 | Seleção, configuração, compatibilidade e apresentação visual dos perfis |
-| RF-05 a RF-08 | Modelos de requisição/resposta |
-| RF-09 a RF-12 | WebSocket, sessão, mensagens e encerramento |
-| RF-13 a RF-18 | Broker e semânticas MQTT, Queue e Topic |
+**Status: aprovado em 2026-11-04.** Esta seção formaliza as decisões DEC-01 a DEC-11 como requisitos verificáveis. A definição de classes, contratos OpenAPI, nomes finais dos eventos, valores numéricos padrão e estratégia concreta de implementação **permanece pendente de especificação arquitetural**. Os requisitos se aplicam à **simulação semântica**, não à execução real dos protocolos de rede.
 
-**Observação:** numeração e conteúdo são apenas uma proposta de organização. Nenhum RF v0.4 foi fechado ou aprovado individualmente até aqui.
+### Grupo A — Editor e conexões
+
+| ID | Requisito | Critério de aceitação verificável |
+| --- | --- | --- |
+| **RF-V4-001** | Disponibilizar os dez perfis nas conexões compatíveis. | O seletor oferece somente os perfis permitidos pela matriz DEC-06 para cada par de componentes; os dez são selecionáveis em ao menos uma topologia suportada. |
+| **RF-V4-002** | Validar origem, destino e perfil conforme matriz aprovada. | Uma conexão permitida é aceita; Cliente → Database, Broker → Broker e perfis incompatíveis são rejeitados com explicação, preservando as validações legadas. WebSocket aceita Cliente → API e API → API. |
+| **RF-V4-003** | Exibir propriedades contextuais e valores padrão por perfil. | Selecionar uma aresta revela os campos específicos do perfil (DEC-08, DEC-09 e DEC-10); troca de perfil valida dados existentes e aplica defaults válidos, sem exigir contratos de rede reais. |
+| **RF-V4-004** | Preservar configurações, tipos e fluidez do editor. | Criar, mover, selecionar, renomear, remover e conectar nós continua fluido; alterar perfil não modifica a identidade visual dos seis clientes nem perde configurações válidas. |
+
+### Grupo B — Requisição/resposta
+
+| ID | Requisito | Critério de aceitação verificável |
+| --- | --- | --- |
+| **RF-V4-005** | Simular REST, SOAP e HTTP genérico com comportamento existente e propriedades próprias. | Cada perfil gera execução de requisição/processamento/resposta; REST/HTTP apresentam método e caminho, SOAP identifica operação e ação opcional; métricas e trace permanecem acessíveis. |
+| **RF-V4-006** | Simular GraphQL Query e Mutation com identificação de operação. | Um cenário Query e outro Mutation executam, registram o tipo/nome lógico da operação e geram resposta; nenhum parser/schema GraphQL real é exigido. |
+| **RF-V4-007** | Simular gRPC unary. | Uma chamada lógica a serviço/método produz uma requisição RPC e uma resposta, com resultado/tempo observável; não requer arquivo `.proto` nem rede real. |
+| **RF-V4-008** | Simular CoAP com CON/NON e confirmação quando aplicável. | Cenários CON e NON são distinguíveis no trace; confirmações semânticas respeitam casos de resposta no ACK ou resposta separada quando aplicáveis, sem representar sempre um ACK independente. |
+
+### Grupo C — WebSocket
+
+| ID | Requisito | Critério de aceitação verificável |
+| --- | --- | --- |
+| **RF-V4-009** | Estabelecer sessão WebSocket virtual em Cliente → API e API → API. | As duas topologias abrem uma sessão virtual que passa por CONNECTING e OPEN ou termina explicitamente em rejeição/erro; uma sessão por conexão por execução. |
+| **RF-V4-010** | Permitir mensagens configuráveis nos dois sentidos. | Uma sequência com emissões da origem e do destino é executada no relógio virtual; mensagens não exigem resposta anterior e preservam identidade/direção. |
+| **RF-V4-011** | Simular latência, timeout e encerramento de sessão. | Latência se aplica a cada mensagem; abertura falha impede mensagens; encerramento automático, explícito ou por erro/timeout encerra a sessão com estado/resultado observável. |
+| **RF-V4-012** | Exibir estados e mensagens WebSocket correlacionados na timeline. | O usuário identifica abertura, mensagens emitidas/recebidas, direção, encerramento e correlação com conexão/sessão; conclusão global aguarda término da sessão. |
+
+### Grupo D — Broker e mensageria
+
+| ID | Requisito | Critério de aceitação verificável |
+| --- | --- | --- |
+| **RF-V4-013** | Disponibilizar um Broker genérico no editor. | O Broker pode ser adicionado, selecionado, movido, configurado e removido, com conexões conforme DEC-06, sem introduzir nós específicos de Queue/Topic/MQTT. |
+| **RF-V4-014** | Configurar filas, tópicos e assinaturas como destinos lógicos. | Editor registra nome de fila/tópico e consumidores/assinantes elegíveis associados às conexões reais; não há exigência de broker de rede real. |
+| **RF-V4-015** | Simular Queue com um consumidor elegível por mensagem. | Mensagem aceita é enfileirada logicamente e entregue a uma única API consumidora; com múltiplos consumidores, round-robin determinístico; sem alegar entrega exatamente uma vez sob falha. |
+| **RF-V4-016** | Simular Topic com uma entrega individual por assinatura elegível. | Uma publicação com duas APIs assinantes gera duas entregas correlacionadas, e o resultado global aguarda a conclusão de ambas. |
+| **RF-V4-017** | Simular MQTT QoS 0 com correspondência exata de tópico. | Publicação QoS 0 é registrada, tópicos exatos selecionam assinantes e produzem entregas lógicas; não há QoS 1/2, curingas, retained messages ou sessões MQTT persistidas. |
+| **RF-V4-018** | Tratar mensagens sem consumidores elegíveis. | Queue permanece pendente até limite virtual e encerra explicitamente com pendência/timeout; Topic/MQTT registram publicação sem destinatários e zero entregas, sem confirmação fictícia de consumo. |
+
+### Grupo E — Execução e resultados
+
+| ID | Requisito | Critério de aceitação verificável |
+| --- | --- | --- |
+| **RF-V4-019** | Separar conclusão principal e global. | Aceite de mensagem encerra publicação principal sem finalizar entregas pendentes; sessão aberta impede conclusão global; global termina apenas quando recursos/derivadas estiverem terminais. |
+| **RF-V4-020** | Registrar eventos e operações derivadas com correlação causal. | Trace/timeline permitem relacionar operação principal, mensagens, entregas, conexão, participantes, perfil e sessão quando pertinente; reaproveitar IDs existentes quando possível. |
+| **RF-V4-021** | Apresentar métricas adequadas por modelo. | Requisição/resposta mostra tempo/latência/processamento; WebSocket mostra abertura/duração/mensagens; mensageria mostra publicações, entregas, processamentos, pendências e falhas aplicáveis. |
+| **RF-V4-022** | Garantir determinismo, limites finitos e resultados explícitos. | Mesmo cenário e parâmetros produzem a mesma sequência lógica; timeout/erro/pêndencia são terminalizados explicitamente; pausa, reinício, velocidade e passo a passo continuam funcionais. |
+
+### Grupo F — Compatibilidade e testes
+
+| ID | Requisito | Critério de aceitação verificável |
+| --- | --- | --- |
+| **RF-V4-023** | Preservar o comportamento aprovado nas versões anteriores. | Cenários válidos da v0.3 continuam executando, incluindo os seis tipos visuais com comportamento Client, API/Database, editor, conexões e controles; nenhuma migração silenciosa de tipos. |
+| **RF-V4-024** | Validar os dez perfis com testes automatizados e cenários reproduzíveis. | Para cada perfil existe ao menos um teste de execução e verificação de resultado/timeline; cenários inválidos, timeouts e regressões relevantes também são testados e documentados. |
+
+### Cenários mínimos de aceitação
+
+| Cenário de ponta a ponta | Resultado esperado | Requisitos |
+| --- | --- | --- |
+| Web Browser → API por REST | Requisição, processamento e resposta | RF-V4-001, 005, 021 |
+| Mobile App → API por GraphQL | Query/Mutation identificada e executada | RF-V4-006 |
+| CLI → API por gRPC unary | Requisição RPC e resposta | RF-V4-007 |
+| Embedded System → API por CoAP CON | Confirmação representada quando aplicável | RF-V4-008 |
+| API A → API B por WebSocket | Sessão e mensagens bidirecionais observáveis | RF-V4-009 a 012 |
+| Bot → Broker → API por Queue | Entrega a um consumidor elegível | RF-V4-013 a 015 |
+| Cliente → Broker → duas APIs por Topic | Duas entregas, uma por assinatura | RF-V4-016, 019 |
+| API → Broker → API por MQTT | Publicação QoS 0 e entrega lógica | RF-V4-017 |
+| Queue sem consumidor | Espera finita e encerramento explícito | RF-V4-018, 022 |
+| Topic sem assinantes | Publicação registrada com zero entregas | RF-V4-018 |
+
+Estes cenários são amostras mínimas e **não restringem a compatibilidade dos demais clientes ou pares de componentes aprovados na DEC-06**.
+
+### Regras transversais de qualidade e implementação
+
+- **Backend primeiro, frontend depois do backend** para mudanças que exigem motor/contratos; entregar em incrementos testáveis.
+- Preservar drag-and-drop, seleção, movimento, conexão, edição, remoção e identidade dos seis clientes.
+- Perfil não implementado **não pode ser apresentado ao usuário como funcional**.
+- Reutilizar funcionalidades existentes quando a semântica permitir; não duplicar motor por perfil.
+- Mesmos dados e configurações devem produzir resultados determinísticos.
+- Exigir defesa técnica de cada implementação, com decisões, alternativas, UML fiel ao código e diagramas de sequência.
+
+### Divisão inicial de entregas — aprovada como orientação, tarefas pendentes
+
+1. **Entrega 1 — Requisição/resposta:** RF-V4-001 a 008 (incluindo compatibilidade e configuração dos seis perfis síncronos).
+2. **Entrega 2 — WebSocket:** RF-V4-009 a 012.
+3. **Entrega 3 — Broker e mensageria:** RF-V4-013 a 018.
+4. **Entrega 4 — Integração e validação:** RF-V4-019 a 024, com capacidades de execução e correlação **implementadas antecipadamente quando forem pré-requisitos** das entregas anteriores.
+
+A decomposição em tarefas/PRs, dependências detalhadas e contratos técnicos será definida após os ADRs e as especificações. **Nenhuma implementação foi autorizada por esta seção.**
 
 ## 12. Questões pendentes para as próximas discussões
 
