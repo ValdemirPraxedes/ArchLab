@@ -97,7 +97,44 @@ A estratégia sugerida é dividir a v0.4 em **entregas verificáveis**, preserva
 
 Essa ordem e os limites de cada incremento **não são ainda tarefas aprovadas**. O objetivo dos dez perfis está aprovado, mas a decomposição técnica depende dos requisitos.
 
-## 6. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
+## 6. Matriz de compatibilidade aprovada — DEC-06
+
+**Status: aprovada em 2026-11-04.** Os seis clientes específicos da v0.3 compartilham estas permissões; não é necessário criar regras diferentes por ícone ou nome.
+
+| Perfil | Cliente → API | API → API | Cliente → Broker | API → Broker | Broker → API |
+| --- | --- | --- | --- | --- | --- |
+| REST (HTTP) | Permitido | Permitido | Não previsto | Não previsto | Não previsto |
+| SOAP (HTTP) | Permitido | Permitido | Não previsto | Não previsto | Não previsto |
+| HTTP genérico | Permitido | Permitido | Não previsto | Não previsto | Não previsto |
+| GraphQL (HTTP) | Permitido | Permitido | Não previsto | Não previsto | Não previsto |
+| gRPC unary | Permitido | Permitido | Não previsto | Não previsto | Não previsto |
+| CoAP | Permitido | Permitido | Não previsto | Não previsto | Não previsto |
+| WebSocket | **Permitido** | **Permitido** | Não previsto | Não previsto | Não previsto |
+| MQTT | Não previsto | Não previsto | Permitido | Permitido | Permitido |
+| Queue Messaging | Não previsto | Não previsto | Permitido | Permitido | Permitido |
+| Topic Messaging | Não previsto | Não previsto | Permitido | Permitido | Permitido |
+
+A aprovação **inclui explicitamente WebSocket em conexões `API → API`**, além de `Cliente → API`. O sentido da aresta identifica quem inicia a conexão; uma sessão WebSocket ativa poderá trocar mensagens nos dois sentidos, sujeito às regras que ainda serão detalhadas.
+
+### DEC-07 — Regras gerais de conexões aprovadas
+
+1. Exibir no editor apenas os perfis compatíveis com o par origem/destino da conexão.
+2. Permitir que qualquer um dos seis clientes existentes inicie chamadas a APIs ou envie mensagens ao Broker, conforme o perfil.
+3. Permitir que a API chame outra API, publique mensagens ao Broker e consuma mensagens entregues pelo Broker.
+4. Manter proibida a conexão direta `Cliente → Database`.
+5. Não oferecer REST, SOAP, HTTP genérico, GraphQL, gRPC unary, CoAP ou WebSocket para arestas destinadas ao Broker neste escopo.
+6. Não permitir `Broker → Broker` na v0.4.
+7. Não confundir permissão de conexão com implementação idêntica: Queue, Topic e MQTT exigem comportamentos semânticos distintos.
+8. Manter as regras já existentes de conexões e validações que não forem explicitamente substituídas por estas decisões. O fluxo `API → Database` e seu protocolo existente permanecem fora da matriz dos dez perfis, sem modificação nesta decisão.
+
+### Pendências específicas — não decidir por inferência
+
+- Como configurar abertura/encerramento de sessão WebSocket, ordem das mensagens, permissões de emissão por cada lado e condição de conclusão da simulação, tanto em Cliente → API quanto API → API.
+- Como representar papéis de produtor, consumidor e assinante na topologia `Cliente/API → Broker → API`, incluindo assinatura e entrega por perfil.
+- Campos configuráveis por perfil, critérios de simulação, eventos e métricas.
+- Limites de simultaneidade e compatibilidade com as restrições estruturais atuais do motor.
+
+## 7. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
 
 | Grupo sugerido | Assuntos a especificar |
 | --- | --- |
@@ -108,9 +145,9 @@ Essa ordem e os limites de cada incremento **não são ainda tarefas aprovadas**
 
 **Observação:** numeração e conteúdo são apenas uma proposta de organização. Nenhum RF v0.4 foi fechado ou aprovado individualmente até aqui.
 
-## 7. Questões pendentes para as próximas discussões
+## 8. Questões pendentes para as próximas discussões
 
-1. **Compatibilidade:** quais pares de tipos de componentes podem usar cada perfil? O que exigir para origens, destinos e papéis de produtor, consumidor e assinante?
+1. **Compatibilidade aprovada:** detalhar papéis de produtor, consumidor e assinante e regras de configuração sem alterar a matriz aprovada.
 2. **Configuração mínima:** quais campos aparecem no editor por perfil, e quais são parâmetros de execução?
 3. **Requisição/resposta:** diferenças semânticas indispensáveis para REST, SOAP, GraphQL, gRPC e CoAP, sem duplicar a engine.
 4. **WebSocket:** estabelecimento de sessão, direção das mensagens, sequência e conclusão.
@@ -121,7 +158,7 @@ Essa ordem e os limites de cada incremento **não são ainda tarefas aprovadas**
 9. **Limites técnicos:** impacto no contrato OpenAPI, modelo do frontend e motor Java; necessidade de ADRs e de documentação de integração.
 10. **Fatiamento:** confirmar entregas pequenas e dependências antes de criar as tarefas no Trello.
 
-## 8. Método de trabalho documental
+## 9. Método de trabalho documental
 
 - Registrar cada nova decisão neste arquivo, identificando claramente **aprovado**, **proposto** ou **pendente**.
 - Não introduzir requisitos extras sem debate e aprovação.
@@ -129,7 +166,7 @@ Essa ordem e os limites de cada incremento **não são ainda tarefas aprovadas**
 - Fazer commits incrementais nesta branch de planejamento.
 - **Não abrir PR ou fazer merge até o responsável solicitar.**
 
-## 9. Referências históricas
+## 10. Referências históricas
 
 - [Requisitos v0.3](v0.3-client-requirements.md)
 - [Catálogo discutido de clientes e perfis](v0.3-clients.md)
