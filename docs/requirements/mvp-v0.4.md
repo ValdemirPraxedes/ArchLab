@@ -250,7 +250,72 @@ Ficam fora do escopo inicial: Ping/Pong semântico detalhado, reconexão automá
 
 Ainda precisam ser especificados antes da implementação: valores padrão e limites dos timeouts, validação dos intervalos das mensagens, política de ordenação em tempos virtuais iguais, condição formal da conclusão global, relação com fluxo principal de simulação, campos do contrato API e testes determinísticos. **A aprovação do comportamento não equivale à aprovação de DTOs ou de uma alteração específica no motor.**
 
-## 9. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
+## 9. Broker e mensageria semântica — DEC-10
+
+**Status: aprovado em 2026-11-04.** A decisão formaliza o comportamento inicial do **Broker genérico** e dos perfis **Queue Messaging, Topic Messaging e MQTT**. Os três usam simulação semântica e o relógio virtual; nenhuma tecnologia real de mensageria será executada.
+
+### DEC-10.1 — Responsabilidades e topologia
+
+O único componente **Broker** previsto na v0.4 deve receber mensagens, mantê-las quando aplicável em memória virtual, selecionar destinos lógicos/assinantes e agendar entregas. Os componentes existentes **Cliente** (seis tipos da v0.3) e **API** podem publicar/enviar mensagens ao Broker; a **API** existente pode consumir/receber mensagens, sem introdução de um Worker.
+
+As topologias de referência são `Cliente → Broker → API` e `API → Broker → API`, respeitando a matriz de compatibilidade aprovada na DEC-06.
+
+**Fila e tópico são destinos lógicos configurados**, não nós adicionais do canvas. As assinaturas/consumidores devem ser derivados ou associados às conexões reais do editor, sem duplicar desnecessariamente configurações.
+
+### DEC-10.2 — Semânticas aprovadas
+
+| Perfil | Entrada no Broker | Seleção/entrega | Particularidade |
+| --- | --- | --- | --- |
+| **Queue Messaging** | Envio para fila lógica identificada | **Uma entrega por mensagem** a um consumidor elegível; se houver vários, seleção por **round-robin determinístico** | Não pressupõe exatamente uma vez sob falhas |
+| **Topic Messaging** | Publicação em tópico lógico identificado | **Uma cópia lógica por assinatura elegível** | Distribuição aos assinantes; assinaturas definidas no modelo |
+| **MQTT** | Publicação em tópico MQTT lógico | Entrega aos assinantes com **correspondência exata** do tópico | **QoS 0** apenas nesta versão; sem reenvio ou garantias superiores |
+
+Não confundir os três perfis: Queue distribui a um consumidor, Topic multiplica por assinaturas elegíveis e MQTT representa publicação/assinatura com a semântica inicial de QoS 0 e tópicos exatos.
+
+### DEC-10.3 — Propriedades no editor
+
+| Propriedade | Queue | Topic | MQTT |
+| --- | --- | --- | --- |
+| Destino lógico | Nome da fila | Nome do tópico | Nome do tópico |
+| Produtor | Cliente ou API | Cliente ou API | Cliente ou API |
+| Destinatário elegível | API consumidora | API com assinatura | API com assinatura |
+| Latência | Configurável, reutilizando o mecanismo existente | Configurável | Configurável |
+| Tempo de processamento | Na API consumidora | Na API consumidora | Na API consumidora |
+| Confirmação observável | Recebimento e consumo lógicos | Registro de publicação e entregas | Publicação QoS 0, sem exigir ACK de entrega |
+
+O painel do Broker e das conexões deve ser contextual e simples. Os exemplos de destino como `orders` não são valores padrão normativos; defaults e validações de nomes ainda serão definidos.
+
+### DEC-10.4 — Ciclo de execução e conclusão
+
+1. O produtor publica/envia uma mensagem lógica.
+2. O Broker recebe a mensagem e registra a aceitação no estado virtual da execução.
+3. O Broker identifica consumidor ou assinantes elegíveis conforme o perfil.
+4. O agendador virtual cria as entregas correspondentes (uma para Queue; uma por assinatura elegível para Topic/MQTT).
+5. A API destinatária recebe e processa a mensagem.
+6. Trace, timeline e resultados registram a aceitação, cada entrega, processamento e eventual erro.
+
+**Conclusão da publicação não é conclusão global.** A publicação pode terminar quando o Broker aceitar a mensagem, mas a **simulação global permanece ativa até todas as entregas agendadas atingirem estado terminal** (processadas, falhadas ou encerradas por timeout), respeitando limites para não ficar indefinidamente aberta. Os conceitos de execução principal e global e seus DTOs precisam de especificação formal antes da implementação.
+
+### DEC-10.5 — Ausência de consumidor elegível
+
+- **Queue:** a mensagem permanece **pendente em memória virtual até um limite de tempo virtual**; ao atingir o limite, registrar resultado terminal explícito (p. ex. mensagem não consumida/timeout). Não concluir silenciosamente.
+- **Topic e MQTT:** registrar **publicação sem destinatários**, sem agendar entregas; concluir a publicação normalmente no modelo semântico, deixando explícito que não houve destinatários. Isso não significa confirmação de consumo.
+- O limite de espera da Queue, métricas e nomenclatura formal dos estados/eventos ainda serão definidos.
+
+### DEC-10.6 — Determinismo, limites e exclusões
+
+- Entregas e processamento são agendados pelo relógio virtual de modo determinístico, inclusive escolha round-robin.
+- A v0.4 simulará **quantidade finita de mensagens**; não implementar loops automáticos em que consumidores republicam mensagens indefinidamente.
+- Mensagens existem **somente no estado de memória virtual da execução**, não em disco nem em serviços externos.
+- **MQTT começa com QoS 0**, correspondência exata de tópicos; sem wildcards, retained messages ou sessões MQTT persistidas.
+- Fora do escopo: reentregas, retries automáticos, dead-letter queue, clustering, persistência em disco e alta disponibilidade; não implementar RabbitMQ, Kafka, IBM MQ, TIBCO EMS ou servidor MQTT real.
+- Não afirmar garantias de `exactly-once`, durabilidade ou entrega em rede real.
+
+### DEC-10.7 — Especificações ainda pendentes
+
+Aprovação do comportamento **não fecha** os contratos OpenAPI, nomes finais de eventos, estrutura de filas/assinaturas, defaults, limites de mensagens, duração de timeout, ordenação de eventos no mesmo instante virtual, métricas, regras de erro ou o desenho interno das classes Java. Essas decisões deverão ser formalizadas antes de criar tarefas de implementação.
+
+## 10. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
 
 | Grupo sugerido | Assuntos a especificar |
 | --- | --- |
@@ -261,20 +326,20 @@ Ainda precisam ser especificados antes da implementação: valores padrão e lim
 
 **Observação:** numeração e conteúdo são apenas uma proposta de organização. Nenhum RF v0.4 foi fechado ou aprovado individualmente até aqui.
 
-## 10. Questões pendentes para as próximas discussões
+## 11. Questões pendentes para as próximas discussões
 
 1. **Compatibilidade aprovada:** detalhar papéis de produtor, consumidor e assinante e regras de configuração sem alterar a matriz aprovada.
 2. **Configuração mínima aprovada para seis perfis:** detalhar defaults, limites, contratos de dados e propriedades ainda pendentes para WebSocket e mensageria.
 3. **Requisição/resposta:** formalizar as diferenças já aprovadas em eventos, parâmetros e critérios de aceitação, sem duplicar a engine.
 4. **WebSocket aprovado:** especificar defaults, validações, eventos internos/DTOs e regras formais de conclusão para o modelo de sessão definido na DEC-09.
-5. **Broker:** configuração de filas/tópicos/assinaturas, fila vazia, número de consumidores, fan-out, latências e consumo pela API existente.
-6. **Mensageria:** o que significa conclusão da execução principal versus entregas assíncronas? Quais eventos e métricas devem aparecer?
+5. **Broker aprovado:** detalhar formato de filas/tópicos/assinaturas, limites, eventos, defaults e contratos sobre a semântica definida na DEC-10.
+6. **Mensageria:** formalizar a distinção aprovada entre publicação e conclusão global; definir estados terminais, eventos e métricas.
 7. **Validação:** regras para rejeitar topologias incompatíveis, conexões duplicadas e cenários inválidos.
 8. **Critérios de aceitação:** cenários mínimos observáveis por perfil, testes determinísticos e regressão da v0.3.
 9. **Limites técnicos:** impacto no contrato OpenAPI, modelo do frontend e motor Java; necessidade de ADRs e de documentação de integração.
 10. **Fatiamento:** confirmar entregas pequenas e dependências antes de criar as tarefas no Trello.
 
-## 11. Método de trabalho documental
+## 12. Método de trabalho documental
 
 - Registrar cada nova decisão neste arquivo, identificando claramente **aprovado**, **proposto** ou **pendente**.
 - Não introduzir requisitos extras sem debate e aprovação.
@@ -282,7 +347,7 @@ Ainda precisam ser especificados antes da implementação: valores padrão e lim
 - Fazer commits incrementais nesta branch de planejamento.
 - **Não abrir PR ou fazer merge até o responsável solicitar.**
 
-## 12. Referências históricas
+## 13. Referências históricas
 
 - [Requisitos v0.3](v0.3-client-requirements.md)
 - [Catálogo discutido de clientes e perfis](v0.3-clients.md)
