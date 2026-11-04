@@ -1,6 +1,6 @@
 # API-V4.1-001 — Plano de evolução de contrato para cenário unificado
 
-> Status: **Proposta de contrato**, não OpenAPI normativo. Não modificar `openapi.yaml` antes de fechar a compatibilidade.
+> Status: **Rascunho de contrato OpenAPI 3.1 atualizado na branch**, pendente de parser, lint, exemplos, geração TypeScript e implementação. O documento descreve decisões e lacunas; o contrato canônico proposto está em `docs/api/openapi.yaml`.
 > Relacionados: [mvp-v0.4.1](../requirements/mvp-v0.4.1.md), [ADR-V4.1-001](../architecture/ADR-V4.1-001.md), [API-V4-002](API-V4-002.md).
 
 ## 1. Objetivo
@@ -99,3 +99,32 @@ A execução em `POST /api/v1/simulations` deve receber arquitetura com perfis d
 - Compatibilidade com tipos de componentes reais e conexões DB legadas.
 
 Este documento é um contrato de planejamento: **não afirma que o exemplo JSON é executável no backend atual**.
+
+
+## 7. Revisão 2026-11-04 — alinhamento com `openapi.yaml`
+
+A branch `docs/v0.4.1-mixed-communication-planning` recebeu um **rascunho OpenAPI v0.4.1** diretamente no contrato público canônico `docs/api/openapi.yaml`, sem adicionar rotas. As mudanças são apenas contratuais, **não implementadas no backend**.
+
+### Decisões refletidas no schema
+
+- `Scenario.oneOf` mantém os três legados `RequestResponseScenario`, `WebSocketScenario`, `MessagePublishScenario` e acrescenta `UnifiedScenario` sem `kind` global.
+- O `discriminator` global de `Scenario` foi retirado porque o novo formato não possui `kind`. Os legados continuam identificados por valores `const`; a nova variante exige `entry`. O validador de `oneOf` deverá confirmar que os quatro formatos são disjuntos.
+- `UnifiedScenario.entry` possui `componentId`, `connectionId` e `operation?`; `sessionSetup[]` abre sessões **por eventos virtuais explícitos**, não cria recursos OPEN arbitrariamente.
+- `Api.behaviors[]` é opcional e não substitui o tratamento de payload antigo sem plano de comportamento.
+- `BehaviorAction.oneOf` define `PROCESS`, `CALL`, `PUBLISH`, `RESPOND`, `OPEN_SESSION`, `WS_SEND`, `CLOSE_SESSION`, `FORK` e `JOIN` com discriminadores e campos obrigatórios específicos.
+- Os identificadores reais de integração existentes no contrato continuam `HTTP_REST`, `SOAP_HTTP`, `DATABASE_QUERY`, `HTTP_GENERIC`, `GRAPHQL_HTTP`, `GRPC_UNARY`, `COAP`, `WEBSOCKET`, `MQTT`, `QUEUE`, `TOPIC`.
+- O exemplo `mixedCommunicationRequest` demonstra REST → Broker Queue → WebSocket, com sessão preparada causalmente.
+
+### Compatibilidade e lacunas bloqueantes
+
+1. **O `CanonicalScenarioValidator` atual só entende duas modalidades v0.4 em seu fluxo próprio; o controlador possui outro caminho para requisição/resposta.** O backend terá de reconciliar ambos no adaptador; mudar apenas o YAML não habilita execução.
+2. **O `Behavior` da primeira iteração foi anexado a `Api`.** Eventos recebidos por clientes e outras capacidades ainda precisam de refinamento para versões seguintes, sem romper as identidades visuais atuais.
+3. **Sessão em `sessionSetup`**: a semântica de preparo, pré-operação e `autoCloseAtEnd` precisa de validação executável, inclusive tempo de abertura, timeout e fechamento antes da conclusão global.
+4. **FORK/JOIN**: referências a ações locais são definidas estruturalmente; a referência causal a operações filhas, políticas de erro, budgets e waits precisam de detalhamento no backend e no validador.
+5. **Sem prometer compatibilidade automática**: regras de migração de cenários antigos continuam requerendo testes e mensagens de erro explícitas.
+6. **Validação OpenAPI ainda pendente**: rodar parser 3.1, Redocly, checagem de todos `$ref`, validar exemplos com schema, gerar `openapi-typescript` e testar mapeamento Java. A mudança de contrato não pode ser declarada pronta para consumo até concluir essa bateria.
+7. **Limites**: verificar coerência de `DurationMs` legado (1 bilhão por propriedade) com limites globais de runtime (3.600.000ms) e políticas de `sessionSetup`.
+
+### Gate de transição
+
+O próximo passo técnico é completar a validação do schema OpenAPI em ambiente com parser e geração TypeScript e resolver discrepâncias. **Somente depois** preparar o trabalho backend, mantendo frontend para depois da entrega funcional e contratual.
