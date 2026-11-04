@@ -543,6 +543,10 @@ As diretrizes de consolidação da API pública única `/api/v1`, reconhecimento
 
 Os schemas definitivos de DTOs, erros, defaults e limites serão detalhados na etapa **API-V4-002**. Não modificar o OpenAPI executável antes dessas aprovações.
 
+### Contrato API-V4-002 aprovado na Etapa 11
+
+A especificação [API-V4-002 — Schemas, limites, defaults e erros](../api/API-V4-002.md) fixa os discriminadores, as modalidades de cenário, os dez limites numéricos, os nove valores padrão, resultados globais e códigos HTTP aprovados. **Prevalece sobre as marcações de limites pendentes nos documentos da Etapa 10.** Ainda falta implementar e validar o OpenAPI 3.1 em `docs/api/openapi.yaml`.
+
 ## 12. Questões pendentes para as próximas discussões
 
 1. **Compatibilidade aprovada:** detalhar papéis de produtor, consumidor e assinante e regras de configuração sem alterar a matriz aprovada.
