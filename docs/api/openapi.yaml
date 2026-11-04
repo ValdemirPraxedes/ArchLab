@@ -107,6 +107,8 @@ paths:
             examples:
               sample:
                 $ref: '#/components/examples/simulationRequest'
+              mixedCommunication:
+                $ref: '#/components/examples/mixedCommunicationRequest'
       responses:
         '200':
           description: Operação concluída.
@@ -1557,6 +1559,67 @@ components:
           schema:
             $ref: '#/components/schemas/InvalidSimulationProblem'
   examples:
+    mixedCommunicationRequest:
+      summary: Entrada REST, publicação em Queue e notificação por WebSocket (contrato v0.4.1)
+      description: Exemplo de contrato; backend atual ainda não implementa execução mista.
+      value:
+        architecture:
+          components:
+          - {id: browser, type: WEB_BROWSER, displayName: Navegador}
+          - id: orders-api
+            type: API
+            displayName: API Pedidos
+            behaviors:
+            - id: handle-create-order
+              trigger: REQUEST_RECEIVED
+              match: {operation: 'POST /pedidos'}
+              actions:
+              - {id: publish, kind: PUBLISH, connectionId: orders-broker, destinationName: pedidos}
+              - {id: respond, kind: RESPOND, statusCode: 201, dependsOn: [publish]}
+          - id: broker
+            type: BROKER
+            displayName: Broker
+            destinations:
+            - {name: pedidos, kind: QUEUE}
+            subscriptions:
+            - {destinationName: pedidos, consumerComponentId: notifications, connectionId: broker-notifications}
+          - id: notifications
+            type: API
+            displayName: API Notificações
+            behaviors:
+            - id: handle-delivery
+              trigger: MESSAGE_CONSUMED
+              match: {destinationName: pedidos}
+              actions:
+              - {id: send, kind: WS_SEND, sessionAlias: notifications-session, payload: 'Pedido criado', sender: TARGET}
+          connections:
+          - id: browser-orders
+            sourceId: browser
+            targetId: orders-api
+            latencyMs: 10
+            integration:
+              kind: HTTP_REST
+              request: {method: POST, path: /pedidos}
+              response: {statusCode: 201}
+          - id: orders-broker
+            sourceId: orders-api
+            targetId: broker
+            latencyMs: 5
+            integration: {kind: QUEUE, queueName: pedidos}
+          - id: broker-notifications
+            sourceId: broker
+            targetId: notifications
+            latencyMs: 5
+            integration: {kind: QUEUE, queueName: pedidos}
+          - id: notifications-websocket
+            sourceId: browser
+            targetId: notifications
+            latencyMs: 5
+            integration: {kind: WEBSOCKET, path: /notificacoes, closeMode: AUTOMATIC}
+        scenario:
+          entry: {componentId: browser, connectionId: browser-orders, operation: 'POST /pedidos'}
+          sessionSetup:
+          - {connectionId: notifications-websocket, sessionAlias: notifications-session, autoCloseAtEnd: true}
     simulationRequest:
       summary: Client → API Pedidos → API Estoque (100 ms)
       value:
