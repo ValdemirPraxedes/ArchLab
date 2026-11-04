@@ -109,6 +109,14 @@ public class V2ResponseMapper {
         } else if(integration instanceof DatabaseQueryIntegrationV2 query) {
             if(query.queryText()!=null)fields.put("queryText",query.queryText());
             if(query.responseText()!=null)fields.put("responseText",query.responseText());
+        } else if(integration instanceof HttpGenericIntegrationV2 generic) {
+            fields.put("method",generic.method()); fields.put("path",generic.path());
+        } else if(integration instanceof GraphqlHttpIntegrationV2 graphql) {
+            fields.put("operationType",graphql.operationType()); fields.put("operationName",graphql.operationName());
+        } else if(integration instanceof GrpcUnaryIntegrationV2 grpc) {
+            fields.put("service",grpc.service()); fields.put("method",grpc.method());
+        } else if(integration instanceof CoapIntegrationV2 coap) {
+            fields.put("method",coap.method()); fields.put("resource",coap.resource()); fields.put("mode",coap.mode());
         }
         return fields;
     }

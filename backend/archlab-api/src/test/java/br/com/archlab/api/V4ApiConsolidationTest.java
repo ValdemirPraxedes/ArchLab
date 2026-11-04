@@ -230,4 +230,23 @@ class V4ApiConsolidationTest {
         var limit = post("/api/v1/scenarios/validate", websocket);
         assertEquals(400, limit.statusCode());
     }
+
+    @Test void synchronousProfilesExecuteAndKeepTheirIntegrationKind() throws Exception {
+        for (String file : new String[]{"http-rest.json", "soap-http.json", "http-generic.json",
+                "graphql-http.json", "grpc-unary.json", "coap.json", "database-query.json"}) {
+            String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", file));
+            var response = post("/api/v1/simulations", fixture);
+            assertEquals(200, response.statusCode(), file + " " + response.body());
+            JsonNode result = json.readTree(response.body());
+            assertEquals("COMPLETED", result.get("execution").get("mainStatus").asText(), file);
+            assertTrue(result.get("trace").size() > 0, file);
+            assertTrue(result.get("messageRepresentations").size() > 0, file);
+            if (!file.equals("database-query.json")) {
+                String expected = json.readTree(fixture).get("architecture").get("connections").get(0)
+                        .get("integration").get("kind").asText();
+                assertEquals(expected, result.get("messageRepresentations").get(0)
+                        .get("integration").get("kind").asText(), file);
+            }
+        }
+    }
 }
