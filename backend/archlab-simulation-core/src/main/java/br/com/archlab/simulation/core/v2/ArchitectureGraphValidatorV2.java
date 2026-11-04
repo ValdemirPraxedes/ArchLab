@@ -132,11 +132,16 @@ public final class ArchitectureGraphValidatorV2 {
 
         for (int i = 0; i < architecture.components().size(); i++) {
             if (!(architecture.components().get(i) instanceof BrokerV2 broker)) continue;
+            Map<String,Integer> subscriptionCounts = new HashMap<>();
+            Set<String> subscriptionKeys = new HashSet<>();
             for (int j = 0; j < broker.subscriptions().size(); j++) {
                 var subscription = broker.subscriptions().get(j);
                 String path = "components[" + i + "].subscriptions[" + j + "]";
                 BrokerDestinationV2 destination = broker.destinations().stream()
                         .filter(d -> d.name().equals(subscription.destinationName())).findFirst().orElse(null);
+                if (subscriptionCounts.merge(subscription.destinationName(), 1, Integer::sum) > 100
+                        || !subscriptionKeys.add(subscription.destinationName() + "\u0000" + subscription.connectionId()))
+                    add(errors, "INVALID_TOPOLOGY", path, "Too many or duplicate subscriptions");
                 ConnectionV2 connection = architecture.connections().stream()
                         .filter(c -> c.id().equals(subscription.connectionId())).findFirst().orElse(null);
                 if (destination == null || connection == null

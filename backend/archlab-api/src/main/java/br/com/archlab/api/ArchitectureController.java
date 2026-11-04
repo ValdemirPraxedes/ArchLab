@@ -31,6 +31,7 @@ public class ArchitectureController {
     private final ArchitectureValidator validator = new ArchitectureValidator();
     private final ArchitectureGraphValidatorV2 canonicalGraph = new ArchitectureGraphValidatorV2();
     private final ScenarioValidatorV2 canonicalScenarios = new ScenarioValidatorV2();
+    private final CanonicalScenarioValidator newScenarios = new CanonicalScenarioValidator();
     private final SimulationEngine engine = new SimulationEngine();
 
     public ArchitectureController(ArchitectureRequestMapper mapper, SimulationResponseMapper responseMapper,
@@ -49,6 +50,10 @@ public class ArchitectureController {
 
     @PostMapping(path = "/scenarios/validate", produces = MediaType.APPLICATION_JSON_VALUE)
     public ValidationResult validateScenario(@RequestBody JsonNode input) {
+        JsonNode scenario = input == null ? null : input.get("scenario");
+        JsonNode kind = scenario == null ? null : scenario.get("kind");
+        if (kind != null && kind.isTextual() && !"REQUEST_RESPONSE".equals(kind.asText()))
+            return newScenarios.validate(input, canonicalMapper);
         var request = canonicalMapper.canonicalRequest(input);
         return canonicalScenarios.validate(request.architecture(), request.scenario());
     }

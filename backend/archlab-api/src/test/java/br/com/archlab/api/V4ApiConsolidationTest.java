@@ -175,4 +175,59 @@ class V4ApiConsolidationTest {
         assertEquals(200, response.statusCode());
         assertFalse(json.readTree(response.body()).get("valid").asBoolean());
     }
+
+    @Test void allNewProfileExamplesValidateArchitecture() throws Exception {
+        for (String file : new String[]{"http-generic.json", "graphql-http.json", "grpc-unary.json",
+                "coap.json", "websocket-session.json"}) {
+            String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", file));
+            JsonNode architecture = json.readTree(fixture).get("architecture");
+            var response = post("/api/v1/architectures/validate", architecture.toString());
+            assertEquals(200, response.statusCode(), file);
+            assertTrue(json.readTree(response.body()).get("valid").asBoolean(), file + " " + response.body());
+        }
+    }
+
+    @Test void websocketCannotRunAsRequestResponseScenario() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "websocket-session.json"));
+        JsonNode architecture = json.readTree(fixture).get("architecture");
+        String scenario = "{\"kind\":\"REQUEST_RESPONSE\",\"entryComponentId\":\"client-1\","
+                + "\"entryConnectionId\":\"conn-entry\",\"apiExecutions\":[]}";
+        String request = "{\"architecture\":" + architecture + ",\"scenario\":" + scenario + "}";
+        var response = post("/api/v1/scenarios/validate", request);
+        assertEquals(200, response.statusCode());
+        assertFalse(json.readTree(response.body()).get("valid").asBoolean());
+    }
+
+    @Test void websocketAndPublishExamplesValidateScenario() throws Exception {
+        for (String file : new String[]{"websocket-session.json", "queue-two-consumers.json",
+                "queue-no-consumer.json", "topic-two-subscribers.json", "mqtt-qos0.json"}) {
+            String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", file));
+            var response = post("/api/v1/scenarios/validate", fixture);
+            assertEquals(200, response.statusCode(), file);
+            assertTrue(json.readTree(response.body()).get("valid").asBoolean(), file + " " + response.body());
+        }
+    }
+
+    @Test void publishWithMissingDestinationIsInvalid() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4",
+                "missing-broker-destination.invalid.json"));
+        var response = post("/api/v1/scenarios/validate", fixture);
+        assertEquals(200, response.statusCode());
+        assertFalse(json.readTree(response.body()).get("valid").asBoolean());
+    }
+
+    @Test void invalidBrokerSubscriptionAndWebSocketLimitAreRejected() throws Exception {
+        String queue = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4",
+                "queue-two-consumers.json"));
+        String broken = queue.replace("\"connectionId\": \"conn-consumer-1\"", "\"connectionId\": \"missing\"");
+        assertNotEquals(queue, broken);
+        var subscription = post("/api/v1/scenarios/validate", broken);
+        assertEquals(200, subscription.statusCode());
+        assertFalse(json.readTree(subscription.body()).get("valid").asBoolean());
+
+        String websocket = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4",
+                "websocket-too-many-messages.invalid.json"));
+        var limit = post("/api/v1/scenarios/validate", websocket);
+        assertEquals(400, limit.statusCode());
+    }
 }

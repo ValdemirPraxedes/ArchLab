@@ -46,12 +46,12 @@ public class V2RequestMapper {
                         try { destinationKind=IntegrationKindV2.valueOf(text(d,"kind")); }
                         catch (IllegalArgumentException ex) { throw invalid("Unsupported broker destination kind"); }
                         if (!destinationKind.isMessaging()) throw invalid("Unsupported broker destination kind");
-                        destinations.add(new BrokerDestinationV2(text(d,"name"),destinationKind));
+                        destinations.add(new BrokerDestinationV2(longText(d,"name",256),destinationKind));
                     }
                     List<BrokerSubscriptionV2> subscriptions=new ArrayList<>();
                     for (JsonNode s:arrayOrEmpty(c,"subscriptions")) {
                         object(s,"destinationName","consumerComponentId","connectionId");
-                        subscriptions.add(new BrokerSubscriptionV2(text(s,"destinationName"),
+                        subscriptions.add(new BrokerSubscriptionV2(longText(s,"destinationName",256),
                                 text(s,"consumerComponentId"),text(s,"connectionId")));
                     }
                     components.add(new BrokerV2(text(c,"id"),text(c,"displayName"),destinations,subscriptions));
@@ -127,20 +127,68 @@ public class V2RequestMapper {
                 object(node,"kind","queryText","responseText");
                 yield new DatabaseQueryIntegrationV2(optionalText(node,"queryText"),optionalText(node,"responseText"));
             }
+            case "HTTP_GENERIC" -> {
+                if (!canonical) throw invalid("Unsupported integration kind");
+                object(node,"kind","method","path");
+                String method=text(node,"method");
+                if (!Set.of("GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS").contains(method))
+                    throw invalid("Unsupported HTTP method");
+                yield new HttpGenericIntegrationV2(method,longText(node,"path",2048));
+            }
+            case "GRAPHQL_HTTP" -> {
+                if (!canonical) throw invalid("Unsupported integration kind");
+                object(node,"kind","operationType","operationName");
+                String operationType=text(node,"operationType");
+                if (!Set.of("QUERY","MUTATION").contains(operationType)) throw invalid("Unsupported GraphQL operation type");
+                yield new GraphqlHttpIntegrationV2(operationType,longText(node,"operationName",256));
+            }
+            case "GRPC_UNARY" -> {
+                if (!canonical) throw invalid("Unsupported integration kind");
+                object(node,"kind","service","method");
+                yield new GrpcUnaryIntegrationV2(longText(node,"service",256),longText(node,"method",256));
+            }
+            case "COAP" -> {
+                if (!canonical) throw invalid("Unsupported integration kind");
+                object(node,"kind","method","resource","mode");
+                String method=text(node,"method"), mode=has(node,"mode")?text(node,"mode"):"CON";
+                if (!Set.of("GET","POST","PUT","DELETE").contains(method) || !Set.of("CON","NON").contains(mode))
+                    throw invalid("Unsupported CoAP method or mode");
+                yield new CoapIntegrationV2(method,longText(node,"resource",2048),mode);
+            }
+            case "WEBSOCKET" -> {
+                if (!canonical) throw invalid("Unsupported integration kind");
+                object(node,"kind","path","connectTimeoutMs","idleTimeoutMs","closeMode","messages");
+                String mode=has(node,"closeMode")?text(node,"closeMode"):"AUTOMATIC";
+                if (!Set.of("AUTOMATIC","EXPLICIT").contains(mode)) throw invalid("Unsupported WebSocket close mode");
+                List<WebSocketMessageV2> messages=new ArrayList<>();
+                for (JsonNode message:arrayOrEmpty(node,"messages")) {
+                    object(message,"sender","intervalMs","payload");
+                    String sender=text(message,"sender");
+                    if (!Set.of("SOURCE","TARGET").contains(sender)) throw invalid("Unsupported WebSocket sender");
+                    messages.add(new WebSocketMessageV2(sender,numberOrZero(message,"intervalMs"),
+                            has(message,"payload")?longText(message,"payload",32768):null));
+                }
+                if (messages.size()>100) throw invalid("Too many WebSocket messages");
+                Long idle=has(node,"idleTimeoutMs") && !node.get("idleTimeoutMs").isNull()
+                        ? number(node,"idleTimeoutMs") : null;
+                yield new WebSocketIntegrationV2(longText(node,"path",2048),
+                        has(node,"connectTimeoutMs")?number(node,"connectTimeoutMs"):5000L,
+                        idle,mode,messages);
+            }
             case "QUEUE" -> {
                 if (!canonical) throw invalid("Unsupported integration kind");
                 object(node,"kind","queueName");
-                yield new QueueIntegrationV2(text(node,"queueName"));
+                yield new QueueIntegrationV2(longText(node,"queueName",256));
             }
             case "TOPIC" -> {
                 if (!canonical) throw invalid("Unsupported integration kind");
                 object(node,"kind","topic");
-                yield new TopicIntegrationV2(text(node,"topic"));
+                yield new TopicIntegrationV2(longText(node,"topic",256));
             }
             case "MQTT" -> {
                 if (!canonical) throw invalid("Unsupported integration kind");
                 object(node,"kind","topic","qos");
-                yield new MqttIntegrationV2(text(node,"topic"),has(node,"qos")?intNumber(node,"qos"):0);
+                yield new MqttIntegrationV2(longText(node,"topic",256),has(node,"qos")?intNumber(node,"qos"):0);
             }
             default -> throw invalid("Unsupported integration kind");
         };
@@ -190,6 +238,12 @@ public class V2RequestMapper {
     private static String text(JsonNode n,String key) {
         JsonNode v=required(n,key);
         if(!v.isTextual())throw invalid("Expected string: "+key);
+        return v.asText();
+    }
+    private static String longText(JsonNode n,String key,int max) {
+        JsonNode v=required(n,key);
+        if (!v.isTextual() || v.asText().isBlank() || v.asText().codePointCount(0,v.asText().length())>max)
+            throw invalid("Invalid text: "+key);
         return v.asText();
     }
     private static String optionalText(JsonNode n,String key) {
