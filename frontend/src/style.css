@@ -64,6 +64,7 @@ body{background:#f4f7fb}
 .architecture-node--client{border-color:#16a3b6}
 .architecture-node--api{border-color:#736de0}
 .architecture-node--database{border-color:#d8a147}
+.architecture-node--broker{border-color:#b982e8}
 .architecture-node--selected{outline-color:#2a6fb7}
 .react-flow__controls button{background:#fff;color:#385773}
 .react-flow__minimap{background:#eaf0f6}
@@ -120,6 +121,7 @@ body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
 .workspace-actions select{padding:8px 10px;border-radius:7px}
 .component-icon{display:inline-flex;align-items:center;justify-content:center;font-size:1.3rem;width:1.6rem;height:1.6rem;vertical-align:middle;font-weight:800}
 .component-icon--client{color:#129daf}.component-icon--api{color:#8175e3}.component-icon--database{color:#b8832e}
+.component-icon--broker{color:#b982e8}
 .architecture-node strong{display:flex;align-items:center;gap:6px}
 [data-theme="dark"] .architecture-node small{color:#b5c8d9}
 [data-theme="dark"] .properties input:disabled,[data-theme="dark"] .properties select:disabled{background:#2b3d51;color:#b7c9d9;-webkit-text-fill-color:#b7c9d9}

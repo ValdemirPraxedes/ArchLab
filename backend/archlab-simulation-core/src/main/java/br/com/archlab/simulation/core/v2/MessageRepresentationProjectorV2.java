@@ -63,6 +63,27 @@ public final class MessageRepresentationProjectorV2 {
             limit(query.queryText(),32768); limit(query.responseText(),32768);
             return new DatabaseQueryIntegrationV2(query.queryText(),query.responseText());
         }
+        if (integration instanceof HttpGenericIntegrationV2 generic) {
+            if (!Set.of("GET","POST","PUT","PATCH","DELETE","HEAD","OPTIONS").contains(generic.method())
+                    || invalid(generic.path(),2048,true)) throw new IllegalArgumentException("Invalid generic HTTP template");
+            return generic;
+        }
+        if (integration instanceof GraphqlHttpIntegrationV2 graphql) {
+            if (!Set.of("QUERY","MUTATION").contains(graphql.operationType())
+                    || invalid(graphql.operationName(),256,true)) throw new IllegalArgumentException("Invalid GraphQL template");
+            return graphql;
+        }
+        if (integration instanceof GrpcUnaryIntegrationV2 grpc) {
+            if (invalid(grpc.service(),256,true) || invalid(grpc.method(),256,true))
+                throw new IllegalArgumentException("Invalid gRPC template");
+            return grpc;
+        }
+        if (integration instanceof CoapIntegrationV2 coap) {
+            if (!Set.of("GET","POST","PUT","DELETE").contains(coap.method())
+                    || !Set.of("CON","NON").contains(coap.mode()) || invalid(coap.resource(),2048,true))
+                throw new IllegalArgumentException("Invalid CoAP template");
+            return coap;
+        }
         throw new IllegalArgumentException("Unsupported integration template");
     }
 

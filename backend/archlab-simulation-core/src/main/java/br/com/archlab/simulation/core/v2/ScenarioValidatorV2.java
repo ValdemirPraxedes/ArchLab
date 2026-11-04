@@ -34,7 +34,9 @@ public final class ScenarioValidatorV2 {
         ConnectionV2 entry = connections.get(scenario.entryConnectionId());
         if (!identifier(scenario.entryConnectionId()) || entry == null
                 || !(components.get(entry.targetId()) instanceof ApiV2)
-                || !Objects.equals(entry.sourceId(), scenario.entryComponentId())) {
+                || !Objects.equals(entry.sourceId(), scenario.entryComponentId())
+                || entry.integration() == null
+                || entry.integration().kind() == IntegrationKindV2.WEBSOCKET) {
             add(errors, "INVALID_ENTRY_CONNECTION", "scenario.entryConnectionId",
                     "Entry connection must lead from the selected Client to an API");
         }
@@ -61,7 +63,9 @@ public final class ScenarioValidatorV2 {
             if (!identifier(selection.dependencyConnectionId()) || dependency == null
                     || !Objects.equals(dependency.sourceId(), selection.componentId())
                     || !(components.get(dependency.targetId()) instanceof ApiV2
-                        || components.get(dependency.targetId()) instanceof DatabaseV2)) {
+                        || components.get(dependency.targetId()) instanceof DatabaseV2)
+                    || dependency.integration() == null
+                    || dependency.integration().kind() == IntegrationKindV2.WEBSOCKET) {
                 add(errors, "INVALID_SCENARIO_DEPENDENCY", base + ".dependencyConnectionId",
                         "Dependency must be an outgoing API-to-API or API-to-Database connection");
             }

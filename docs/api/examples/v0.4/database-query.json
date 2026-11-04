@@ -1,0 +1,54 @@
+{
+  "architecture": {
+    "components": [
+      {
+        "id": "client-1",
+        "type": "CLI",
+        "displayName": "client-1"
+      },
+      {
+        "id": "api-1",
+        "type": "API",
+        "displayName": "api-1"
+      },
+      {
+        "id": "db-1",
+        "type": "DATABASE",
+        "displayName": "db-1",
+        "processingMs": 20
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-entry",
+        "sourceId": "client-1",
+        "targetId": "api-1",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "HTTP_REST"
+        }
+      },
+      {
+        "id": "conn-db",
+        "sourceId": "api-1",
+        "targetId": "db-1",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "DATABASE_QUERY",
+          "queryText": "SELECT id FROM orders WHERE id = ?"
+        }
+      }
+    ]
+  },
+  "scenario": {
+    "kind": "REQUEST_RESPONSE",
+    "entryComponentId": "client-1",
+    "entryConnectionId": "conn-entry",
+    "apiExecutions": [
+      {
+        "componentId": "api-1",
+        "dependencyConnectionId": "conn-db"
+      }
+    ]
+  }
+}

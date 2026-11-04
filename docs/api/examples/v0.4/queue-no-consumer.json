@@ -1,0 +1,42 @@
+{
+  "architecture": {
+    "components": [
+      {
+        "id": "client-1",
+        "type": "BOT",
+        "displayName": "client-1"
+      },
+      {
+        "id": "broker-1",
+        "type": "BROKER",
+        "displayName": "broker-1",
+        "destinations": [
+          {
+            "name": "orders",
+            "kind": "QUEUE"
+          }
+        ],
+        "subscriptions": []
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-entry",
+        "sourceId": "client-1",
+        "targetId": "broker-1",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "QUEUE",
+          "queueName": "orders"
+        }
+      }
+    ]
+  },
+  "scenario": {
+    "kind": "MESSAGE_PUBLISH",
+    "entryComponentId": "client-1",
+    "entryConnectionId": "conn-entry",
+    "destinationName": "orders",
+    "publishCount": 1
+  }
+}

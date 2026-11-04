@@ -13,7 +13,8 @@ public final class V2BodyLimitFilter extends OncePerRequestFilter {
     private static final int MAX_BYTES = 1024 * 1024;
 
     @Override protected boolean shouldNotFilter(HttpServletRequest request) {
-        return !"POST".equals(request.getMethod()) || !request.getRequestURI().startsWith("/api/v2/");
+        return !"POST".equals(request.getMethod()) ||
+                !(request.getRequestURI().startsWith("/api/v2/") || request.getRequestURI().startsWith("/api/v1/"));
     }
 
     @Override protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response,

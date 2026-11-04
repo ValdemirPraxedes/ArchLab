@@ -14,7 +14,7 @@ export function toArchitectureRequest(nodes: ArchitectureNode[], edges: Architec
     }),
     connections: edges.map((edge) => ({
       id: edge.id, sourceId: edge.source, targetId: edge.target,
-      protocol: edge.data!.protocol, latencyMs: edge.data!.latencyMs,
+      protocol: edge.data!.protocol as 'REST' | 'SOAP' | 'TCP', latencyMs: edge.data!.latencyMs,
     })),
   };
 }

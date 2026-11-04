@@ -1,0 +1,83 @@
+{
+  "architecture": {
+    "components": [
+      {
+        "id": "client-1",
+        "type": "BOT",
+        "displayName": "client-1"
+      },
+      {
+        "id": "broker-1",
+        "type": "BROKER",
+        "displayName": "broker-1",
+        "destinations": [
+          {
+            "name": "order-events",
+            "kind": "TOPIC"
+          }
+        ],
+        "subscriptions": [
+          {
+            "destinationName": "order-events",
+            "consumerComponentId": "api-1",
+            "connectionId": "conn-consumer-1"
+          },
+          {
+            "destinationName": "order-events",
+            "consumerComponentId": "api-2",
+            "connectionId": "conn-consumer-2"
+          }
+        ]
+      },
+      {
+        "id": "api-1",
+        "type": "API",
+        "displayName": "api-1"
+      },
+      {
+        "id": "api-2",
+        "type": "API",
+        "displayName": "api-2"
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-entry",
+        "sourceId": "client-1",
+        "targetId": "broker-1",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "TOPIC",
+          "topic": "order-events"
+        }
+      },
+      {
+        "id": "conn-consumer-1",
+        "sourceId": "broker-1",
+        "targetId": "api-1",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "TOPIC",
+          "topic": "order-events"
+        }
+      },
+      {
+        "id": "conn-consumer-2",
+        "sourceId": "broker-1",
+        "targetId": "api-2",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "TOPIC",
+          "topic": "order-events"
+        }
+      }
+    ]
+  },
+  "scenario": {
+    "kind": "MESSAGE_PUBLISH",
+    "entryComponentId": "client-1",
+    "entryConnectionId": "conn-entry",
+    "destinationName": "unknown",
+    "publishCount": 1
+  }
+}
