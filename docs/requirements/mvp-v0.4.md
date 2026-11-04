@@ -190,7 +190,67 @@ Estas sequências são **exemplos conceituais**, não nomes normativos de evento
 - Não incluir propriedades de WebSocket, MQTT, Queue ou Topic nesta decisão; serão detalhadas em etapas específicas.
 - A definição exata dos DTOs, eventos de trace, validações formais e métricas permanece **pendente de especificação**.
 
-## 8. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
+## 8. Simulação semântica WebSocket — DEC-09
+
+**Status: aprovado em 2026-11-04.** Esta decisão aplica-se às conexões `Cliente → API` e `API → API` aprovadas na DEC-06. O WebSocket será representado por **sessão virtual controlada pelo relógio virtual**, sem abrir sockets, conexões externas ou executar frames reais.
+
+### DEC-09.1 — Ciclo de vida da sessão
+
+1. **Abertura:** o componente de origem solicita a conexão; o destino aceita ou rejeita.
+2. **Estabelecimento:** ao aceitar, a sessão passa a permitir mensagens independentes em ambos os sentidos.
+3. **Troca de mensagens:** origem e destino podem enviar mensagens, inclusive sem requisição precedente; cada mensagem é agendada e entregue segundo a latência da simulação.
+4. **Encerramento:** a sessão termina normalmente (automático ao final da sequência ou por evento explícito), por falha ou por timeout.
+
+A direção `Origem → Destino` na aresta identifica **quem inicia a sessão**, e não restringe a direção das mensagens após sua abertura. O fluxo semântico também vale para `API → API`.
+
+### DEC-09.2 — Propriedades da conexão
+
+| Propriedade | Regra aprovada |
+| --- | --- |
+| Caminho da conexão | Caminho lógico configurável (exemplo ilustrativo: `/ws/events`) |
+| Latência | Reutilizar o mecanismo existente, aplicado às mensagens |
+| Timeout de abertura | Configurável para estabelecer sessão |
+| Timeout de inatividade | Opcional |
+| Mensagens da sessão | Sequência configurável de mensagens lógicas, sem payload de rede real |
+| Emissor por mensagem | Origem ou Destino |
+| Intervalo entre mensagens | Tempo virtual em milissegundos |
+| Encerramento | Automático após a última mensagem ou por evento de encerramento configurado |
+
+O editor deverá disponibilizar uma seção contextual **Mensagens da sessão**, preferencialmente mantendo o painel simples e a fluidez da v0.3. Nomes de mensagem como `subscribe`, `subscribed` e `notification` e valores numéricos do protótipo são **exemplos**, não defaults normativos.
+
+### DEC-09.3 — Estados e eventos observáveis
+
+Estados semânticos da sessão: `CONNECTING`, `OPEN`, `CLOSING` e `CLOSED`. Falhas e timeouts devem aparecer explicitamente como resultados de erro; a representação formal desses resultados na máquina de estados será detalhada na especificação técnica.
+
+Eventos **candidatos** à timeline:
+- `WS_CONNECT_REQUESTED`
+- `WS_CONNECTED`
+- `WS_MESSAGE_SENT`
+- `WS_MESSAGE_RECEIVED`
+- `WS_CLOSE_REQUESTED`
+- `WS_CLOSED`
+- `WS_TIMEOUT`
+- `WS_FAILED`
+
+**Os nomes acima não determinam a criação obrigatória de oito novos eventos internos.** Reutilizar eventos existentes com metadados de perfil sempre que isso mantiver a semântica observável.
+
+### DEC-09.4 — Regras de execução
+
+1. **Uma sessão virtual por conexão WebSocket durante uma execução**, neste escopo.
+2. Após abrir, **ambos os participantes podem enviar mensagens** em ordem configurável e por agendamento determinístico no relógio virtual, sem exigir resposta obrigatória para cada envio.
+3. A latência aplica-se **a cada mensagem**; não exigir que a mensagem anterior tenha sido recebida para agendar a próxima, desde que seus horários e pré-condições permitam.
+4. Se a abertura for rejeitada ou falhar, **não enviar mensagens de aplicação** nessa sessão.
+5. Registrar encerramento normal ou por falha/timeout e o resultado correspondente na timeline.
+6. Uma simulação com sessão WebSocket **não deve ser considerada globalmente concluída enquanto a sessão permanecer aberta**; falha/timeout terminal também conta como encerramento.
+7. Manter cenários v0.3 e demais perfis funcionando sem regressão.
+
+### DEC-09.5 — Limites e detalhamento futuro
+
+Ficam fora do escopo inicial: Ping/Pong semântico detalhado, reconexão automática, múltiplas sessões simultâneas por conexão, frames WebSocket reais e sockets reais.
+
+Ainda precisam ser especificados antes da implementação: valores padrão e limites dos timeouts, validação dos intervalos das mensagens, política de ordenação em tempos virtuais iguais, condição formal da conclusão global, relação com fluxo principal de simulação, campos do contrato API e testes determinísticos. **A aprovação do comportamento não equivale à aprovação de DTOs ou de uma alteração específica no motor.**
+
+## 9. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
 
 | Grupo sugerido | Assuntos a especificar |
 | --- | --- |
@@ -201,12 +261,12 @@ Estas sequências são **exemplos conceituais**, não nomes normativos de evento
 
 **Observação:** numeração e conteúdo são apenas uma proposta de organização. Nenhum RF v0.4 foi fechado ou aprovado individualmente até aqui.
 
-## 9. Questões pendentes para as próximas discussões
+## 10. Questões pendentes para as próximas discussões
 
 1. **Compatibilidade aprovada:** detalhar papéis de produtor, consumidor e assinante e regras de configuração sem alterar a matriz aprovada.
 2. **Configuração mínima aprovada para seis perfis:** detalhar defaults, limites, contratos de dados e propriedades ainda pendentes para WebSocket e mensageria.
 3. **Requisição/resposta:** formalizar as diferenças já aprovadas em eventos, parâmetros e critérios de aceitação, sem duplicar a engine.
-4. **WebSocket:** estabelecimento de sessão, direção das mensagens, sequência e conclusão.
+4. **WebSocket aprovado:** especificar defaults, validações, eventos internos/DTOs e regras formais de conclusão para o modelo de sessão definido na DEC-09.
 5. **Broker:** configuração de filas/tópicos/assinaturas, fila vazia, número de consumidores, fan-out, latências e consumo pela API existente.
 6. **Mensageria:** o que significa conclusão da execução principal versus entregas assíncronas? Quais eventos e métricas devem aparecer?
 7. **Validação:** regras para rejeitar topologias incompatíveis, conexões duplicadas e cenários inválidos.
@@ -214,7 +274,7 @@ Estas sequências são **exemplos conceituais**, não nomes normativos de evento
 9. **Limites técnicos:** impacto no contrato OpenAPI, modelo do frontend e motor Java; necessidade de ADRs e de documentação de integração.
 10. **Fatiamento:** confirmar entregas pequenas e dependências antes de criar as tarefas no Trello.
 
-## 10. Método de trabalho documental
+## 11. Método de trabalho documental
 
 - Registrar cada nova decisão neste arquivo, identificando claramente **aprovado**, **proposto** ou **pendente**.
 - Não introduzir requisitos extras sem debate e aprovação.
@@ -222,7 +282,7 @@ Estas sequências são **exemplos conceituais**, não nomes normativos de evento
 - Fazer commits incrementais nesta branch de planejamento.
 - **Não abrir PR ou fazer merge até o responsável solicitar.**
 
-## 11. Referências históricas
+## 12. Referências históricas
 
 - [Requisitos v0.3](v0.3-client-requirements.md)
 - [Catálogo discutido de clientes e perfis](v0.3-clients.md)
