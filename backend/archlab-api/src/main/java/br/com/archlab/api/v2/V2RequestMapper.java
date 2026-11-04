@@ -24,12 +24,38 @@ public class V2RequestMapper {
             switch(type) {
                 case "CLIENT" -> { object(c,"id","type","displayName");
                     components.add(new ClientV2(text(c,"id"),text(c,"displayName"))); }
+                case "WEB_BROWSER", "MOBILE_APP", "DESKTOP_APP", "CLI", "BOT", "EMBEDDED_SYSTEM" -> {
+                    if (!canonical) throw invalid("Unsupported component type");
+                    object(c,"id","type","displayName");
+                    components.add(new ClientV2(text(c,"id"),text(c,"displayName"),
+                            ComponentTypeV2.valueOf(type)));
+                }
                 case "API" -> { object(c,"id","type","displayName","preProcessingMs","postProcessingMs");
                     components.add(new ApiV2(text(c,"id"),text(c,"displayName"),
                             canonical ? numberOrZero(c,"preProcessingMs") : number(c,"preProcessingMs"),
                             canonical ? numberOrZero(c,"postProcessingMs") : number(c,"postProcessingMs"))); }
                 case "DATABASE" -> { object(c,"id","type","displayName","processingMs");
                     components.add(new DatabaseV2(text(c,"id"),text(c,"displayName"),number(c,"processingMs"))); }
+                case "BROKER" -> {
+                    if (!canonical) throw invalid("Unsupported component type");
+                    object(c,"id","type","displayName","destinations","subscriptions");
+                    List<BrokerDestinationV2> destinations=new ArrayList<>();
+                    for (JsonNode d:arrayOrEmpty(c,"destinations")) {
+                        object(d,"name","kind");
+                        IntegrationKindV2 destinationKind;
+                        try { destinationKind=IntegrationKindV2.valueOf(text(d,"kind")); }
+                        catch (IllegalArgumentException ex) { throw invalid("Unsupported broker destination kind"); }
+                        if (!destinationKind.isMessaging()) throw invalid("Unsupported broker destination kind");
+                        destinations.add(new BrokerDestinationV2(text(d,"name"),destinationKind));
+                    }
+                    List<BrokerSubscriptionV2> subscriptions=new ArrayList<>();
+                    for (JsonNode s:arrayOrEmpty(c,"subscriptions")) {
+                        object(s,"destinationName","consumerComponentId","connectionId");
+                        subscriptions.add(new BrokerSubscriptionV2(text(s,"destinationName"),
+                                text(s,"consumerComponentId"),text(s,"connectionId")));
+                    }
+                    components.add(new BrokerV2(text(c,"id"),text(c,"displayName"),destinations,subscriptions));
+                }
                 default -> throw invalid("Unsupported component type");
             }
         }
@@ -37,7 +63,8 @@ public class V2RequestMapper {
         for(JsonNode c:array(node,"connections")) {
             object(c,"id","sourceId","targetId","latencyMs","integration","apiProcessingOverride");
             connections.add(new ConnectionV2(text(c,"id"),text(c,"sourceId"),text(c,"targetId"),
-                    canonical ? numberOrZero(c,"latencyMs") : number(c,"latencyMs"),integration(required(c,"integration")),
+                    canonical ? numberOrZero(c,"latencyMs") : number(c,"latencyMs"),
+                    integration(required(c,"integration"),canonical),
                     has(c,"apiProcessingOverride") ? override(required(c,"apiProcessingOverride")) : null));
         }
         return new ArchitectureV2(components,connections);
@@ -78,7 +105,7 @@ public class V2RequestMapper {
         return new Request(architecture,new ScenarioV2(text(s,"entryComponentId"),
                 text(s,"entryConnectionId"),selections));
     }
-    private IntegrationV2 integration(JsonNode node) {
+    private IntegrationV2 integration(JsonNode node, boolean canonical) {
         String kind=text(node,"kind");
         return switch(kind) {
             case "HTTP_REST" -> {
@@ -99,6 +126,21 @@ public class V2RequestMapper {
             case "DATABASE_QUERY" -> {
                 object(node,"kind","queryText","responseText");
                 yield new DatabaseQueryIntegrationV2(optionalText(node,"queryText"),optionalText(node,"responseText"));
+            }
+            case "QUEUE" -> {
+                if (!canonical) throw invalid("Unsupported integration kind");
+                object(node,"kind","queueName");
+                yield new QueueIntegrationV2(text(node,"queueName"));
+            }
+            case "TOPIC" -> {
+                if (!canonical) throw invalid("Unsupported integration kind");
+                object(node,"kind","topic");
+                yield new TopicIntegrationV2(text(node,"topic"));
+            }
+            case "MQTT" -> {
+                if (!canonical) throw invalid("Unsupported integration kind");
+                object(node,"kind","topic","qos");
+                yield new MqttIntegrationV2(text(node,"topic"),has(node,"qos")?intNumber(node,"qos"):0);
             }
             default -> throw invalid("Unsupported integration kind");
         };
@@ -141,6 +183,9 @@ public class V2RequestMapper {
         JsonNode v=required(n,key);
         if(!v.isArray())throw invalid("Expected array: "+key);
         return v;
+    }
+    private static Iterable<JsonNode> arrayOrEmpty(JsonNode n,String key) {
+        return has(n,key) ? array(n,key) : List.of();
     }
     private static String text(JsonNode n,String key) {
         JsonNode v=required(n,key);

@@ -11,6 +11,8 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -138,5 +140,39 @@ class V4ApiConsolidationTest {
         var response = post("/api/v1/architectures/validate", legacy);
         assertEquals(200, response.statusCode());
         assertTrue(json.readTree(response.body()).get("valid").asBoolean());
+    }
+
+    @Test void sixSpecificClientTypesWorkOnCanonicalV1Only() throws Exception {
+        for (String type : new String[]{"WEB_BROWSER", "MOBILE_APP", "DESKTOP_APP", "CLI", "BOT", "EMBEDDED_SYSTEM"}) {
+            String architecture = ARCHITECTURE.replace("\"type\":\"CLIENT\"", "\"type\":\"" + type + "\"");
+            var validation = post("/api/v1/architectures/validate", architecture);
+            assertEquals(200, validation.statusCode(), type);
+            assertTrue(json.readTree(validation.body()).get("valid").asBoolean(), type);
+            var execution = post("/api/v1/simulations",
+                    "{\"architecture\":" + architecture + ",\"scenario\":" + SCENARIO + "}");
+            assertEquals(200, execution.statusCode(), type);
+            assertEquals(260, json.readTree(execution.body()).get("execution").get("totalDurationMs").asInt(), type);
+            var oldRoute = post("/api/v2/architectures/validate", architecture);
+            assertEquals(400, oldRoute.statusCode(), type);
+        }
+    }
+
+    @Test void brokerExamplesValidateGraphWithoutClaimingExecution() throws Exception {
+        for (String file : new String[]{"queue-two-consumers.json", "queue-no-consumer.json",
+                "topic-two-subscribers.json", "mqtt-qos0.json"}) {
+            String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", file));
+            JsonNode architecture = json.readTree(fixture).get("architecture");
+            var response = post("/api/v1/architectures/validate", architecture.toString());
+            assertEquals(200, response.statusCode(), file);
+            assertTrue(json.readTree(response.body()).get("valid").asBoolean(), file + " " + response.body());
+        }
+    }
+
+    @Test void invalidMqttQosIsRejectedByGraphValidator() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "mqtt-qos1.invalid.json"));
+        JsonNode architecture = json.readTree(fixture).get("architecture");
+        var response = post("/api/v1/architectures/validate", architecture.toString());
+        assertEquals(200, response.statusCode());
+        assertFalse(json.readTree(response.body()).get("valid").asBoolean());
     }
 }
