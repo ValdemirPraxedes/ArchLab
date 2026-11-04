@@ -5,6 +5,9 @@ info:
   description: Contrato canônico v1 em evolução para a v0.4; simulação semântica determinística sem protocolos de rede reais.
 servers:
 - url: /
+# API de simulacao local sem mecanismo de autenticacao especificado nesta versao.
+# Revisar quando houver requisitos reais de autenticacao/autorizacao.
+security: []
 tags:
 - name: Architectures
   description: Validação estrutural do grafo.
@@ -40,6 +43,8 @@ paths:
               examples:
                 sample:
                   $ref: '#/components/examples/validationValid'
+                invalid:
+                  $ref: '#/components/examples/validationInvalid'
         '400':
           $ref: '#/components/responses/BadRequest'
         '413':
@@ -75,6 +80,8 @@ paths:
               examples:
                 sample:
                   $ref: '#/components/examples/validationValid'
+                invalid:
+                  $ref: '#/components/examples/validationInvalid'
         '400':
           $ref: '#/components/responses/BadRequest'
         '413':
