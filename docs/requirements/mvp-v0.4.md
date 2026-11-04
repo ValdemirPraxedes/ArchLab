@@ -1,6 +1,6 @@
 # ArchLab — Planejamento da v0.4: perfis de comunicação
 
-> **Estado: planejamento em andamento.** Este documento consolida as definições aprovadas e registra propostas ainda sujeitas a refinamento. **Não autoriza implementação.** Será atualizado nesta branch durante as discussões; abrir PR para `develop` somente quando o responsável solicitar.
+> **Atualização arquitetural aprovada (2026-11-04):** manter somente a API pública `/api/v1`, migrar/remover `/api/v2` e não criar `/api/v4`. Consulte [ADR-v0.4](../architecture/ADR-v0.4.md) e RF-V4-025. Esta revisão prevalece sobre qualquer sugestão anterior de uma API pública v4.\n\n> **Estado: planejamento em andamento.** Este documento consolida as definições aprovadas e registra propostas ainda sujeitas a refinamento. **Não autoriza implementação.** Será atualizado nesta branch durante as discussões; abrir PR para `develop` somente quando o responsável solicitar.
 
 ## 1. Objetivo
 
@@ -425,7 +425,7 @@ Antes de implementar, verificar o backend atual e definir em especificação nor
 
 A DEC-11 **não aprova automaticamente alterações internas na engine nem novos contratos OpenAPI**: essas mudanças devem ser justificadas e detalhadas no desenho técnico.
 
-## 11. Requisitos funcionais v0.4 e critérios de aceitação — RF-V4-001 a RF-V4-024
+## 11. Requisitos funcionais v0.4 e critérios de aceitação — RF-V4-001 a RF-V4-025
 
 **Status: aprovado em 2026-11-04.** Esta seção formaliza as decisões DEC-01 a DEC-11 como requisitos verificáveis. A definição de classes, contratos OpenAPI, nomes finais dos eventos, valores numéricos padrão e estratégia concreta de implementação **permanece pendente de especificação arquitetural**. Os requisitos se aplicam à **simulação semântica**, não à execução real dos protocolos de rede.
 
@@ -517,6 +517,20 @@ Estes cenários são amostras mínimas e **não restringem a compatibilidade dos
 4. **Entrega 4 — Integração e validação:** RF-V4-019 a 024, com capacidades de execução e correlação **implementadas antecipadamente quando forem pré-requisitos** das entregas anteriores.
 
 A decomposição em tarefas/PRs, dependências detalhadas e contratos técnicos será definida após os ADRs e as especificações. **Nenhuma implementação foi autorizada por esta seção.**
+
+### Grupo G — Consolidação da API pública (requisito adicional aprovado)
+
+| ID | Requisito | Critério de aceitação verificável |
+| --- | --- | --- |
+| **RF-V4-025** | Consolidar todas as funcionalidades da API v1 e v2 em uma **API pública única `/api/v1`**, incluindo os recursos da v0.4, e retirar a API pública `/api/v2` após migração. | OpenAPI canônico atualizado em `docs/api/openapi.yaml`; endpoints de validação de arquitetura, validação de cenário e simulação disponíveis sob `/api/v1`; frontend migrado; testes de contrato e regressão cobrem recursos de versões anteriores e v0.4; não existem rotas públicas `/api/v2` ou `/api/v4` ao final. Eventuais mudanças incompatíveis nos payloads v1 são identificadas, documentadas e testadas. |
+
+**Decisão arquitetural vinculada:** [ADR-V4-006 — API pública única /api/v1](../architecture/ADR-v0.4.md#adr-v4-006--api-pública-única-sob-apiv1-revisada-e-aprovada).
+
+**Ordem obrigatória:** inventário de contratos e consumidores → definição do contrato v1 consolidado → migração do backend/frontend e testes → retirada final das rotas v2. A consolidação da API v1 é a **primeira frente do backend** da v0.4, antes dos novos perfis. O código do motor legado não deve ser descartado apenas porque carrega sufixo V2.
+
+### Revisão do planejamento de entregas após RF-V4-025
+
+A divisão anterior em quatro entregas permanece como orientação para os dez perfis, mas **é precedida por uma etapa de consolidação da API v1**. As tarefas finais serão detalhadas depois dos ADRs e do contrato canônico, sempre com backend antes do frontend.
 
 ## 12. Questões pendentes para as próximas discussões
 
