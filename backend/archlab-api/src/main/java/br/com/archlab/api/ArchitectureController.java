@@ -131,9 +131,34 @@ public class ArchitectureController {
         for (Map<String,Object> representation : representations) {
             @SuppressWarnings("unchecked") Map<String,Object> integration =
                     (Map<String,Object>) representation.get("integration");
-            integration.values().removeIf(java.util.Objects::isNull);
+            if (integration.get("request") instanceof br.com.archlab.simulation.core.v2.HttpRequestV2 requestBody) {
+                Map<String,Object> projected = new LinkedHashMap<>();
+                projected.put("method", requestBody.method().name());
+                projected.put("path", requestBody.path());
+                if (requestBody.headers() != null) projected.put("headers", requestBody.headers());
+                if (requestBody.body() != null) projected.put("body", requestBody.body());
+                integration.put("request", projected);
+            }
+            if (integration.get("response") instanceof br.com.archlab.simulation.core.v2.HttpResponseV2 responseBody) {
+                Map<String,Object> projected = new LinkedHashMap<>();
+                projected.put("statusCode", responseBody.statusCode());
+                if (responseBody.headers() != null) projected.put("headers", responseBody.headers());
+                if (responseBody.body() != null) projected.put("body", responseBody.body());
+                integration.put("response", projected);
+            }
+            stripOptionalNulls(integration);
         }
         return result;
+    }
+
+    private static void stripOptionalNulls(Map<String,Object> fields) {
+        fields.values().removeIf(java.util.Objects::isNull);
+        for (Object value : fields.values()) {
+            if (value instanceof Map<?,?> nested) {
+                @SuppressWarnings("unchecked") Map<String,Object> typed = (Map<String,Object>) nested;
+                stripOptionalNulls(typed);
+            }
+        }
     }
 
     private static boolean legacy(JsonNode input) {

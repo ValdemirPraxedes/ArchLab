@@ -181,6 +181,16 @@ class V4ApiConsolidationTest {
         }
     }
 
+    @Test void canonicalHttpRepresentationOmitsAbsentOptionalFields() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "database-query.json"));
+        var response = post("/api/v1/simulations", fixture);
+        assertEquals(200, response.statusCode());
+        JsonNode integration = json.readTree(response.body()).get("messageRepresentations").get(0).get("integration");
+        assertEquals("HTTP_REST", integration.get("kind").asText());
+        assertNull(integration.get("request").get("body"));
+        assertNull(integration.get("response").get("body"));
+    }
+
     @Test void queueWithoutConsumerTimesOutAndPublishStillCompletes() throws Exception {
         String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "queue-no-consumer.json"));
         var response = post("/api/v1/simulations", fixture);

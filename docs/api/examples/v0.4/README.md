@@ -9,7 +9,7 @@ Cada JSON é uma requisição completa para `POST /api/v1/scenarios/validate` ou
 | `database-query.json` | Integração legada API → Database |
 | `websocket-session.json` | Sessão bidirecional com duas mensagens |
 | `queue-two-consumers.json` | Queue com dois consumidores elegíveis |
-| `queue-no-consumer.json` | Queue sem consumidor, para teste posterior de timeout virtual |
+| `queue-no-consumer.json` | Queue sem consumidor, timeout virtual de 30.000 ms |
 | `topic-two-subscribers.json` | Topic com duas assinaturas elegíveis |
 | `mqtt-qos0.json` | MQTT QoS 0 com tópico exato |
 | `mqtt-qos1.invalid.json` | QoS não permitido pelo schema |
@@ -23,4 +23,10 @@ npm install
 npm run validate
 ```
 
-O verificador confirma formato, entrada, destino e coerência básica das assinaturas. Resultados de execução como round-robin, fan-out e timeout dependem de testes do backend após implementação.
+O verificador confirma formato, entrada, destino e coerência básica das assinaturas. Para conferir as respostas reais dos 12 exemplos positivos e os erros dos 3 negativos, inicie o backend e execute:
+
+```sh
+ARCHLAB_API_URL=http://localhost:8080 npm run verify:live
+```
+
+`verify:live` valida cada resposta 200 contra `SimulationResponse` do OpenAPI 3.1 e confere sequência do trace e limites do relógio virtual. O backend também testa round-robin, fan-out, timeout e regressão das rotas v1/v2 em `mvn test`.
