@@ -910,6 +910,7 @@ components:
           - COMPONENT
           - REQUEST
           - EXCHANGE
+          - WEBSOCKET_SESSION
         entityId:
           $ref: '#/components/schemas/Identifier'
         previousState:
@@ -968,11 +969,14 @@ components:
           enum:
           - REQUEST
           - RESPONSE
+          - MESSAGE
         intent:
           type: string
           enum:
           - API_REQUEST
           - DATABASE_QUERY
+          - WEBSOCKET_OPEN
+          - WEBSOCKET_MESSAGE
       required:
       - sequence
       - timestampMs

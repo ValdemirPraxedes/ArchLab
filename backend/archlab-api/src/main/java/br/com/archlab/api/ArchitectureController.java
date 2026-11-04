@@ -11,6 +11,8 @@ import br.com.archlab.simulation.core.validation.ValidationResult;
 import br.com.archlab.simulation.core.validation.Violation;
 import br.com.archlab.simulation.core.v2.ArchitectureGraphValidatorV2;
 import br.com.archlab.simulation.core.v2.ScenarioValidatorV2;
+import br.com.archlab.simulation.core.v2.WebSocketIntegrationV2;
+import br.com.archlab.simulation.core.v4.WebSocketRuntimeV4;
 import tools.jackson.databind.JsonNode;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -63,6 +65,25 @@ public class ArchitectureController {
         if (legacy(input)) {
             Architecture architecture = mapper.toDomain(input);
             return responseMapper.map(engine.execute(architecture));
+        }
+        JsonNode scenarioNode = input == null ? null : input.get("scenario");
+        JsonNode kindNode = scenarioNode == null ? null : scenarioNode.get("kind");
+        if (kindNode != null && "WEBSOCKET_SESSION".equals(kindNode.asText())) {
+            ValidationResult validation = newScenarios.validate(input, canonicalMapper);
+            if (!validation.valid()) return invalid(validation, httpRequest);
+            var architecture = canonicalMapper.canonicalArchitecture(input.get("architecture"));
+            String entryId = scenarioNode.get("entryConnectionId").asText();
+            var connection = architecture.connections().stream().filter(c -> entryId.equals(c.id())).findFirst().orElseThrow();
+            try {
+                var result = new WebSocketRuntimeV4().run((WebSocketIntegrationV2) connection.integration(),
+                        connection.latencyMs());
+                return new WebSocketResponseMapperV4().map(architecture, connection,
+                        (WebSocketIntegrationV2) connection.integration(),result);
+            } catch (ArithmeticException | IllegalArgumentException ex) {
+                return invalid(new ValidationResult(false, List.of(new Violation(
+                        "EXCESSIVE_EXECUTION_DURATION", "execution.totalDurationMs",
+                        "WebSocket execution exceeds virtual limits"))), httpRequest);
+            }
         }
         var request = canonicalMapper.canonicalRequest(input);
         var valid = canonicalScenarios.validate(request.architecture(), request.scenario());

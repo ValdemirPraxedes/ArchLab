@@ -249,4 +249,70 @@ class V4ApiConsolidationTest {
             }
         }
     }
+
+    @Test void websocketSessionRunsBidirectionallyUnderVirtualClock() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "websocket-session.json"));
+        var response = post("/api/v1/simulations", fixture);
+        assertEquals(200, response.statusCode(), response.body());
+        JsonNode result = json.readTree(response.body());
+        assertEquals("COMPLETED", result.get("execution").get("mainStatus").asText());
+        assertEquals(55, result.get("execution").get("totalDurationMs").asInt());
+        assertEquals(3, result.get("timeline").size());
+        assertEquals("WEBSOCKET_SESSION", result.get("resourceStates").get(0).get("kind").asText());
+        assertEquals("WEBSOCKET", result.get("messageRepresentations").get(0)
+                .get("integration").get("kind").asText());
+    }
+
+    @Test void websocketConnectTimeoutPreventsMessages() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "websocket-session.json"))
+                .replace("\"connectTimeoutMs\": 5000", "\"connectTimeoutMs\": 5");
+        var response = post("/api/v1/simulations", fixture);
+        assertEquals(200, response.statusCode(), response.body());
+        JsonNode result = json.readTree(response.body());
+        assertEquals("TIMED_OUT", result.get("execution").get("status").asText());
+        assertEquals(5, result.get("execution").get("totalDurationMs").asInt());
+        assertEquals(0, result.get("timeline").size());
+    }
+
+    @Test void websocketIdleTimeoutEndsAfterLastDeliveredMessage() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "websocket-session.json"))
+                .replace("\"idleTimeoutMs\": null", "\"idleTimeoutMs\": 5");
+        var response = post("/api/v1/simulations", fixture);
+        assertEquals(200, response.statusCode(), response.body());
+        JsonNode result = json.readTree(response.body());
+        assertEquals("TIMED_OUT", result.get("execution").get("status").asText());
+        assertEquals(25, result.get("execution").get("totalDurationMs").asInt());
+        assertEquals(2, result.get("timeline").size());
+    }
+
+    @Test void websocketCanStartFromOneApiToAnother() throws Exception {
+        String request = """
+            {"architecture":{"components":[
+              {"id":"api-a","type":"API","displayName":"API A"},
+              {"id":"api-b","type":"API","displayName":"API B"}],
+              "connections":[{"id":"ab","sourceId":"api-a","targetId":"api-b","latencyMs":2,
+                "integration":{"kind":"WEBSOCKET","path":"/events",
+                  "messages":[{"sender":"SOURCE","intervalMs":0},{"sender":"TARGET","intervalMs":3}]}}]},
+             "scenario":{"kind":"WEBSOCKET_SESSION","entryComponentId":"api-a","entryConnectionId":"ab"}}
+            """;
+        var response = post("/api/v1/simulations", request);
+        assertEquals(200, response.statusCode(), response.body());
+        JsonNode result = json.readTree(response.body());
+        assertEquals("COMPLETED", result.get("execution").get("status").asText());
+        assertEquals(9, result.get("execution").get("totalDurationMs").asInt());
+    }
+
+    @Test void explicitWebSocketCloseIsVisibleInTrace() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "websocket-session.json"))
+                .replace("\"closeMode\": \"AUTOMATIC\"", "\"closeMode\": \"EXPLICIT\"");
+        var response = post("/api/v1/simulations", fixture);
+        assertEquals(200, response.statusCode(), response.body());
+        JsonNode trace = json.readTree(response.body()).get("trace");
+        boolean closing = false;
+        for (JsonNode entry : trace) {
+            if (entry.has("newState") && "CLOSING".equals(entry.get("newState").asText())
+                    && "EXPLICIT_CLOSE".equals(entry.get("cause").asText())) closing = true;
+        }
+        assertTrue(closing);
+    }
 }
