@@ -132,6 +132,25 @@ npx --yes @redocly/cli lint docs/api/openapi.yaml
 
 **Revalidação:** as correções foram feitas no GitHub; o Redocly **não foi novamente executado** após esse commit neste ambiente. O responsável precisa atualizar sua branch e repetir lint e typegen. A existência do aviso de licença não deve ser apresentada como um contrato totalmente livre de warnings.
 
+## 3C. Revalidação Redocly e typegen realizada pelo responsável — 2026-11-04
+
+Após atualizar a branch documental até `6b1ac17`, o responsável executou no Windows, a partir da raiz do repositório:
+
+```powershell
+npx --yes @redocly/cli lint docs/api/openapi.yaml
+npx --yes openapi-typescript docs/api/openapi.yaml -o backend/target/schema-v1.d.ts
+```
+
+**Evidências reportadas:**
+- Redocly: `Woohoo! Your API description is valid.` — **0 erros, 1 warning**, validação em **152 ms**, utilizando a configuração recomendada embutida.
+- Único warning: `info-license` no campo `info`, porque a licença ainda não está declarada no contrato.
+- `openapi-typescript 7.13.0`: geração do arquivo `backend/target/schema-v1.d.ts` **concluída com sucesso** em **70,5 ms**.
+- A branch local foi atualizada por fast-forward (`f80e044..6b1ac17`).
+
+**Conclusão:** parsing/validação Redocly e geração de tipos TypeScript **aprovados com ressalva documental de licença**. Ainda é preciso testar exemplos JSON contra schemas, compatibilidade dos consumidores v1/v2 e integração do frontend/backend. **Não interpretar typegen como testes de DTO Java ou de runtime.**
+
+O aviso de licença não deve ser ocultado com uma identificação fictícia; sua resolução depende de decisão explícita sobre a licença do projeto.
+
 ## 4. Critério de saída da Etapa 12
 
 Somente declarar o contrato **validado** após parse, validação OpenAPI, exemplos e typegen passarem e eventuais colisões serem resolvidas. Até lá, `docs/api/openapi.yaml` é **rascunho**, e nenhuma implementação deve tratá-lo como contrato homologado.
