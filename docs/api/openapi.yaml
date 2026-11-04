@@ -1391,7 +1391,7 @@ components:
                 statusCode: 200
                 body: '{"disponivel":true}'
         scenario: &id009
-      kind: REQUEST_RESPONSE
+          kind: REQUEST_RESPONSE
           entryComponentId: client-web
           entryConnectionId: conn-1
           apiExecutions:
@@ -1411,6 +1411,7 @@ components:
         execution:
           id: exec-001
           status: COMPLETED
+          mainStatus: COMPLETED
           requestId: req-001
           entryComponentId: client-web
           entryConnectionId: conn-1
