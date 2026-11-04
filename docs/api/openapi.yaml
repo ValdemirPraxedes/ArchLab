@@ -487,15 +487,17 @@ components:
           type: string
           const: API
         preProcessingMs:
-          $ref: '#/components/schemas/DurationMs'
+          allOf:
+          - $ref: '#/components/schemas/DurationMs'
+          default: 0
         postProcessingMs:
-          $ref: '#/components/schemas/DurationMs'
+          allOf:
+          - $ref: '#/components/schemas/DurationMs'
+          default: 0
       required:
       - id
       - type
       - displayName
-      - preProcessingMs
-      - postProcessingMs
     Database:
       type: object
       additionalProperties: false
@@ -624,7 +626,7 @@ components:
       - integration
       description: Conexão lógica dirigida; resposta percorre a conexão em sentido inverso. Unicidade por par
         não ordenado de componentes. apiProcessingOverride é opcional, aplicável só à API de destino em Client→API ou API→API;
-        se ausente, prevalecem os valores obrigatórios preProcessingMs/postProcessingMs de Api. DATABASE_QUERY não aceita override.
+        se ausente, prevalecem os valores de Api (padrão 0 ms para propriedades omitidas). DATABASE_QUERY não aceita override.
     Architecture:
       type: object
       additionalProperties: false
