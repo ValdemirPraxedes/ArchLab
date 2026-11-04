@@ -134,7 +134,63 @@ A aprovação **inclui explicitamente WebSocket em conexões `API → API`**, al
 - Campos configuráveis por perfil, critérios de simulação, eventos e métricas.
 - Limites de simultaneidade e compatibilidade com as restrições estruturais atuais do motor.
 
-## 7. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
+## 7. Configuração dos perfis de requisição/resposta — DEC-08
+
+**Status: aprovado em 2026-11-04.** Esta decisão detalha os seis perfis REST, SOAP, HTTP genérico, GraphQL (HTTP), gRPC unary e CoAP, respeitando a matriz aprovada na DEC-06. É uma **configuração semântica**, não execução de protocolos reais.
+
+### DEC-08.1 — Painel contextual de propriedades
+
+Ao selecionar uma conexão, o editor apresenta o perfil de comunicação e propriedades comuns; exibe **somente os campos específicos do perfil selecionado**. Trocar de perfil deve validar os campos e impedir que dados incompatíveis tornem o modelo inválido. Usar valores padrão para permitir simulação básica sem preenchimento extensivo.
+
+As mesmas opções são permitidas para os seis tipos de cliente da v0.3. Configurações precisam ser preservadas no modelo do editor e representadas na simulação sem alterar o tipo visual do cliente.
+
+### DEC-08.2 — Campos comuns
+
+| Propriedade | Regra aprovada |
+| --- | --- |
+| Nome da conexão | Opcional |
+| Perfil de comunicação | Obrigatório, limitado pelos tipos de origem/destino |
+| Latência | Reutilizar o comportamento/configuração já existentes |
+| Timeout | Configurável quando aplicável ao perfil |
+| Tempo de processamento | Permanece propriedade do componente que executa a operação; não confundir com latência de rede |
+| Payload | Representação lógica simples e inicialmente opcional, sem payload real |
+| Resultado | Simulação registra sucesso, falha ou timeout conforme as regras de execução a detalhar |
+
+**Nota:** números exibidos no protótipo (por exemplo, 50 ms de latência ou 3000 ms de timeout) são valores ilustrativos; os valores padrão normativos e seus limites devem ser definidos na especificação de parâmetros.
+
+### DEC-08.3 — Campos específicos por perfil
+
+| Perfil | Propriedades aprovadas | Intenção semântica |
+| --- | --- | --- |
+| REST (HTTP) | Método HTTP e caminho/recurso | Requisição, processamento e resposta |
+| SOAP (HTTP) | Operação SOAP e ação SOAP opcional | Chamada de operação e resposta, sem processar XML |
+| HTTP genérico | Método HTTP e caminho/recurso | Requisição/resposta sem impor modelagem REST |
+| GraphQL (HTTP) | Tipo de operação Query/Mutation e nome da operação | Execução semântica da operação, sem interpretar schema GraphQL |
+| gRPC unary | Nome de serviço e método | Uma requisição RPC e uma resposta; sem arquivos `.proto` |
+| CoAP | Método, recurso e modo CON/NON | Requisição/resposta com confirmação quando aplicável; sem mensagens reais de rede |
+
+O desenho do painel pode utilizar opções usuais de método (GET, POST, PUT, DELETE e PATCH onde adequado). A lista exata de métodos permitidos por perfil, os defaults, os limites e a validação de cada propriedade serão fechados antes da implementação. O CoAP não deve receber automaticamente todos os métodos do HTTP.
+
+### DEC-08.4 — Timeline e semântica
+
+As simulações precisam **demonstrar diferenças relevantes entre os perfis**, ainda que compartilhem mecanismo interno de requisição/resposta:
+
+- REST / HTTP genérico: requisição → processamento → resposta.
+- SOAP: chamada da operação → processamento → resposta.
+- GraphQL: operação recebida → resolução/execução → resposta.
+- gRPC unary: chamada RPC → execução do método → resposta RPC.
+- CoAP: solicitação e resposta, com confirmação semântica quando aplicável. Resposta piggybacked e resposta separada devem ser distinguidas quando o detalhamento dos eventos for definido.
+
+Estas sequências são **exemplos conceituais**, não nomes normativos de eventos. Reutilizar eventos do motor com metadados quando suficiente; adicionar eventos próprios somente quando necessário à semântica. Não presumir que toda resposta CoAP ocorra obrigatoriamente após um ACK separado.
+
+### DEC-08.5 — Limites
+
+- Não exigir XML SOAP, schema GraphQL, arquivos proto, payloads reais nem implementação de transporte de rede.
+- Preservar fluidez do editor e configurações anteriores, evitando campos irrelevantes.
+- Não incluir propriedades de WebSocket, MQTT, Queue ou Topic nesta decisão; serão detalhadas em etapas específicas.
+- A definição exata dos DTOs, eventos de trace, validações formais e métricas permanece **pendente de especificação**.
+
+## 8. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
 
 | Grupo sugerido | Assuntos a especificar |
 | --- | --- |
@@ -145,11 +201,11 @@ A aprovação **inclui explicitamente WebSocket em conexões `API → API`**, al
 
 **Observação:** numeração e conteúdo são apenas uma proposta de organização. Nenhum RF v0.4 foi fechado ou aprovado individualmente até aqui.
 
-## 8. Questões pendentes para as próximas discussões
+## 9. Questões pendentes para as próximas discussões
 
 1. **Compatibilidade aprovada:** detalhar papéis de produtor, consumidor e assinante e regras de configuração sem alterar a matriz aprovada.
-2. **Configuração mínima:** quais campos aparecem no editor por perfil, e quais são parâmetros de execução?
-3. **Requisição/resposta:** diferenças semânticas indispensáveis para REST, SOAP, GraphQL, gRPC e CoAP, sem duplicar a engine.
+2. **Configuração mínima aprovada para seis perfis:** detalhar defaults, limites, contratos de dados e propriedades ainda pendentes para WebSocket e mensageria.
+3. **Requisição/resposta:** formalizar as diferenças já aprovadas em eventos, parâmetros e critérios de aceitação, sem duplicar a engine.
 4. **WebSocket:** estabelecimento de sessão, direção das mensagens, sequência e conclusão.
 5. **Broker:** configuração de filas/tópicos/assinaturas, fila vazia, número de consumidores, fan-out, latências e consumo pela API existente.
 6. **Mensageria:** o que significa conclusão da execução principal versus entregas assíncronas? Quais eventos e métricas devem aparecer?
@@ -158,7 +214,7 @@ A aprovação **inclui explicitamente WebSocket em conexões `API → API`**, al
 9. **Limites técnicos:** impacto no contrato OpenAPI, modelo do frontend e motor Java; necessidade de ADRs e de documentação de integração.
 10. **Fatiamento:** confirmar entregas pequenas e dependências antes de criar as tarefas no Trello.
 
-## 9. Método de trabalho documental
+## 10. Método de trabalho documental
 
 - Registrar cada nova decisão neste arquivo, identificando claramente **aprovado**, **proposto** ou **pendente**.
 - Não introduzir requisitos extras sem debate e aprovação.
@@ -166,7 +222,7 @@ A aprovação **inclui explicitamente WebSocket em conexões `API → API`**, al
 - Fazer commits incrementais nesta branch de planejamento.
 - **Não abrir PR ou fazer merge até o responsável solicitar.**
 
-## 10. Referências históricas
+## 11. Referências históricas
 
 - [Requisitos v0.3](v0.3-client-requirements.md)
 - [Catálogo discutido de clientes e perfis](v0.3-clients.md)
