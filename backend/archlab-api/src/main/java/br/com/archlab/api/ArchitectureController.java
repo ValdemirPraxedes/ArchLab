@@ -62,7 +62,14 @@ public class ArchitectureController {
         var request = canonicalMapper.canonicalRequest(input);
         var valid = canonicalScenarios.validate(request.architecture(), request.scenario());
         if (!valid.valid()) return invalid(valid, httpRequest);
-        var executed = engine.execute(request.architecture(), request.scenario());
+        br.com.archlab.simulation.core.v2.NestedExecutionResultV2 executed;
+        try {
+            executed = engine.execute(request.architecture(), request.scenario());
+        } catch (IllegalArgumentException ex) {
+            return invalid(new ValidationResult(false, List.of(new Violation(
+                    "INVALID_MESSAGE_TEMPLATE", "architecture.connections",
+                    "Invalid illustrative integration template"))), httpRequest);
+        }
         if (executed.totalDurationMs() > 3_600_000L) {
             return invalid(new ValidationResult(false, List.of(new Violation(
                     "EXCESSIVE_EXECUTION_DURATION", "execution.totalDurationMs",

@@ -110,4 +110,33 @@ class V4ApiConsolidationTest {
         assertEquals(413, response.statusCode());
         assertEquals("PAYLOAD_TOO_LARGE", json.readTree(response.body()).get("code").asText());
     }
+
+    @Test void legacyTcpOnClientEdgeIsRejectedWithoutConversion() throws Exception {
+        String legacy = """
+            {"components":[{"id":"c","type":"CLIENT"},
+                           {"id":"a","type":"API","preProcessingMs":0,"postProcessingMs":0},
+                           {"id":"d","type":"DATABASE","processingMs":0}],
+             "connections":[{"id":"ca","sourceId":"c","targetId":"a","protocol":"TCP","latencyMs":0},
+                            {"id":"ad","sourceId":"a","targetId":"d","protocol":"TCP","latencyMs":0}]}
+            """;
+        var response = post("/api/v1/simulations", legacy);
+        assertEquals(422, response.statusCode());
+        assertEquals("ARCHITECTURE_INVALID", json.readTree(response.body()).get("code").asText());
+    }
+
+    @Test void legacyLongIdsRemainAccepted() throws Exception {
+        String longId = "c".repeat(100);
+        String legacy = """
+            {"components":[{"id":"client-1","type":"CLIENT"},
+                           {"id":"api-1","type":"API","preProcessingMs":0,"postProcessingMs":0},
+                           {"id":"db-1","type":"DATABASE","processingMs":0}],
+             "connections":[{"id":"ca","sourceId":"client-1","targetId":"api-1","protocol":"REST","latencyMs":0},
+                            {"id":"ad","sourceId":"api-1","targetId":"db-1","protocol":"TCP","latencyMs":0}]}
+            """.replace("client-1", longId);
+        // Replace every occurrence of the ID, including the connection source.
+        legacy = legacy.replace("client-1", longId);
+        var response = post("/api/v1/architectures/validate", legacy);
+        assertEquals(200, response.statusCode());
+        assertTrue(json.readTree(response.body()).get("valid").asBoolean());
+    }
 }
