@@ -57,15 +57,15 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
   const state = traceStateAt(result,cursor);
   const messages = inFlightMessages(result.trace,cursor);
   const activities = result.timeline.filter(e => e.startMs <= time);
-  return <section className="playback" aria-label="Reprodução v2">
-    <strong>Reprodução v2</strong>
-    <output aria-label="Relógio virtual v2">{Math.round(time)} / {total} ms</output>
+  return <section className="playback" aria-label="Reprodução v1">
+    <strong>Reprodução v1</strong>
+    <output aria-label="Relógio virtual v1">{Math.round(time)} / {total} ms</output>
     <button type="button" disabled={time >= total && !playing} onClick={() => { setStep(false); setPlaying(v => !v); }}>{playing ? <><Pause size={16} aria-hidden="true" /> Pausar</> : <><Play size={16} aria-hidden="true" /> Continuar</>}</button>
-    <label>Velocidade <select aria-label="Velocidade v2" value={speed} onChange={e => setSpeed(Number(e.target.value))}>{[0.5,1,2,4].map(n => <option key={n} value={n}>{n}×</option>)}</select></label>
+    <label>Velocidade <select aria-label="Velocidade v1" value={speed} onChange={e => setSpeed(Number(e.target.value))}>{[0.5,1,2,4].map(n => <option key={n} value={n}>{n}×</option>)}</select></label>
     <button type="button" onClick={() => { setStep(true); setPlaying(false); }}><StepForward size={16} aria-hidden="true" /> Passo a passo</button>
     <button type="button" disabled={!step || (time === 0 && cursor.sequence === 0)} onClick={() => setCursor(previousCursor(result.trace,cursor))}><SkipBack size={16} aria-hidden="true" /> Anterior</button>
     <button type="button" disabled={!step || (time >= total && cursor.sequence === Number.POSITIVE_INFINITY)} onClick={() => setCursor(nextCursor(result.trace,cursor,total))}><SkipForward size={16} aria-hidden="true" /> Próximo</button>
-    <progress aria-label="Progresso v2" value={time} max={total || 1}/>
+    <progress aria-label="Progresso v1" value={time} max={total || 1}/>
     <p>Eventos até o instante: {events.length} / {result.trace.length}. Atividades iniciadas: {activities.length} / {result.timeline.length}.</p>
     <div className="inspector-toggle-row"><button type="button" aria-expanded={inspectorOpen} aria-controls="playback-inspector-content" onClick={() => setInspectorOpen(open => !open)}>{inspectorOpen ? <><ChevronDown size={16} aria-hidden="true" /> Recolher inspeção</> : <><ChevronRight size={16} aria-hidden="true" /> Abrir inspeção</>} ({events.length} eventos)</button></div>
     {inspectorOpen && <div className="playback-inspector-shell" id="playback-inspector-content" style={{ height: inspectorHeight }}>

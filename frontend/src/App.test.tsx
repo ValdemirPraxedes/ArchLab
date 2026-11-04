@@ -172,57 +172,57 @@ describe('Editor visual', () => {
     expect(screen.getByText('Elemento removido do canvas.')).toBeInTheDocument();
   });
   it('valida arquitetura com backend v2, preserva resultado valid:false e path', async () => {
-    server.use(http.post('/api/v2/architectures/validate', async ({ request }) => {
+    server.use(http.post('/api/v1/architectures/validate', async ({ request }) => {
       const body = await request.json() as { components: unknown[]; scenario?: unknown };
       expect(body.components).toEqual([]);
       expect(body).not.toHaveProperty('scenario');
       return HttpResponse.json({ valid: false, violations: [{ code: 'INVALID_DAG', path: 'connections[0]', message: 'Conexão inválida' }] });
     }));
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Validar arquitetura v2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Validar arquitetura v1' }));
     expect(await screen.findByText(/INVALID_DAG/)).toBeInTheDocument();
     expect(screen.getByText('connections[0]', { exact: false })).toBeInTheDocument();
   });
-  it.each(['Validar arquitetura v2', 'Validar cenário v2'])('envia %s com tipo funcional CLIENT', async (action) => {
+  it.each(['Validar arquitetura v1', 'Validar cenário v1'])('envia %s com tipo funcional CLIENT', async (action) => {
     const calls = vi.fn(async ({ request }: { request: Request }) => {
       const body = await request.json() as { components?: { type: string }[]; architecture?: { components: { type: string }[] } };
-      expect((body.components ?? body.architecture?.components)?.[0].type).toBe('CLIENT');
+      expect((body.components ?? body.architecture?.components)?.[0].type).toBe('WEB_BROWSER');
       return HttpResponse.json({ valid: true, violations: [] });
     });
     server.use(
-      http.post('/api/v2/architectures/validate', calls),
-      http.post('/api/v2/scenarios/validate', calls),
+      http.post('/api/v1/architectures/validate', calls),
+      http.post('/api/v1/scenarios/validate', calls),
     );
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
     fireEvent.click(screen.getByRole('button', { name: action }));
-    expect(await screen.findByText(/v2 válid[ao] pelo backend/)).toBeInTheDocument();
+    expect(await screen.findByText(/v1 válid[ao] pelo backend/)).toBeInTheDocument();
     expect(calls).toHaveBeenCalledOnce();
     expect(screen.getByRole('button', { name: 'Nó: Web Browser 1' })).toHaveAttribute('data-component-type', 'WEB_BROWSER');
   });
   it('valida cenário em rota separada sem executar o motor', async () => {
-    server.use(http.post('/api/v2/scenarios/validate', async ({ request }) => {
+    server.use(http.post('/api/v1/scenarios/validate', async ({ request }) => {
       const body = await request.json() as { architecture: { components: unknown[] }; scenario: { apiExecutions: unknown[] } };
       expect(body.architecture.components).toEqual([]);
       expect(body.scenario.apiExecutions).toEqual([]);
       return HttpResponse.json({ valid: true, violations: [] });
     }));
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Validar cenário v2' }));
-    expect(await screen.findByText(/Cenário v2 válido pelo backend/)).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Validar cenário v1' }));
+    expect(await screen.findByText(/Cenário v1 válido pelo backend/)).toBeInTheDocument();
   });
   it('mostra Problem Details de falhas HTTP v2', async () => {
-    server.use(http.post('/api/v2/architectures/validate', () => HttpResponse.json({
+    server.use(http.post('/api/v1/architectures/validate', () => HttpResponse.json({
       type: 'about:blank', title: 'Too Large', status: 413, code: 'PAYLOAD_TOO_LARGE', detail: 'Limite excedido',
     }, { status: 413 })));
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'Validar arquitetura v2' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Validar arquitetura v1' }));
     expect(await screen.findByText(/PAYLOAD_TOO_LARGE/)).toBeInTheDocument();
     expect(screen.getByText(/HTTP 413: Limite excedido/)).toBeInTheDocument();
   });
 
   it('apresenta 422 de validação v2 sem executar o motor', async () => {
-    server.use(http.post('/api/v2/scenarios/validate', () => HttpResponse.json({
+    server.use(http.post('/api/v1/scenarios/validate', () => HttpResponse.json({
       valid: false, violations: [{ code: 'INVALID_ENTRY_CONNECTION', path: 'scenario.entryConnectionId', message: 'Selecione uma conexão inicial' }],
     })));
     render(<App />);
@@ -232,8 +232,8 @@ describe('Editor visual', () => {
   });
 
   it('executa o cenário v2, preserva snapshot e bloqueia edição até reiniciar', async () => {
-    server.use(http.post('/api/v2/scenarios/validate', () => HttpResponse.json({ valid: true, violations: [] })));
-    server.use(http.post('/api/v2/simulations', async ({ request }) => {
+    server.use(http.post('/api/v1/scenarios/validate', () => HttpResponse.json({ valid: true, violations: [] })));
+    server.use(http.post('/api/v1/simulations', async ({ request }) => {
       const input = await request.json() as { scenario: { entryComponentId: string; entryConnectionId: string }; architecture: { components: unknown[] } };
       expect(input.architecture.components).toHaveLength(2);
       expect(input.scenario.entryComponentId).not.toBe('');
@@ -255,7 +255,7 @@ describe('Editor visual', () => {
     const start = screen.getByRole('combobox', { name: 'Conexão de entrada' });
     fireEvent.change(start, { target: { value: (start.querySelector('option:not([value=""])') as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
-    expect(await screen.findByRole('region', { name: 'Reprodução v2' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Reprodução v1' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Abrir inspeção/ })).toHaveAttribute('aria-expanded', 'false');
     expect(screen.queryByRole('separator', { name: 'Redimensionar inspeção' })).not.toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: /Abrir inspeção/ }));
@@ -272,18 +272,22 @@ describe('Editor visual', () => {
   });
   it.each(['Web Browser', 'Mobile App', 'Desktop App', 'CLI', 'Bot', 'Embedded System'])('simula %s → API → Database e correlaciona timeline', async (name) => {
     const protocol = name === 'CLI' ? 'SOAP' : 'REST';
-    server.use(http.post('/api/v2/scenarios/validate', async ({ request }) => {
+    server.use(http.post('/api/v1/scenarios/validate', async ({ request }) => {
       const body = await request.json() as { architecture: { components: { id: string; type: string }[]; connections: { sourceId: string; targetId: string }[] }; scenario: { entryComponentId: string; entryConnectionId: string; apiExecutions: { componentId: string; dependencyConnectionId: string }[] } };
-      expect(body.architecture.components.map(component => component.type)).toEqual(['CLIENT', 'API', 'DATABASE']);
+      const visualType = { 'Web Browser': 'WEB_BROWSER', 'Mobile App': 'MOBILE_APP',
+        'Desktop App': 'DESKTOP_APP', CLI: 'CLI', Bot: 'BOT', 'Embedded System': 'EMBEDDED_SYSTEM' }[name];
+      expect(body.architecture.components.map(component => component.type)).toEqual([visualType, 'API', 'DATABASE']);
       expect(body.scenario.entryComponentId).toBe(body.architecture.components[0].id);
       expect(body.scenario.apiExecutions).toHaveLength(1);
       expect(body.architecture.connections).toHaveLength(2);
       return HttpResponse.json({ valid: true, violations: [] });
     }));
-    server.use(http.post('/api/v2/simulations', async ({ request }) => {
+    server.use(http.post('/api/v1/simulations', async ({ request }) => {
       const body = await request.json() as { architecture: { components: { id: string; type: string; displayName: string }[]; connections: { id: string; sourceId: string; targetId: string; integration: { kind: string } }[] }; scenario: { entryComponentId: string; entryConnectionId: string } };
       const [client, api, db] = body.architecture.components;
-      expect(client).toMatchObject({ type: 'CLIENT', displayName: `${name} 1` });
+      const visualType = { 'Web Browser': 'WEB_BROWSER', 'Mobile App': 'MOBILE_APP',
+        'Desktop App': 'DESKTOP_APP', CLI: 'CLI', Bot: 'BOT', 'Embedded System': 'EMBEDDED_SYSTEM' }[name];
+      expect(client).toMatchObject({ type: visualType, displayName: `${name} 1` });
       expect(body.architecture.connections[0]).toMatchObject({ sourceId: client.id, targetId: api.id, integration: { kind: protocol === 'SOAP' ? 'SOAP_HTTP' : 'HTTP_REST' } });
       expect(body.architecture.connections[1]).toMatchObject({ sourceId: api.id, targetId: db.id });
       expect(body.scenario.entryComponentId).toBe(client.id);
@@ -311,7 +315,7 @@ describe('Editor visual', () => {
     const dependency = screen.getByRole('combobox', { name: 'Dependência de API 1' });
     fireEvent.change(dependency, { target: { value: (dependency.querySelector('option:not([value=""])') as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Simular' }));
-    expect(await screen.findByRole('region', { name: 'Reprodução v2' })).toBeInTheDocument();
+    expect(await screen.findByRole('region', { name: 'Reprodução v1' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: `Nó: ${name} 1` })).toHaveAttribute('data-component-type');
     fireEvent.click(screen.getByRole('button', { name: /Abrir inspeção/ }));
     expect(screen.getByText('Timeline recebida do backend')).toBeInTheDocument();
@@ -357,7 +361,7 @@ describe('Editor visual', () => {
   });
 
   it('limpa erro de cenário v2 ao editar seleção', async () => {
-    server.use(http.post('/api/v2/scenarios/validate', () => HttpResponse.json({
+    server.use(http.post('/api/v1/scenarios/validate', () => HttpResponse.json({
       valid: false, violations: [{ code: 'INVALID_ENTRY_CONNECTION', path: 'scenario.entryConnectionId', message: 'Entrada ausente' }],
     })));
     render(<App />);

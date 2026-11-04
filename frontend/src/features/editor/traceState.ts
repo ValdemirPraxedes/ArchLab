@@ -19,7 +19,7 @@ export function reconstructState(
   const sorted = [...trace].sort((a, b) => a.timestampMs - b.timestampMs || a.sequence - b.sequence);
   for (const entry of sorted) {
     if (entry.timestampMs > timestampMs || (entry.timestampMs === timestampMs && entry.sequence > sequence)) break;
-    if (entry.type !== 'STATE_TRANSITION') continue;
+    if (entry.type !== 'STATE_TRANSITION' || !entry.entityId || !entry.newState) continue;
     switch (entry.entityKind) {
       case 'COMPONENT':
         snapshot.components[entry.entityId] = entry.newState as typeof snapshot.components[string];

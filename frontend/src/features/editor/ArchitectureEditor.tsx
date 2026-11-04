@@ -16,8 +16,8 @@ import type { TraceCursor } from './traceV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { emptyScenario, reconcileScenario, selectedPath } from './scenario';
 import type { ScenarioDraft } from './scenario';
-import { toArchitectureV2 } from './architectureV2';
-import { archlabV2Client, ArchlabV2HttpError } from '../../api/archlabV2Client';
+import { toArchitectureV1, toRequestV1 } from './architectureV1';
+import { archlabV1Client, ArchlabV1HttpError } from '../../api/archlabV1Client';
 import type { ValidationIssue } from './validation';
 import {
   VISUAL_CLIENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
@@ -119,29 +119,29 @@ function EditorCanvas() {
     const requestGeneration = ++generation.current;
     setIssues([]); setValidationStatus('checking'); setExecutionStatus('VALIDATING'); setValidationScope('scenario');
     try {
-      const architecture = toArchitectureV2(nodes, edges);
-      const request = { architecture, scenario };
-      const result = await archlabV2Client.validateScenario(request);
+      const architecture = toArchitectureV1(nodes, edges);
+      const request = toRequestV1(architecture, scenario);
+      const result = await archlabV1Client.validateScenario(request);
       if (requestGeneration !== generation.current) return;
       if (!result.valid) {
         setIssues(result.violations.map(v => ({ code: v.code, path: v.path, message: v.message })));
         setValidationStatus('invalid'); setExecutionStatus('ERROR'); return;
       }
       setValidationStatus('valid'); setExecutionStatus('EXECUTING');
-      const response = await archlabV2Client.simulate(request);
+      const response = await archlabV1Client.simulate(request);
       if (requestGeneration !== generation.current) return;
       setTraceCursor({time:0,sequence:0});
-      setSimulationResultV2(response);
+      setSimulationResultV2(response as unknown as SimulationResponseV2);
       setV2PlaybackStatus('PAUSADA');
       setExecutionStatus('COMPLETED');
     } catch (cause) {
       if (requestGeneration !== generation.current) return;
       setSimulationResultV2(null); setExecutionStatus('ERROR'); setValidationStatus('error');
-      if (cause instanceof ArchlabV2HttpError) {
+      if (cause instanceof ArchlabV1HttpError) {
         const violations = cause.violations.map(v => ({ code: v.code, path: v.path, message: v.message }));
         setIssues(violations.length ? violations : [{ code: cause.problem?.code ?? 'HTTP_ERROR', path: '', message: `HTTP ${cause.status}: ${cause.problem?.detail ?? cause.message}` }]);
       } else {
-        setIssues([{ code: 'NETWORK_ERROR', path: '', message: cause instanceof Error ? cause.message : 'Falha de comunicação com a API v2.' }]);
+        setIssues([{ code: 'NETWORK_ERROR', path: '', message: cause instanceof Error ? cause.message : 'Falha de comunicação com a API v1.' }]);
       }
     }
   };
@@ -152,21 +152,21 @@ function EditorCanvas() {
     setIssues([]);
     setValidationStatus('checking');
     try {
-      const architecture = toArchitectureV2(nodes, edges);
+      const architecture = toArchitectureV1(nodes, edges);
       const response = scope === 'architecture'
-        ? await archlabV2Client.validateArchitecture(architecture)
-        : await archlabV2Client.validateScenario({ architecture, scenario });
+        ? await archlabV1Client.validateArchitecture(architecture)
+        : await archlabV1Client.validateScenario(toRequestV1(architecture, scenario));
       setIssues(response.violations.map(v => ({ code: v.code, path: v.path, message: v.message })));
       setValidationStatus(response.valid ? 'valid' : 'invalid');
     } catch (cause) {
-      if (cause instanceof ArchlabV2HttpError) {
+      if (cause instanceof ArchlabV1HttpError) {
         const problem = cause.problem;
         const violations = cause.violations.map(v => ({ code: v.code, path: v.path, message: v.message }));
         setIssues(violations.length ? violations : [{
           code: problem?.code ?? 'HTTP_ERROR', path: '', message: `HTTP ${cause.status}: ${problem?.detail ?? problem?.title ?? cause.message}`,
         }]);
       } else {
-        setIssues([{ code: 'NETWORK_ERROR', path: '', message: cause instanceof Error ? cause.message : 'Falha na validação v2.' }]);
+        setIssues([{ code: 'NETWORK_ERROR', path: '', message: cause instanceof Error ? cause.message : 'Falha na validação v1.' }]);
       }
       setValidationStatus('error');
     }
@@ -292,12 +292,12 @@ function EditorCanvas() {
         </section>)}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura v1</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário v1</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
         {actionFeedback && <p className="action-feedback" role="status" aria-live="polite">{actionFeedback}</p>}
         <div className="execution-status" role="status">Execução: {simulationResultV2 ? v2PlaybackStatus : executionStatus}{simulationResultV2 && <span> · Tempo virtual total: {simulationResultV2.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
           {validationStatus === 'checking' && <p>Validando arquitetura...</p>}
-          {validationStatus === 'valid' && <p>{validationScope === 'architecture' ? 'Arquitetura v2 válida pelo backend.' : 'Cenário v2 válido pelo backend.'}</p>}
+          {validationStatus === 'valid' && <p>{validationScope === 'architecture' ? 'Arquitetura v1 válida pelo backend.' : 'Cenário v1 válido pelo backend.'}</p>}
           {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? (validationScope === 'architecture' ? 'Arquitetura inválida' : 'Cenário inválido') : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
         <ScenarioEditor nodes={nodes} edges={edges} value={scenario} onChange={(next) => { setScenario(next); resetValidation(); }} disabled={executionLocked} />
