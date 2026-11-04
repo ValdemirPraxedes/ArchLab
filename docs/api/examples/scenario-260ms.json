@@ -2,7 +2,11 @@
   "execution": {
     "id": "exec-001",
     "status": "COMPLETED",
-    "totalDurationMs": 260
+    "totalDurationMs": 260,
+    "mainStatus": "COMPLETED",
+    "requestId": "req-001",
+    "entryComponentId": "client-1",
+    "entryConnectionId": "connection-1"
   },
   "initialState": {
     "components": {
@@ -58,7 +62,8 @@
       "sourceId": "client-1",
       "targetId": "api-1",
       "direction": "REQUEST",
-      "intent": "API_REQUEST"
+      "intent": "API_REQUEST",
+      "parentExchangeId": null
     },
     {
       "sequence": 5,
@@ -82,7 +87,8 @@
       "sourceId": "client-1",
       "targetId": "api-1",
       "direction": "REQUEST",
-      "intent": "API_REQUEST"
+      "intent": "API_REQUEST",
+      "parentExchangeId": null
     },
     {
       "sequence": 7,
@@ -164,7 +170,8 @@
       "sourceId": "api-1",
       "targetId": "db-1",
       "direction": "REQUEST",
-      "intent": "DATABASE_QUERY"
+      "intent": "DATABASE_QUERY",
+      "parentExchangeId": "exchange-api-1"
     },
     {
       "sequence": 15,
@@ -178,7 +185,8 @@
       "sourceId": "api-1",
       "targetId": "db-1",
       "direction": "REQUEST",
-      "intent": "DATABASE_QUERY"
+      "intent": "DATABASE_QUERY",
+      "parentExchangeId": "exchange-api-1"
     },
     {
       "sequence": 16,
@@ -230,7 +238,8 @@
       "sourceId": "db-1",
       "targetId": "api-1",
       "direction": "RESPONSE",
-      "intent": "DATABASE_QUERY"
+      "intent": "DATABASE_QUERY",
+      "parentExchangeId": "exchange-api-1"
     },
     {
       "sequence": 21,
@@ -244,7 +253,8 @@
       "sourceId": "db-1",
       "targetId": "api-1",
       "direction": "RESPONSE",
-      "intent": "DATABASE_QUERY"
+      "intent": "DATABASE_QUERY",
+      "parentExchangeId": "exchange-api-1"
     },
     {
       "sequence": 22,
@@ -316,7 +326,8 @@
       "sourceId": "api-1",
       "targetId": "client-1",
       "direction": "RESPONSE",
-      "intent": "API_REQUEST"
+      "intent": "API_REQUEST",
+      "parentExchangeId": null
     },
     {
       "sequence": 29,
@@ -330,7 +341,8 @@
       "sourceId": "api-1",
       "targetId": "client-1",
       "direction": "RESPONSE",
-      "intent": "API_REQUEST"
+      "intent": "API_REQUEST",
+      "parentExchangeId": null
     },
     {
       "sequence": 30,
@@ -373,7 +385,8 @@
       "targetId": "api-1",
       "startMs": 0,
       "endMs": 20,
-      "durationMs": 20
+      "durationMs": 20,
+      "exchangeId": "exchange-api-1"
     },
     {
       "id": "activity-2",
@@ -394,7 +407,8 @@
       "targetId": "db-1",
       "startMs": 50,
       "endMs": 60,
-      "durationMs": 10
+      "durationMs": 10,
+      "exchangeId": "exchange-db-1"
     },
     {
       "id": "activity-4",
@@ -415,7 +429,8 @@
       "targetId": "api-1",
       "startMs": 210,
       "endMs": 220,
-      "durationMs": 10
+      "durationMs": 10,
+      "exchangeId": "exchange-db-1"
     },
     {
       "id": "activity-6",
@@ -436,14 +451,85 @@
       "targetId": "client-1",
       "startMs": 240,
       "endMs": 260,
-      "durationMs": 20
+      "durationMs": 20,
+      "exchangeId": "exchange-api-1"
     }
   ],
   "metrics": {
-    "apiPreProcessingMs": 30,
-    "apiPostProcessingMs": 20,
-    "databaseProcessingMs": 150,
-    "communicationMs": 60,
-    "apiWaitingMs": 170
-  }
+    "totalDurationMs": 260,
+    "processingByComponent": [
+      {
+        "componentId": "api-1",
+        "durationMs": 50
+      },
+      {
+        "componentId": "db-1",
+        "durationMs": 150
+      }
+    ],
+    "communicationByConnection": [
+      {
+        "connectionId": "connection-1",
+        "traversals": 2,
+        "durationMs": 40
+      },
+      {
+        "connectionId": "connection-2",
+        "traversals": 2,
+        "durationMs": 20
+      }
+    ],
+    "waitingByComponent": [
+      {
+        "componentId": "client-1",
+        "exchangeId": "exchange-api-1",
+        "startMs": 0,
+        "endMs": 260,
+        "durationMs": 260
+      },
+      {
+        "componentId": "api-1",
+        "exchangeId": "exchange-db-1",
+        "startMs": 50,
+        "endMs": 220,
+        "durationMs": 170
+      }
+    ],
+    "exchanges": [
+      {
+        "exchangeId": "exchange-api-1",
+        "parentExchangeId": null,
+        "callerComponentId": "client-1",
+        "calleeComponentId": "api-1",
+        "connectionId": "connection-1",
+        "startMs": 0,
+        "endMs": 260,
+        "durationMs": 260
+      },
+      {
+        "exchangeId": "exchange-db-1",
+        "parentExchangeId": "exchange-api-1",
+        "callerComponentId": "api-1",
+        "calleeComponentId": "db-1",
+        "connectionId": "connection-2",
+        "startMs": 50,
+        "endMs": 220,
+        "durationMs": 170
+      }
+    ]
+  },
+  "messageRepresentations": [
+    {
+      "connectionId": "connection-1",
+      "integration": {
+        "kind": "HTTP_REST"
+      }
+    },
+    {
+      "connectionId": "connection-2",
+      "integration": {
+        "kind": "DATABASE_QUERY"
+      }
+    }
+  ]
 }
