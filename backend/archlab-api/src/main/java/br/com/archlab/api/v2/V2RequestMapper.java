@@ -9,6 +9,14 @@ import java.util.*;
 @Component
 public class V2RequestMapper {
     public ArchitectureV2 architecture(JsonNode node) {
+        return architecture(node, false);
+    }
+
+    public ArchitectureV2 canonicalArchitecture(JsonNode node) {
+        return architecture(node, true);
+    }
+
+    private ArchitectureV2 architecture(JsonNode node, boolean canonical) {
         object(node,"components","connections");
         List<ComponentV2> components=new ArrayList<>();
         for(JsonNode c:array(node,"components")) {
@@ -18,7 +26,8 @@ public class V2RequestMapper {
                     components.add(new ClientV2(text(c,"id"),text(c,"displayName"))); }
                 case "API" -> { object(c,"id","type","displayName","preProcessingMs","postProcessingMs");
                     components.add(new ApiV2(text(c,"id"),text(c,"displayName"),
-                            number(c,"preProcessingMs"),number(c,"postProcessingMs"))); }
+                            canonical ? numberOrZero(c,"preProcessingMs") : number(c,"preProcessingMs"),
+                            canonical ? numberOrZero(c,"postProcessingMs") : number(c,"postProcessingMs"))); }
                 case "DATABASE" -> { object(c,"id","type","displayName","processingMs");
                     components.add(new DatabaseV2(text(c,"id"),text(c,"displayName"),number(c,"processingMs"))); }
                 default -> throw invalid("Unsupported component type");
@@ -28,7 +37,7 @@ public class V2RequestMapper {
         for(JsonNode c:array(node,"connections")) {
             object(c,"id","sourceId","targetId","latencyMs","integration","apiProcessingOverride");
             connections.add(new ConnectionV2(text(c,"id"),text(c,"sourceId"),text(c,"targetId"),
-                    number(c,"latencyMs"),integration(required(c,"integration")),
+                    canonical ? numberOrZero(c,"latencyMs") : number(c,"latencyMs"),integration(required(c,"integration")),
                     has(c,"apiProcessingOverride") ? override(required(c,"apiProcessingOverride")) : null));
         }
         return new ArchitectureV2(components,connections);
@@ -41,10 +50,26 @@ public class V2RequestMapper {
     }
 
     public Request scenarioRequest(JsonNode root) {
+        return scenarioRequest(root, false);
+    }
+
+    /** Canonical v1 request/response transport; v2 wire format remains unchanged. */
+    public Request canonicalRequest(JsonNode root) {
+        return scenarioRequest(root, true);
+    }
+
+    private Request scenarioRequest(JsonNode root, boolean canonical) {
         object(root,"architecture","scenario");
-        ArchitectureV2 architecture=architecture(required(root,"architecture"));
+        ArchitectureV2 architecture=canonical ? canonicalArchitecture(required(root,"architecture"))
+                : architecture(required(root,"architecture"));
         JsonNode s=required(root,"scenario");
-        object(s,"entryComponentId","entryConnectionId","apiExecutions");
+        if (canonical) {
+            object(s,"kind","entryComponentId","entryConnectionId","apiExecutions");
+            if (!"REQUEST_RESPONSE".equals(text(s,"kind")))
+                throw invalid("Unsupported scenario.kind for current request/response engine");
+        } else {
+            object(s,"entryComponentId","entryConnectionId","apiExecutions");
+        }
         List<ApiExecutionV2> selections=new ArrayList<>();
         for(JsonNode a:array(s,"apiExecutions")) {
             object(a,"componentId","dependencyConnectionId");
@@ -129,6 +154,9 @@ public class V2RequestMapper {
         JsonNode v=required(n,key);
         if(!v.isIntegralNumber()||!v.canConvertToLong())throw invalid("Expected int64: "+key);
         return v.longValue();
+    }
+    private static long numberOrZero(JsonNode n,String key) {
+        return has(n,key) ? number(n,key) : 0L;
     }
     private static int intNumber(JsonNode n,String key) {
         long value=number(n,key);
