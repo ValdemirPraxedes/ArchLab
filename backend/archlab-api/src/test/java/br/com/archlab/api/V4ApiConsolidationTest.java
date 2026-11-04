@@ -157,7 +157,7 @@ class V4ApiConsolidationTest {
         }
     }
 
-    @Test void brokerExamplesValidateGraphWithoutClaimingExecution() throws Exception {
+    @Test void brokerExamplesValidateGraph() throws Exception {
         for (String file : new String[]{"queue-two-consumers.json", "queue-no-consumer.json",
                 "topic-two-subscribers.json", "mqtt-qos0.json"}) {
             String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", file));
@@ -166,6 +166,36 @@ class V4ApiConsolidationTest {
             assertEquals(200, response.statusCode(), file);
             assertTrue(json.readTree(response.body()).get("valid").asBoolean(), file + " " + response.body());
         }
+    }
+
+    @Test void brokerExamplesExecuteWithExpectedDeliveryCounts() throws Exception {
+        for (String file : new String[]{"queue-two-consumers.json", "topic-two-subscribers.json", "mqtt-qos0.json"}) {
+            String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", file));
+            var response = post("/api/v1/simulations", fixture);
+            assertEquals(200, response.statusCode(), file + " " + response.body());
+            JsonNode result = json.readTree(response.body());
+            int expected = file.startsWith("topic") ? 2 : 1;
+            assertEquals(expected, result.get("metrics").get("messaging").get(0).get("delivered").asInt(), file);
+            assertEquals("COMPLETED", result.get("execution").get("status").asText(), file);
+            assertEquals("COMPLETED", result.get("execution").get("mainStatus").asText(), file);
+        }
+    }
+
+    @Test void queueWithoutConsumerTimesOutAndPublishStillCompletes() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "queue-no-consumer.json"));
+        var response = post("/api/v1/simulations", fixture);
+        assertEquals(200, response.statusCode(), response.body());
+        JsonNode result = json.readTree(response.body());
+        assertEquals("COMPLETED", result.get("execution").get("mainStatus").asText());
+        assertEquals("COMPLETED_WITH_ERRORS", result.get("execution").get("status").asText());
+        assertEquals(30010, result.get("execution").get("totalDurationMs").asInt());
+        assertEquals(1, result.get("metrics").get("messaging").get(0).get("failures").asInt());
+        assertEquals(1, result.get("metrics").get("waitingByComponent").size());
+    }
+
+    @Test void missingBrokerDestinationCannotSimulate() throws Exception {
+        String fixture = Files.readString(Path.of("..", "..", "docs", "api", "examples", "v0.4", "missing-broker-destination.invalid.json"));
+        assertEquals(422, post("/api/v1/simulations", fixture).statusCode());
     }
 
     @Test void invalidMqttQosIsRejectedByGraphValidator() throws Exception {

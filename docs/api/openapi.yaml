@@ -911,6 +911,9 @@ components:
           - REQUEST
           - EXCHANGE
           - WEBSOCKET_SESSION
+          - BROKER_MESSAGE
+          - DELIVERY
+          - EXECUTION
         entityId:
           $ref: '#/components/schemas/Identifier'
         previousState:
@@ -977,6 +980,8 @@ components:
           - DATABASE_QUERY
           - WEBSOCKET_OPEN
           - WEBSOCKET_MESSAGE
+          - BROKER_PUBLISH
+          - BROKER_DELIVERY
       required:
       - sequence
       - timestampMs
@@ -1015,6 +1020,7 @@ components:
           - API_PRE_PROCESSING
           - API_POST_PROCESSING
           - DATABASE_PROCESSING
+          - API_MESSAGE_PROCESSING
       required:
       - sequence
       - timestampMs
@@ -1089,6 +1095,7 @@ components:
           - API_PRE_PROCESSING
           - API_POST_PROCESSING
           - DATABASE_PROCESSING
+          - API_MESSAGE_PROCESSING
         startMs: *id005
         endMs: *id006
         durationMs: *id007

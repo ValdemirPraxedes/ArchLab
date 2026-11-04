@@ -13,6 +13,8 @@ import br.com.archlab.simulation.core.v2.ArchitectureGraphValidatorV2;
 import br.com.archlab.simulation.core.v2.ScenarioValidatorV2;
 import br.com.archlab.simulation.core.v2.WebSocketIntegrationV2;
 import br.com.archlab.simulation.core.v4.WebSocketRuntimeV4;
+import br.com.archlab.simulation.core.v4.BrokerRuntimeV4;
+import br.com.archlab.simulation.core.v2.BrokerV2;
 import tools.jackson.databind.JsonNode;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -83,6 +85,25 @@ public class ArchitectureController {
                 return invalid(new ValidationResult(false, List.of(new Violation(
                         "EXCESSIVE_EXECUTION_DURATION", "execution.totalDurationMs",
                         "WebSocket execution exceeds virtual limits"))), httpRequest);
+            }
+        }
+        if (kindNode != null && "MESSAGE_PUBLISH".equals(kindNode.asText())) {
+            ValidationResult validation = newScenarios.validate(input, canonicalMapper);
+            if (!validation.valid()) return invalid(validation, httpRequest);
+            var architecture = canonicalMapper.canonicalArchitecture(input.get("architecture"));
+            String entryId = scenarioNode.get("entryConnectionId").asText();
+            var connection = architecture.connections().stream().filter(c -> entryId.equals(c.id())).findFirst().orElseThrow();
+            var broker = architecture.components().stream().filter(c -> c.id().equals(connection.targetId()))
+                    .map(c -> (BrokerV2)c).findFirst().orElseThrow();
+            int publishCount = scenarioNode.get("publishCount") == null ? 1 : scenarioNode.get("publishCount").asInt();
+            try {
+                var result = new BrokerRuntimeV4().run(architecture, connection, broker,
+                        scenarioNode.get("destinationName").asText(), publishCount);
+                return new BrokerResponseMapperV4().map(architecture, connection, result);
+            } catch (ArithmeticException | IllegalArgumentException ex) {
+                return invalid(new ValidationResult(false, List.of(new Violation(
+                        "EXCESSIVE_EXECUTION_DURATION", "execution.totalDurationMs",
+                        "Broker execution exceeds virtual limits"))), httpRequest);
             }
         }
         var request = canonicalMapper.canonicalRequest(input);
