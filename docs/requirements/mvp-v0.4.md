@@ -315,7 +315,117 @@ O painel do Broker e das conexões deve ser contextual e simples. Os exemplos de
 
 Aprovação do comportamento **não fecha** os contratos OpenAPI, nomes finais de eventos, estrutura de filas/assinaturas, defaults, limites de mensagens, duração de timeout, ordenação de eventos no mesmo instante virtual, métricas, regras de erro ou o desenho interno das classes Java. Essas decisões deverão ser formalizadas antes de criar tarefas de implementação.
 
-## 10. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
+## 10. Estados, eventos, métricas e conclusão das simulações — DEC-11
+
+**Status: aprovado em 2026-11-04.** Esta decisão consolida como os dez perfis da v0.4 serão observados e concluídos. Os estados e os eventos abaixo representam **semântica do produto**, e não impõem antecipadamente novos tipos internos ou nomes definitivos de DTOs.
+
+### DEC-11.1 — Modelo de execução
+
+Distinguir três conceitos relacionados, porém independentes:
+
+1. **Execução principal:** operação iniciada pelo usuário — requisição, publicação ou abertura de sessão.
+2. **Operações derivadas e recursos ativos:** chamadas internas, mensagens, entregas, processamento e recursos que permanecem vivos (por exemplo, sessão WebSocket e mensagem pendente).
+3. **Conclusão global:** acontece apenas quando operações derivadas e recursos relevantes atingem estados terminais, com sucesso ou falha explicitamente registrados.
+
+A conclusão da execução principal **não cancela operações assíncronas em andamento**. A conclusão global não deve ser confundida com sucesso: pode haver falhas, timeouts ou pendências encerradas.
+
+### DEC-11.2 — Estados semânticos por modelo
+
+| Modelo | Progressão de referência | Ressalva |
+| --- | --- | --- |
+| Requisição/resposta | `CREATED → SENT → PROCESSING → COMPLETED` | Falha e timeout são resultados terminais alternativos |
+| Sessão WebSocket | `CONNECTING → OPEN → CLOSING → CLOSED` | Rejeição, falha e timeout também encerram a sessão de modo terminal |
+| Mensagem/entrega | `CREATED → ACCEPTED → QUEUED/ROUTED → DELIVERED → PROCESSED` | Etapas dependem do perfil; nem todo fluxo requer todos os estados |
+
+**Separar estados de sessão, mensagem/entrega, operação principal e execução global.** Não impor uma máquina de estados única aos dez perfis. Em MQTT QoS 0, `DELIVERED` é **entrega lógica da simulação**, não confirmação protocolar garantida pelo consumidor.
+
+### DEC-11.3 — Eventos e timeline
+
+A timeline deve representar a **sequência causal** do processamento, incluindo:
+
+- Requisição/resposta: envio, recepção, processamento, resposta e conclusão.
+- WebSocket: abertura/aceite ou falha, mensagens nos dois sentidos, encerramento/timeout.
+- Queue: publicação, aceite pelo Broker, enfileiramento, escolha de consumidor, entrega e processamento (ou término por limite virtual).
+- Topic/MQTT: publicação, aceite, identificação das assinaturas elegíveis, entrega lógica individual por assinatura, processamento e conclusão global.
+
+Exemplos de rótulos ilustrativos: `REQUEST_SENT`, `RESPONSE_RECEIVED`, `WS_CONNECTED`, `WS_MESSAGE_SENT`, `BROKER_ACCEPTED`, `MESSAGE_DELIVERED`, `MESSAGE_PROCESSED`, `MAIN_COMPLETED`, `GLOBAL_COMPLETED`.
+
+**Não são nomes normativos de eventos da engine.** Reutilizar eventos existentes e metadados quando suficiente para manter a semântica observável. Os exemplos de instantes virtuais apresentados na discussão não definem defaults.
+
+### DEC-11.4 — Correlação lógica
+
+Cada evento deve poder ser relacionado à sua execução e operação, preservando causa, ordem, participantes e perfil. Campos lógicos propostos:
+
+| Campo lógico | Finalidade |
+| --- | --- |
+| `executionId` | Identificar a simulação |
+| `eventId` | Identificar o evento |
+| `timestamp` | Instante do relógio virtual |
+| `componentId` | Componente responsável |
+| `connectionId` | Conexão associada, quando houver |
+| `operationId` | Requisição, mensagem ou operação |
+| `parentOperationId` | Operação que originou a derivada |
+| `sessionId` | Sessão WebSocket, quando aplicável |
+| `profile` | Perfil de comunicação |
+| `eventType` | Tipo semântico |
+| `status` | Estado ou resultado associado |
+
+Esses campos constituem **modelo lógico**, não exigência de adicionar todos os atributos a cada DTO. Antes de formalizar contratos, mapear e reutilizar identidades/correlações já existentes no backend, evitando redundância.
+
+### DEC-11.5 — Métricas observáveis
+
+Manter métricas anteriores de duração, latência e processamento. Propor métricas adicionais por modelo:
+
+| Modelo | Métricas aprovadas como direção funcional |
+| --- | --- |
+| Requisição/resposta | Tempo de resposta, processamento, latência e timeouts |
+| WebSocket | Tempo de abertura, duração da sessão, mensagens enviadas/recebidas |
+| Queue | Quantidade publicada, entregue, processada e pendente; tempo de espera |
+| Topic | Publicações, assinantes elegíveis, entregas e falhas |
+| MQTT | Publicações, entregas lógicas, publicações sem destinatário e falhas |
+
+Métricas reais de CPU, rede e throughput físico estão fora do escopo, pois o transporte não é real.
+
+### DEC-11.6 — Regras de conclusão principal e global
+
+| Situação | Execução principal | Execução global |
+| --- | --- | --- |
+| Requisição/resposta recebe resposta | Concluída | Terminal quando não houver operações/recursos relevantes pendentes |
+| WebSocket com sessão aberta | Em andamento | Em andamento |
+| WebSocket encerrado normalmente, por erro ou timeout | Terminal | Terminal se não restarem pendências |
+| Queue com mensagem aceita pelo Broker | Concluída após aceite | Mantém-se ativa enquanto houver entrega/consumo pendente |
+| Queue com todas as mensagens processadas | Concluída | Terminal quando não houver outras pendências |
+| Topic com múltiplas APIs assinantes | Concluída após aceite | Aguarda entrega/processamento de cada assinatura elegível |
+| MQTT sem assinantes | Concluída após aceite | Pode concluir com zero entregas registradas |
+| Queue sem consumidor elegível | Concluída após aceite | Aguarda o limite virtual e termina com pendência/timeout explícito |
+
+**Estados terminais não significam sucesso obrigatório.** Registrar resultados globais que diferenciem sucesso, falha, timeout e pendências encerradas.
+
+### DEC-11.7 — Determinismo, controles e limites
+
+1. O relógio virtual governa todos os eventos; a simulação não depende de tempo real.
+2. Eventos no mesmo instante devem ter ordenação determinística definida pelo agendador.
+3. Operações derivadas mantêm correlação com a principal.
+4. Sessões, mensagens e operações pendentes têm limites finitos; não permitir execução infinita.
+5. Resultados diferenciam sucesso, falha, timeout e encerramento com pendências.
+6. Preservar pausa, continuação, reinício, mudança de velocidade e execução passo a passo.
+7. Timeline e resultados apresentam tanto a operação principal quanto as derivadas.
+8. Mesma arquitetura e mesmos parâmetros produzem o mesmo resultado, preservadas as premissas determinísticas.
+
+### DEC-11.8 — Detalhamento técnico pendente
+
+Antes de implementar, verificar o backend atual e definir em especificação normativa:
+
+- nomes e tipos definitivos de eventos, DTOs e estados;
+- quais IDs e mecanismos de correlação já existem;
+- limites numéricos de sessões/mensagens/operações, timeouts e regras de desempate;
+- modelo formal de encerramento de recursos, operação principal e conclusão global;
+- tratamento de falhas parciais e as métricas exatas;
+- testes determinísticos e critérios de aceitação de cada perfil.
+
+A DEC-11 **não aprova automaticamente alterações internas na engine nem novos contratos OpenAPI**: essas mudanças devem ser justificadas e detalhadas no desenho técnico.
+
+## 11. Proposta inicial de grupos de requisitos — ainda sem RFs normativos
 
 | Grupo sugerido | Assuntos a especificar |
 | --- | --- |
@@ -326,7 +436,7 @@ Aprovação do comportamento **não fecha** os contratos OpenAPI, nomes finais d
 
 **Observação:** numeração e conteúdo são apenas uma proposta de organização. Nenhum RF v0.4 foi fechado ou aprovado individualmente até aqui.
 
-## 11. Questões pendentes para as próximas discussões
+## 12. Questões pendentes para as próximas discussões
 
 1. **Compatibilidade aprovada:** detalhar papéis de produtor, consumidor e assinante e regras de configuração sem alterar a matriz aprovada.
 2. **Configuração mínima aprovada para seis perfis:** detalhar defaults, limites, contratos de dados e propriedades ainda pendentes para WebSocket e mensageria.
@@ -339,7 +449,7 @@ Aprovação do comportamento **não fecha** os contratos OpenAPI, nomes finais d
 9. **Limites técnicos:** impacto no contrato OpenAPI, modelo do frontend e motor Java; necessidade de ADRs e de documentação de integração.
 10. **Fatiamento:** confirmar entregas pequenas e dependências antes de criar as tarefas no Trello.
 
-## 12. Método de trabalho documental
+## 13. Método de trabalho documental
 
 - Registrar cada nova decisão neste arquivo, identificando claramente **aprovado**, **proposto** ou **pendente**.
 - Não introduzir requisitos extras sem debate e aprovação.
@@ -347,7 +457,7 @@ Aprovação do comportamento **não fecha** os contratos OpenAPI, nomes finais d
 - Fazer commits incrementais nesta branch de planejamento.
 - **Não abrir PR ou fazer merge até o responsável solicitar.**
 
-## 13. Referências históricas
+## 14. Referências históricas
 
 - [Requisitos v0.3](v0.3-client-requirements.md)
 - [Catálogo discutido de clientes e perfis](v0.3-clients.md)
