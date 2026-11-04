@@ -532,6 +532,10 @@ A decomposição em tarefas/PRs, dependências detalhadas e contratos técnicos 
 
 A divisão anterior em quatro entregas permanece como orientação para os dez perfis, mas **é precedida por uma etapa de consolidação da API v1**. As tarefas finais serão detalhadas depois dos ADRs e do contrato canônico, sempre com backend antes do frontend.
 
+### Especificação de contrato aprovada — API-V4-001
+
+As diretrizes de consolidação da API pública única `/api/v1`, reconhecimento dos seis tipos de clientes, integrações discriminadas, cenário explícito, resultados e migração controlada estão registradas em [API-V4-001 — Contrato canônico v1](../api/API-V4-001.md). **O esquema OpenAPI normativo, os erros e os limites continuam pendentes**; `docs/api/openapi.yaml` não foi alterado nesta etapa.
+
 ## 12. Questões pendentes para as próximas discussões
 
 1. **Compatibilidade aprovada:** detalhar papéis de produtor, consumidor e assinante e regras de configuração sem alterar a matriz aprovada.
