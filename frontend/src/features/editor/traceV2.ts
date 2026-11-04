@@ -8,12 +8,15 @@ export function traceStateAt(result: SimulationResponseV2, cursor: TraceCursor) 
     components: { ...result.initialState.components } as Record<string,string>,
     requests: { ...result.initialState.requests } as Record<string,string>,
     exchanges: { ...result.initialState.exchanges } as Record<string,string>,
+    resources: {} as Record<string,string>,
   };
   for (const event of orderedTrace(result.trace)) {
     if (event.timestampMs > cursor.time || (event.timestampMs === cursor.time && event.sequence > cursor.sequence)) break;
     if (event.type !== 'STATE_TRANSITION') continue;
-    const bucket = event.entityKind === 'COMPONENT' ? state.components : event.entityKind === 'REQUEST' ? state.requests : state.exchanges;
-    bucket[event.entityId] = event.newState;
+    const bucket = event.entityKind === 'COMPONENT' ? state.components : event.entityKind === 'REQUEST' ? state.requests
+      : event.entityKind === 'EXCHANGE' ? state.exchanges : state.resources;
+    bucket[event.entityKind === 'COMPONENT' || event.entityKind === 'REQUEST' || event.entityKind === 'EXCHANGE'
+      ? event.entityId : `${event.entityKind}:${event.entityId}`] = event.newState;
   }
   return state;
 }

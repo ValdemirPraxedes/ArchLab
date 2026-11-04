@@ -319,7 +319,7 @@ describe('Editor visual', () => {
     expect(screen.getByRole('button', { name: `Nó: ${name} 1` })).toHaveAttribute('data-component-type');
     fireEvent.click(screen.getByRole('button', { name: /Abrir inspeção/ }));
     expect(screen.getByText('Timeline recebida do backend')).toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Análise de métricas v2' })).toHaveTextContent('20 ms');
+    expect(screen.getByRole('region', { name: 'Análise de métricas v1' })).toHaveTextContent('20 ms');
   });
 
   it('permite nomes duplicados sem alterar identidade e rejeita nome vazio', () => {
@@ -390,9 +390,84 @@ describe('Editor visual', () => {
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Editar latência (ms)' }), { target: { value: '55' } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar alterações' }));
     fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Conexão: REST' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Conexão: SOAP' }));
     expect(screen.getByRole('combobox', { name: 'Tipo de integração' })).toHaveValue('SOAP_HTTP');
     expect(screen.getByRole('textbox', { name: 'Operação SOAP' })).toHaveValue('ConsultarSeguro');
+  });
+
+  it('executa uma sessão WebSocket v0.4 pelo editor', async () => {
+    server.use(http.post('/api/v1/scenarios/validate', async ({request}) => {
+      const body = await request.json() as {scenario:{kind:string;entryComponentId:string;entryConnectionId:string};architecture:{connections:{integration:{kind:string}}[]}};
+      expect(body.scenario.kind).toBe('WEBSOCKET_SESSION');
+      expect(body.architecture.connections[0].integration.kind).toBe('WEBSOCKET');
+      return HttpResponse.json({valid:true,violations:[]});
+    }));
+    server.use(http.post('/api/v1/simulations', async ({request}) => {
+      const body = await request.json() as {scenario:{kind:string}};
+      expect(body.scenario.kind).toBe('WEBSOCKET_SESSION');
+      return HttpResponse.json({
+        execution:{id:'exec-1',status:'COMPLETED',mainStatus:'COMPLETED',requestId:'request-1',entryComponentId:'c',entryConnectionId:'e',totalDurationMs:20},
+        initialState:{components:{},requests:{},exchanges:{}},trace:[],timeline:[],messageRepresentations:[],
+        resourceStates:[{id:'session-1',kind:'WEBSOCKET_SESSION',status:'COMPLETED'}],
+        metrics:{totalDurationMs:20,processingByComponent:[],communicationByConnection:[],waitingByComponent:[],exchanges:[],
+          websocket:[{connectionId:'e',sessionId:'session-1',messagesSent:1,messagesReceived:1,durationMs:20}]},
+      });
+    }));
+    render(<App/>);
+    fireEvent.click(screen.getByRole('button',{name:'Web Browser'}));
+    fireEvent.click(screen.getByRole('button',{name:'API'}));
+    fireEvent.click(screen.getByRole('button',{name:'Nó: Web Browser 1'}));
+    fireEvent.change(screen.getByRole('combobox',{name:'Destino'}),{target:{value:(screen.getByRole('option',{name:/API 1/}) as HTMLOptionElement).value}});
+    fireEvent.change(screen.getByRole('combobox',{name:'Protocolo'}),{target:{value:'WEBSOCKET'}});
+    fireEvent.click(screen.getByRole('button',{name:'Conectar'}));
+    fireEvent.change(screen.getByRole('combobox',{name:'Tipo de cenário'}),{target:{value:'WEBSOCKET_SESSION'}});
+    fireEvent.change(screen.getByRole('combobox',{name:'Origem inicial'}),{target:{value:(screen.getByRole('option',{name:/Web Browser 1/}) as HTMLOptionElement).value}});
+    const entry = screen.getByRole('combobox',{name:'Conexão de entrada'});
+    fireEvent.change(entry,{target:{value:(entry.querySelector('option:not([value=""])') as HTMLOptionElement).value}});
+    fireEvent.click(screen.getByRole('button',{name:'Simular'}));
+    expect(await screen.findByLabelText('Recursos da execução')).toHaveTextContent('WEBSOCKET_SESSION');
+    expect(screen.getByText(/Conclusão global:/)).toHaveTextContent('COMPLETED');
+  });
+  it('publica em Queue com destino e assinatura configurados no Broker', async () => {
+    const inspect = vi.fn(async ({request}:{request:Request}) => {
+      const body = await request.json() as {architecture:{components:{type:string;destinations?:unknown[];subscriptions?:unknown[]}[];connections:{integration:{kind:string}}[]};scenario:{kind:string;destinationName:string;publishCount:number}};
+      expect(body.scenario).toMatchObject({kind:'MESSAGE_PUBLISH',destinationName:'orders',publishCount:1});
+      expect(body.architecture.components.find(c => c.type === 'BROKER')).toMatchObject({
+        destinations:[{name:'orders',kind:'QUEUE'}],subscriptions:[expect.objectContaining({destinationName:'orders'})],
+      });
+      expect(body.architecture.connections.map(c => c.integration.kind)).toEqual(['QUEUE','QUEUE']);
+      return HttpResponse.json({valid:true,violations:[]});
+    });
+    server.use(http.post('/api/v1/scenarios/validate',inspect));
+    server.use(http.post('/api/v1/simulations',() => HttpResponse.json({
+      execution:{id:'exec-1',status:'COMPLETED',mainStatus:'COMPLETED',requestId:'publish-1',entryComponentId:'c',entryConnectionId:'e',totalDurationMs:20},
+      initialState:{components:{},requests:{},exchanges:{}},trace:[],timeline:[],messageRepresentations:[],
+      resourceStates:[{id:'broker-message-1',kind:'BROKER_MESSAGE',status:'COMPLETED'}],
+      metrics:{totalDurationMs:20,processingByComponent:[],communicationByConnection:[],waitingByComponent:[],exchanges:[],
+        messaging:[{connectionId:'e',published:1,delivered:1,processed:1,pending:0}]},
+    })));
+    render(<App/>);
+    for (const name of ['Bot','Broker','API']) fireEvent.click(screen.getByRole('button',{name}));
+    fireEvent.click(screen.getByRole('button',{name:'Nó: Broker 1'}));
+    fireEvent.click(screen.getByRole('button',{name:'Adicionar destino'}));
+    fireEvent.click(screen.getByRole('button',{name:'Nó: Bot 1'}));
+    fireEvent.change(screen.getByRole('combobox',{name:'Destino'}),{target:{value:(screen.getByRole('option',{name:/Broker 1/}) as HTMLOptionElement).value}});
+    fireEvent.click(screen.getByRole('button',{name:'Conectar'}));
+    fireEvent.click(screen.getByRole('button',{name:'Nó: Broker 1'}));
+    fireEvent.change(screen.getByRole('combobox',{name:'Destino'}),{target:{value:(screen.getByRole('option',{name:/API 1/}) as HTMLOptionElement).value}});
+    fireEvent.click(screen.getByRole('button',{name:'Conectar'}));
+    fireEvent.change(screen.getByRole('combobox',{name:'Destino da assinatura'}),{target:{value:'orders'}});
+    const delivery = screen.getByRole('combobox',{name:'Conexão de entrega'});
+    fireEvent.change(delivery,{target:{value:(delivery.querySelector('option:not([value=""])') as HTMLOptionElement).value}});
+    fireEvent.click(screen.getByRole('button',{name:'Adicionar assinatura'}));
+    fireEvent.change(screen.getByRole('combobox',{name:'Tipo de cenário'}),{target:{value:'MESSAGE_PUBLISH'}});
+    fireEvent.change(screen.getByRole('combobox',{name:'Origem inicial'}),{target:{value:(screen.getByRole('option',{name:/Bot 1/}) as HTMLOptionElement).value}});
+    const entry = screen.getByRole('combobox',{name:'Conexão de entrada'});
+    fireEvent.change(entry,{target:{value:(entry.querySelector('option:not([value=""])') as HTMLOptionElement).value}});
+    fireEvent.change(screen.getByRole('combobox',{name:'Destino do Broker'}),{target:{value:'orders'}});
+    fireEvent.click(screen.getByRole('button',{name:'Simular'}));
+    expect(await screen.findByLabelText('Recursos da execução')).toHaveTextContent('BROKER_MESSAGE');
+    expect(inspect).toHaveBeenCalledOnce();
   });
 
 });

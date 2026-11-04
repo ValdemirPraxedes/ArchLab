@@ -32,7 +32,7 @@ describe('modelo do editor', () => {
     } finally { uuid.mockRestore(); }
   });
   it('limita protocolos e pares permitidos', () => {
-    expect(allowedProtocols('CLIENT', 'API')).toEqual(['REST', 'SOAP']);
+    expect(allowedProtocols('CLIENT', 'API')).toEqual(['REST', 'SOAP', 'HTTP_GENERIC', 'GRAPHQL_HTTP', 'GRPC_UNARY', 'COAP', 'WEBSOCKET']);
     expect(allowedProtocols('API', 'DATABASE')).toEqual(['TCP']);
     expect(allowedProtocols('DATABASE', 'API')).toEqual([]);
   });
@@ -40,7 +40,7 @@ describe('modelo do editor', () => {
     const visual = createArchitectureNode(type, { x: 0, y: 0 });
     const api = createArchitectureNode('API', { x: 1, y: 1 });
     const db = createArchitectureNode('DATABASE', { x: 2, y: 2 });
-    expect(allowedProtocols(type, 'API')).toEqual(['REST', 'SOAP']);
+    expect(allowedProtocols(type, 'API')).toEqual(['REST', 'SOAP', 'HTTP_GENERIC', 'GRAPHQL_HTTP', 'GRPC_UNARY', 'COAP', 'WEBSOCKET']);
     expect(validateConnection([visual, api, db], [], visual.id, api.id)).toBeNull();
     expect(validateConnection([visual, api, db], [], visual.id, db.id)).toMatch(/incompatível/);
     expect(validateConnection([visual, api, db], [], api.id, visual.id)).toMatch(/incompatível/);
