@@ -321,16 +321,12 @@ components:
       required: [kind, topic]
       properties:
         kind: {type: string, const: MQTT}
-        topic: {type: string, minLength: 1, maxLength: 256, pattern: '^[^+#]+      oneOf:
-      - $ref: '#/components/schemas/HttpRestIntegration'
-      - $ref: '#/components/schemas/SoapHttpIntegration'
-      - $ref: '#/components/schemas/DatabaseQueryIntegration'
-      discriminator:
-        propertyName: kind
-        mapping:
-          HTTP_REST: '#/components/schemas/HttpRestIntegration'
-          SOAP_HTTP: '#/components/schemas/SoapHttpIntegration'
-          DATABASE_QUERY: '#/components/schemas/DatabaseQueryIntegration'
+        topic:
+          type: string
+          minLength: 1
+          maxLength: 256
+          pattern: '^[^+#]+$'
+        qos: {type: integer, const: 0, default: 0}
     QueueIntegration:
       type: object
       additionalProperties: false
