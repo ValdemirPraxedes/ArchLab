@@ -101,6 +101,8 @@ As estruturas finais e a existência de variantes de compatibilidade serão espe
 - Exigir testes determinísticos, regressão, defesa técnica, UML e diagramas de sequência fiéis ao código.
 - Planejamento e documentação na branch `docs/v0.4-communication-profiles-planning`; abrir PR **somente ao final**, mediante solicitação do responsável.
 
+**Especificação de contrato vinculada:** [API-V4-001 — Contrato canônico da API pública v1](../api/API-V4-001.md), com diretrizes aprovadas e pendências normativas explícitas. A aprovação deste documento **não autoriza alterar imediatamente** `docs/api/openapi.yaml` ou remover rotas existentes.
+
 ## Pendências para a próxima etapa
 
 - Inventário detalhado e reconciliação de esquemas v1/v2, identificando colisões e campos incompatíveis.
