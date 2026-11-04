@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: ArchLab Simulation API (unificada /api/v1)
-  version: 0.4.0-contract-draft
-  description: Contrato canônico v1 em evolução para a v0.4; simulação semântica determinística sem protocolos de rede reais.
+  version: 0.4.1-contract-draft
+  description: Contrato canônico v1 em evolução para a v0.4.1; simulação semântica determinística sem protocolos de rede reais.
 servers:
 - url: /
 # API de simulacao local sem mecanismo de autenticacao especificado nesta versao.
@@ -489,6 +489,11 @@ components:
         type:
           type: string
           const: API
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
         preProcessingMs:
           allOf:
           - $ref: '#/components/schemas/DurationMs'
@@ -566,6 +571,158 @@ components:
           $ref: '#/components/schemas/Identifier'
         connectionId:
           $ref: '#/components/schemas/Identifier'
+    Behavior:
+      type: object
+      additionalProperties: false
+      required: [id, trigger, actions]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        trigger:
+          type: string
+          enum: [REQUEST_RECEIVED, MESSAGE_CONSUMED, WS_MESSAGE_RECEIVED, SESSION_OPENED]
+        match:
+          $ref: '#/components/schemas/BehaviorMatcher'
+        actions:
+          type: array
+          minItems: 1
+          maxItems: 100
+          items: {$ref: '#/components/schemas/BehaviorAction'}
+      description: Plano declarativo finito executado apenas quando o gatilho correspondente ocorre.
+    BehaviorMatcher:
+      type: object
+      additionalProperties: false
+      properties:
+        operation: {type: string, minLength: 1, maxLength: 256}
+        destinationName: {type: string, minLength: 1, maxLength: 256}
+        websocketPath: {type: string, minLength: 1, maxLength: 2048}
+      minProperties: 1
+      description: Tipo de filtro aplicável ao gatilho é validado semanticamente.
+    ActionDependencies:
+      type: array
+      maxItems: 100
+      uniqueItems: true
+      default: []
+      items: {$ref: '#/components/schemas/Identifier'}
+      description: Referências de ações locais; o validador exige DAG acíclico.
+    BehaviorAction:
+      oneOf:
+      - $ref: '#/components/schemas/ProcessAction'
+      - $ref: '#/components/schemas/CallAction'
+      - $ref: '#/components/schemas/PublishAction'
+      - $ref: '#/components/schemas/RespondAction'
+      - $ref: '#/components/schemas/OpenSessionAction'
+      - $ref: '#/components/schemas/WsSendAction'
+      - $ref: '#/components/schemas/CloseSessionAction'
+      - $ref: '#/components/schemas/ForkAction'
+      - $ref: '#/components/schemas/JoinAction'
+      discriminator:
+        propertyName: kind
+        mapping:
+          PROCESS: '#/components/schemas/ProcessAction'
+          CALL: '#/components/schemas/CallAction'
+          PUBLISH: '#/components/schemas/PublishAction'
+          RESPOND: '#/components/schemas/RespondAction'
+          OPEN_SESSION: '#/components/schemas/OpenSessionAction'
+          WS_SEND: '#/components/schemas/WsSendAction'
+          CLOSE_SESSION: '#/components/schemas/CloseSessionAction'
+          FORK: '#/components/schemas/ForkAction'
+          JOIN: '#/components/schemas/JoinAction'
+    ProcessAction:
+      type: object
+      additionalProperties: false
+      required: [id, kind]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: PROCESS}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        durationMs: {$ref: '#/components/schemas/DurationMs'}
+    CallAction:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: CALL}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+    PublishAction:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, destinationName]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: PUBLISH}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        destinationName: {type: string, minLength: 1, maxLength: 256}
+    RespondAction:
+      type: object
+      additionalProperties: false
+      required: [id, kind]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: RESPOND}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        statusCode: {type: integer, minimum: 100, maximum: 599, default: 200}
+    OpenSessionAction:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: OPEN_SESSION}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        sessionAlias: {$ref: '#/components/schemas/Identifier'}
+    WsSendAction:
+      type: object
+      additionalProperties: false
+      required: [id, kind, sessionAlias]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: WS_SEND}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        sessionAlias: {$ref: '#/components/schemas/Identifier'}
+        payload: {type: string, maxLength: 32768}
+        sender: {type: string, enum: [SOURCE, TARGET]}
+    CloseSessionAction:
+      type: object
+      additionalProperties: false
+      required: [id, kind, sessionAlias]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: CLOSE_SESSION}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        sessionAlias: {$ref: '#/components/schemas/Identifier'}
+    ForkAction:
+      type: object
+      additionalProperties: false
+      required: [id, kind, actionIds]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: FORK}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        actionIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/Identifier'}
+    JoinAction:
+      type: object
+      additionalProperties: false
+      required: [id, kind, actionIds]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: JOIN}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        actionIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/Identifier'}
     Component:
       oneOf:
       - $ref: '#/components/schemas/Client'
@@ -661,17 +818,44 @@ components:
       - componentId
       - dependencyConnectionId
       description: Só listar APIs que efetivamente chamam uma dependência; APIs omitidas respondem diretamente.
+    UnifiedScenarioEntry:
+      type: object
+      additionalProperties: false
+      required: [componentId, connectionId]
+      properties:
+        componentId: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        operation: {type: string, minLength: 1, maxLength: 256}
+      description: Ponto de entrada explícito; operação e compatibilidade com a integração são validadas pelo domínio.
+    SessionSetup:
+      type: object
+      additionalProperties: false
+      required: [connectionId, sessionAlias]
+      properties:
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        sessionAlias: {$ref: '#/components/schemas/Identifier'}
+        autoCloseAtEnd: {type: boolean, default: true}
+      description: Abre uma sessão via evento causal virtual antes do gatilho principal; não materializa sessão em OPEN.
+    UnifiedScenario:
+      type: object
+      additionalProperties: false
+      required: [entry]
+      properties:
+        entry: {$ref: '#/components/schemas/UnifiedScenarioEntry'}
+        sessionSetup:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/SessionSetup'}
+      description: Cenário v0.4.1; o protocolo está em cada conexão, e não no tipo global do cenário.
     Scenario:
+      description: Aceita cenário unificado sem kind e três variantes legadas com kind explícito durante a migração.
       oneOf:
+      - $ref: '#/components/schemas/UnifiedScenario'
       - $ref: '#/components/schemas/RequestResponseScenario'
       - $ref: '#/components/schemas/WebSocketScenario'
       - $ref: '#/components/schemas/MessagePublishScenario'
-      discriminator:
-        propertyName: kind
-        mapping:
-          REQUEST_RESPONSE: '#/components/schemas/RequestResponseScenario'
-          WEBSOCKET_SESSION: '#/components/schemas/WebSocketScenario'
-          MESSAGE_PUBLISH: '#/components/schemas/MessagePublishScenario'
+      # Sem discriminator global: a variante unificada não possui kind; oneOf é disjunto por propriedades obrigatórias.
     RequestResponseScenario:
       type: object
       additionalProperties: false
@@ -746,6 +930,19 @@ components:
           - INVALID_IDENTIFIER
           - INVALID_TOPOLOGY
           - EXCESSIVE_EXECUTION_DURATION
+          - INVALID_BEHAVIOR_TRIGGER
+          - AMBIGUOUS_BEHAVIOR_MATCH
+          - UNKNOWN_ACTION_KIND
+          - INVALID_ACTION_DEPENDENCY
+          - INVALID_ACTION_CONNECTION
+          - INVALID_ACTION_CAPABILITY
+          - INVALID_RESPONSE_CONTEXT
+          - INVALID_BROKER_DESTINATION
+          - SESSION_NOT_OPEN
+          - INVALID_SESSION_REFERENCE
+          - UNBOUNDED_EXECUTION
+          - EXECUTION_LIMIT_EXCEEDED
+          - LEGACY_SCENARIO_MIGRATION_REQUIRED
         path:
           type: string
           maxLength: 2048
