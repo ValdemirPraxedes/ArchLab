@@ -105,6 +105,8 @@ As estruturas finais e a existência de variantes de compatibilidade serão espe
 
 **Detalhamento aprovado na Etapa 10:** [DM-V4-001 — Modelo de domínio](DM-V4-001.md) e [VAL-V4-001 — Validação e limites](VAL-V4-001.md). Ambos registram invariantes e a separação de estados, mas mantêm classes Java finais, schemas OpenAPI e valores numéricos pendentes.
 
+**Contrato e limites aprovados na Etapa 11:** [API-V4-002](../api/API-V4-002.md). Os valores numéricos, defaults, discriminadores e resultados globais ali aprovados complementam as ADRs; falta convertê-los em OpenAPI normativo validado e testar compatibilidade.
+
 ## Pendências para a próxima etapa
 
 - Inventário detalhado e reconciliação de esquemas v1/v2, identificando colisões e campos incompatíveis.
