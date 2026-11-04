@@ -536,6 +536,13 @@ A divisão anterior em quatro entregas permanece como orientação para os dez p
 
 As diretrizes de consolidação da API pública única `/api/v1`, reconhecimento dos seis tipos de clientes, integrações discriminadas, cenário explícito, resultados e migração controlada estão registradas em [API-V4-001 — Contrato canônico v1](../api/API-V4-001.md). **O esquema OpenAPI normativo, os erros e os limites continuam pendentes**; `docs/api/openapi.yaml` não foi alterado nesta etapa.
 
+### Documentos de domínio e validação aprovados na Etapa 10
+
+- [DM-V4-001 — Modelo de domínio e execução](../architecture/DM-V4-001.md): componentes, conexões, Broker, integrações, cenários e estados independentes.
+- [VAL-V4-001 — Validações, invariantes e limites](../architecture/VAL-V4-001.md): regras VAL-V4-001 a VAL-V4-010 e limites numéricos ainda pendentes.
+
+Os schemas definitivos de DTOs, erros, defaults e limites serão detalhados na etapa **API-V4-002**. Não modificar o OpenAPI executável antes dessas aprovações.
+
 ## 12. Questões pendentes para as próximas discussões
 
 1. **Compatibilidade aprovada:** detalhar papéis de produtor, consumidor e assinante e regras de configuração sem alterar a matriz aprovada.
