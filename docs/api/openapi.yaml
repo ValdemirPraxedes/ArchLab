@@ -802,6 +802,13 @@ components:
           enum: [HIT, MISS, STORED, REMOVED, NOT_FOUND, FOUND, CREATED, REPLACED, DELETED, SENT, INDEXED, UPDATED, REGISTERED, UNAVAILABLE, ALLOW, DENY, REVIEW]
         resultRef: {$ref: '#/components/schemas/Identifier'}
         timestampMs: {$ref: '#/components/schemas/DurationMs'}
+        operationId: {$ref: '#/components/schemas/Identifier'}
+        componentId: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        details:
+          type: object
+          maxProperties: 32
+          additionalProperties: {type: [string, number, boolean, 'null']}
     ServiceV5:
       type: object
       additionalProperties: false
@@ -1791,8 +1798,9 @@ components:
         actionId: {$ref: '#/components/schemas/Identifier'}
         componentId: {$ref: '#/components/schemas/Identifier'}
         operationId: {$ref: '#/components/schemas/Identifier'}
-        status: {type: string, enum: [STARTED, COMPLETED, FAILED]}
+        status: {type: string, enum: [STARTED, COMPLETED, FAILED, TIMED_OUT, SKIPPED]}
         cause: {type: string, minLength: 1, maxLength: 128}
+        outcome: {$ref: '#/components/schemas/ResourceOutcomeV5'}
         correlation: {$ref: '#/components/schemas/Correlation'}
     CommunicationActivity:
       type: object
@@ -2075,6 +2083,11 @@ components:
           maxItems: 1000
           default: []
           items: {$ref: '#/components/schemas/ResourceState'}
+        resourceOutcomes:
+          type: array
+          maxItems: 50000
+          default: []
+          items: {$ref: '#/components/schemas/ResourceOutcomeV5'}
         rootOperations:
           type: array
           items:
@@ -2209,7 +2222,7 @@ components:
                 resultRef: cache-result
                 cases:
                 - {equals: HIT, actionIds: [respond-hit]}
-                - {equals: MISS, actionIds: [db-read]}
+                - {equals: MISS, actionIds: [db-read, respond-miss]}
               - {id: db-read, kind: CALL, connectionId: orders-database, dependsOn: [choose]}
               - {id: respond-miss, kind: RESPOND, statusCode: 200, dependsOn: [db-read]}
               - {id: respond-hit, kind: RESPOND, statusCode: 200, dependsOn: [choose]}
