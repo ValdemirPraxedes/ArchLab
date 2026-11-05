@@ -363,7 +363,8 @@ public final class UnifiedSimulationV41 {
                         resource.id(),edge.id(),outcome.details()).toMap();
                 resourceOutcomes.add(result);
                 event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",resource.id(),
-                        "operationId",operationId,"status","COMPLETED","cause","RESOURCE_OPERATION",
+                        "operationId",operationId,"parentExchangeId",parent,
+                        "status","COMPLETED","cause","RESOURCE_OPERATION",
                         "outcome",result));
                 if (deadline) finish.finish(false);
                 else send(edge,edge.targetId(),edge.sourceId(),"RESPONSE",action.kind(),operationId,parent,

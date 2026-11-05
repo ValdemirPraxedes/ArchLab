@@ -139,7 +139,8 @@ public final class ArchitectureGraphValidatorV2 {
             // Include every resolvable edge in the directed graph, even if its type is invalid.
             // This catches cycles outside the selected execution path.
             graph.get(connection.sourceId()).add(connection.targetId());
-            boolean http = source.type().initiatesRequest() && target.type().receivesRequest();
+            boolean http = source.type().initiatesRequest() && target.type().receivesRequest()
+                    && (!source.type().isClient() || target.type().isProcessor());
             boolean db = source.type().initiatesRequest() && target.type() == ComponentTypeV2.DATABASE;
             boolean messaging = (source.type().publishesMessage()
                     && target.type() == ComponentTypeV2.BROKER)

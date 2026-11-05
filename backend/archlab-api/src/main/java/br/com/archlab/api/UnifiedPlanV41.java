@@ -250,9 +250,10 @@ final class UnifiedPlanV41 {
                             || scheduler.schedules().stream().noneMatch(s -> s.id().equals(action.options().get("scheduleId")))))
                         error("INVALID_SCHEDULE",actionPath+".scheduleId","Unknown Scheduler scheduleId");
                     if ("REGISTER_SERVICE".equals(action.kind()) &&
-                            !components.containsKey(action.options().get("targetComponentId")))
+                            (components.get(action.options().get("targetComponentId"))==null
+                                || !components.get(action.options().get("targetComponentId")).type().isProcessor()))
                         error("INVALID_VIRTUAL_RESOURCE_OPERATION",actionPath+".targetComponentId",
-                                "Registered target must exist in the architecture");
+                                "Registered target must be a processing component in the architecture");
                 }
                 validateBranches(actions,path,behavior.trigger());
                 if (cycle(actions)) error("INVALID_ACTION_DEPENDENCY",path+".actions","Action dependency cycle");
@@ -367,12 +368,12 @@ final class UnifiedPlanV41 {
             for (Object item:cases) if (item instanceof Map<?,?> option
                     && option.get("actionIds") instanceof List<?> ids) groups.add(ids);
             if (branch.options().get("defaultActionIds") instanceof List<?> defaults) groups.add(defaults);
-            int left=-1,right=-1;
+            Set<Integer> left=new HashSet<>(),right=new HashSet<>();
             for (int i=0;i<groups.size();i++) for (Object id:groups.get(i)) {
-                if (id.equals(first.id()) || firstAncestors.contains(id)) left=i;
-                if (id.equals(second.id()) || secondAncestors.contains(id)) right=i;
+                if (id.equals(first.id()) || firstAncestors.contains(id)) left.add(i);
+                if (id.equals(second.id()) || secondAncestors.contains(id)) right.add(i);
             }
-            if (left>=0 && right>=0 && left!=right) return true;
+            if (left.size()==1 && right.size()==1 && !left.equals(right)) return true;
         }
         return false;
     }
