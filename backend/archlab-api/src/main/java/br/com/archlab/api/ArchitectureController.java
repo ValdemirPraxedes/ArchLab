@@ -15,6 +15,7 @@ import br.com.archlab.simulation.core.v2.WebSocketIntegrationV2;
 import br.com.archlab.simulation.core.v4.WebSocketRuntimeV4;
 import br.com.archlab.simulation.core.v4.BrokerRuntimeV4;
 import br.com.archlab.simulation.core.v2.BrokerV2;
+import br.com.archlab.simulation.core.v41.UnifiedSimulationV41;
 import tools.jackson.databind.JsonNode;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -49,12 +50,16 @@ public class ArchitectureController {
     @PostMapping(path = "/architectures/validate", produces = MediaType.APPLICATION_JSON_VALUE)
     public Object validate(@RequestBody JsonNode input) {
         if (legacy(input)) return validator.validate(mapper.toDomain(input));
-        return canonicalGraph.validate(canonicalMapper.canonicalArchitecture(input));
+        var architecture=canonicalMapper.canonicalArchitecture(input);
+        ValidationResult graph=canonicalGraph.validate(architecture);
+        if (!graph.valid()) return graph;
+        return UnifiedPlanV41.parseArchitecture(input,architecture).validateArchitecture();
     }
 
     @PostMapping(path = "/scenarios/validate", produces = MediaType.APPLICATION_JSON_VALUE)
     public ValidationResult validateScenario(@RequestBody JsonNode input) {
         JsonNode scenario = input == null ? null : input.get("scenario");
+        if (scenario != null && scenario.get("entry") != null) return newScenarios.validateUnified(input,canonicalMapper);
         JsonNode kind = scenario == null ? null : scenario.get("kind");
         if (kind != null && kind.isTextual() && !"REQUEST_RESPONSE".equals(kind.asText()))
             return newScenarios.validate(input, canonicalMapper);
@@ -69,6 +74,17 @@ public class ArchitectureController {
             return responseMapper.map(engine.execute(architecture));
         }
         JsonNode scenarioNode = input == null ? null : input.get("scenario");
+        if (scenarioNode != null && scenarioNode.get("entry") != null) {
+            ValidationResult validation=newScenarios.validateUnified(input,canonicalMapper);
+            if (!validation.valid()) return invalid(validation,httpRequest);
+            try {
+                var architecture=canonicalMapper.canonicalArchitecture(input.get("architecture"));
+                return new UnifiedSimulationV41(UnifiedPlanV41.parse(input,architecture).toExecutionPlan()).run();
+            } catch (ArithmeticException | IllegalArgumentException ex) {
+                return invalid(new ValidationResult(false,List.of(new Violation(
+                        "EXECUTION_LIMIT_EXCEEDED","scenario",ex.getMessage()))),httpRequest);
+            }
+        }
         JsonNode kindNode = scenarioNode == null ? null : scenarioNode.get("kind");
         if (kindNode != null && "WEBSOCKET_SESSION".equals(kindNode.asText())) {
             ValidationResult validation = newScenarios.validate(input, canonicalMapper);
@@ -160,6 +176,7 @@ public class ArchitectureController {
             }
         }
     }
+
 
     private static boolean legacy(JsonNode input) {
         if (input == null || !input.isObject() || input.get("architecture") != null) return false;

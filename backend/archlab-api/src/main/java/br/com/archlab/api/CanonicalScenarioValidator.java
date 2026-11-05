@@ -7,7 +7,7 @@ import tools.jackson.databind.JsonNode;
 
 import java.util.*;
 
-/** Validates the two v0.4 scenario shapes whose engines are implemented in later cards. */
+/** Validates canonical scenarios while legacy request/response keeps its established validator. */
 final class CanonicalScenarioValidator {
     private final ArchitectureGraphValidatorV2 graph = new ArchitectureGraphValidatorV2();
 
@@ -17,12 +17,20 @@ final class CanonicalScenarioValidator {
         JsonNode architectureNode = required(root, "architecture");
         JsonNode scenario = required(root, "scenario");
         ArchitectureV2 architecture = mapper.canonicalArchitecture(architectureNode);
+        if (scenario.get("entry") != null) return validateUnified(root,mapper);
         String kind = text(scenario, "kind");
         if ("WEBSOCKET_SESSION".equals(kind))
             return validateWebSocket(architecture, scenario);
         if ("MESSAGE_PUBLISH".equals(kind))
             return validatePublish(architecture, scenario);
         throw new IllegalArgumentException("Unsupported scenario.kind");
+    }
+
+    ValidationResult validateUnified(JsonNode root,V2RequestMapper mapper) {
+        ArchitectureV2 architecture=mapper.canonicalArchitecture(required(root,"architecture"));
+        ValidationResult graphResult=graph.validate(architecture);
+        if (!graphResult.valid()) return graphResult;
+        return UnifiedPlanV41.parse(root,architecture).validate();
     }
 
     private ValidationResult validateWebSocket(ArchitectureV2 architecture, JsonNode scenario) {

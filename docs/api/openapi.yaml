@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: ArchLab Simulation API (unificada /api/v1)
-  version: 0.4.1-contract-draft
-  description: Contrato canônico v1 em evolução para a v0.4.1; simulação semântica determinística sem protocolos de rede reais.
+  version: 0.4.1
+  description: Contrato canônico v1 com cenário unificado e formatos anteriores; simulação semântica determinística sem protocolos de rede reais.
 servers:
 - url: /
 # API de simulacao local sem mecanismo de autenticacao especificado nesta versao.
@@ -1078,6 +1078,11 @@ components:
           $ref: '#/components/schemas/Identifier'
         entryConnectionId:
           $ref: '#/components/schemas/Identifier'
+        entryConnectionIds:
+          type: array
+          items: {$ref: '#/components/schemas/Identifier'}
+        mode: {type: string, enum: [UNIFIED]}
+        responseStatusCode: {type: integer, minimum: 100, maximum: 599}
         totalDurationMs:
           allOf:
           - $ref: '#/components/schemas/DurationMs'
@@ -1127,6 +1132,7 @@ components:
           type: string
           maxLength: 128
           minLength: 1
+        correlation: {$ref: '#/components/schemas/Correlation'}
       required:
       - sequence
       - timestampMs
@@ -1181,6 +1187,7 @@ components:
           - WEBSOCKET_MESSAGE
           - BROKER_PUBLISH
           - BROKER_DELIVERY
+        correlation: {$ref: '#/components/schemas/Correlation'}
       required:
       - sequence
       - timestampMs
@@ -1220,6 +1227,7 @@ components:
           - API_POST_PROCESSING
           - DATABASE_PROCESSING
           - API_MESSAGE_PROCESSING
+        correlation: {$ref: '#/components/schemas/Correlation'}
       required:
       - sequence
       - timestampMs
@@ -1233,12 +1241,28 @@ components:
       - $ref: '#/components/schemas/StateTransitionTrace'
       - $ref: '#/components/schemas/MessageTrace'
       - $ref: '#/components/schemas/ProcessingTrace'
+      - $ref: '#/components/schemas/ActionTrace'
       discriminator:
         propertyName: type
         mapping:
           STATE_TRANSITION: '#/components/schemas/StateTransitionTrace'
           MESSAGE_EVENT: '#/components/schemas/MessageTrace'
           PROCESSING_EVENT: '#/components/schemas/ProcessingTrace'
+          ACTION_EVENT: '#/components/schemas/ActionTrace'
+    ActionTrace:
+      type: object
+      additionalProperties: false
+      required: [sequence, timestampMs, type, actionId, componentId, operationId, status, cause]
+      properties:
+        sequence: *id003
+        timestampMs: *id004
+        type: {type: string, const: ACTION_EVENT}
+        actionId: {$ref: '#/components/schemas/Identifier'}
+        componentId: {$ref: '#/components/schemas/Identifier'}
+        operationId: {$ref: '#/components/schemas/Identifier'}
+        status: {type: string, enum: [STARTED, COMPLETED, FAILED]}
+        cause: {type: string, minLength: 1, maxLength: 128}
+        correlation: {$ref: '#/components/schemas/Correlation'}
     CommunicationActivity:
       type: object
       additionalProperties: false
@@ -1520,6 +1544,18 @@ components:
           maxItems: 1000
           default: []
           items: {$ref: '#/components/schemas/ResourceState'}
+        rootOperations:
+          type: array
+          items:
+            type: object
+            additionalProperties: false
+            required: [id, connectionId, kind, status, completedAtMs]
+            properties:
+              id: {$ref: '#/components/schemas/Identifier'}
+              connectionId: {$ref: '#/components/schemas/Identifier'}
+              kind: {type: string}
+              status: {type: string, enum: [COMPLETED, TIMED_OUT]}
+              completedAtMs: {$ref: '#/components/schemas/DurationMs'}
       required:
       - execution
       - initialState
@@ -1561,7 +1597,7 @@ components:
   examples:
     mixedCommunicationRequest:
       summary: Entrada REST, publicação em Queue e notificação por WebSocket (contrato v0.4.1)
-      description: Exemplo de contrato; backend atual ainda não implementa execução mista.
+      description: Exemplo executável pelo backend v0.4.1.
       value:
         architecture:
           components:
