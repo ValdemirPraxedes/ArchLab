@@ -1,8 +1,9 @@
 import type { SimulationResponseV2, IntegrationV2 } from '../../api/archlabV2Client';
+import type { IntegrationV1 } from '../../api/archlabV1Client';
 import { exchangeTree, messageEvents, representationFor } from './exchangeTreeV2';
 import type { MessageEventV2 } from './exchangeTreeV2';
 
-function IntegrationSnapshot({ integration }: { integration: IntegrationV2 }) {
+function IntegrationSnapshot({ integration }: { integration: IntegrationV1 | IntegrationV2 }) {
   if (integration.kind === 'HTTP_REST') return <div>
     <h4>HTTP REST — snapshot</h4>
     <p>Requisição: {integration.request?.method ?? 'GET'} {integration.request?.path ?? '/'}</p>
@@ -20,6 +21,8 @@ function IntegrationSnapshot({ integration }: { integration: IntegrationV2 }) {
     <h5>Envelope de requisição</h5><pre>{integration.requestEnvelope ?? ''}</pre>
     <h5>Envelope de resposta</h5><pre>{integration.responseEnvelope ?? ''}</pre>
   </div>;
+  if (integration.kind !== 'DATABASE_QUERY') return <div><h4>{integration.kind} — snapshot</h4>
+    <pre>{JSON.stringify(integration, null, 2)}</pre></div>;
   return <div><h4>DATABASE_QUERY — snapshot</h4>
     <h5>Consulta</h5><pre>{integration.queryText ?? ''}</pre>
     <h5>Resposta</h5><pre>{integration.responseText ?? ''}</pre>
@@ -35,7 +38,7 @@ function EventDetail({ event, result }: { event: MessageEventV2; result: Simulat
       {([['messageId',event.messageId],['requestId',event.requestId],['exchangeId',event.exchangeId],['parentExchangeId',event.parentExchangeId ?? '—'],['connectionId',event.connectionId],['Origem',event.sourceId],['Destino',event.targetId],['Direção',event.direction],['Ação',event.action],['Tempo virtual',event.timestampMs+' ms'],['Intenção',event.intent]] as const).map(([key,value]) => <div key={key}><dt>{key}</dt><dd>{value}</dd></div>)}
     </dl>
     <p>Eventos de resposta correlacionados: {response.length}</p>
-    {snapshot ? <IntegrationSnapshot integration={snapshot}/> : <p>Sem representação ilustrativa no snapshot.</p>}
+    {snapshot ? <IntegrationSnapshot integration={snapshot as IntegrationV1}/> : <p>Sem representação ilustrativa no snapshot.</p>}
   </section>;
 }
 
@@ -57,7 +60,7 @@ export function MessageInspectorV2({ result, selectedSequence, onSelect }: Props
       {item.children.length > 0 && <ul>{item.children.map(child => draw(child,next))}</ul>}
     </li>;
   };
-  return <section aria-label="Inspetor de mensagens v2" className="message-inspector">
+  return <section aria-label="Inspetor de mensagens v1" className="message-inspector">
     <h3>Exchanges executadas ({byExchange.size})</h3>
     {events.length ? <ul>{roots.map(root => draw(root,new Set()))}</ul> : <p>Não há mensagens executadas no trace.</p>}
     {selected && <EventDetail event={selected} result={result}/>}

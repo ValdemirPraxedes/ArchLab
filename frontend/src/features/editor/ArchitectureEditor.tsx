@@ -8,16 +8,19 @@ import '@xyflow/react/dist/style.css';
 import { ArchitectureNode } from './ArchitectureNode';
 import { ComponentIcon } from './ComponentIcon';
 import { IntegrationEditor } from './IntegrationEditor';
+import { BrokerEditor } from './BrokerEditor';
 import { defaultIntegration, allowedIntegrationKinds } from './integration';
-import { ScenarioEditor } from './ScenarioEditor';
+import type { IntegrationKind } from './integration';
+import { UnifiedScenarioEditorV41 } from './UnifiedScenarioEditorV41';
+import { BehaviorEditorV41 } from './BehaviorEditorV41';
+import { emptyEntryV41, toUnifiedRequestV41 } from './unifiedScenarioV41';
+import type { EntryDraftV41, SessionDraftV41 } from './unifiedScenarioV41';
 import { SimulationPlaybackV2 } from './SimulationPlaybackV2';
 import { inFlightMessages, traceStateAt } from './traceV2';
 import type { TraceCursor } from './traceV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
-import { emptyScenario, reconcileScenario, selectedPath } from './scenario';
-import type { ScenarioDraft } from './scenario';
-import { toArchitectureV2 } from './architectureV2';
-import { archlabV2Client, ArchlabV2HttpError } from '../../api/archlabV2Client';
+import { toArchitectureV1 } from './architectureV1';
+import { archlabV1Client, ArchlabV1HttpError } from '../../api/archlabV1Client';
 import type { ValidationIssue } from './validation';
 import {
   VISUAL_CLIENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
@@ -28,16 +31,20 @@ import type { ArchitectureNode as ArchitectureNodeType, ArchitectureEdge, Compon
 const DRAG_MIME = 'application/x-archlab-component';
 const CANVAS_WIDTH = 2400;
 const CANVAS_HEIGHT = 1600;
+const kindForProtocol = (value: Protocol): IntegrationKind => value === 'REST' ? 'HTTP_REST' : value === 'SOAP' ? 'SOAP_HTTP' : value === 'TCP' ? 'DATABASE_QUERY' : value;
+const protocolForKind = (value: string): Protocol => value === 'HTTP_REST' ? 'REST' : value === 'SOAP_HTTP' ? 'SOAP' : value === 'DATABASE_QUERY' ? 'TCP' : value as Protocol;
 const PALETTE_CATEGORIES = [
   { title: 'Clientes', types: VISUAL_CLIENT_TYPES },
   { title: 'Serviços', types: ['API'] },
   { title: 'Dados', types: ['DATABASE'] },
+  { title: 'Mensageria', types: ['BROKER'] },
 ] as const satisfies ReadonlyArray<{ title: string; types: readonly ComponentType[] }>;
 
 function EditorCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<ArchitectureNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<ArchitectureEdge>([]);
-  const [scenario, setScenario] = useState<ScenarioDraft>(emptyScenario);
+  const [entry, setEntry] = useState<EntryDraftV41>(emptyEntryV41);
+  const [sessions, setSessions] = useState<SessionDraftV41[]>([]);
   const [selection, setSelection] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null);
   const [targetId, setTargetId] = useState('');
   const [protocol, setProtocol] = useState<Protocol>('REST');
@@ -82,7 +89,9 @@ function EditorCanvas() {
   const traceState = simulationResultV2 ? traceStateAt(simulationResultV2,traceCursor) : null;
   const flying = simulationResultV2 ? inFlightMessages(simulationResultV2.trace,traceCursor) : [];
   const flyingConnections = new Set(flying.map(e => e.connectionId));
-  const path = selectedPath(scenario, nodes, edges);
+  const initialEdge = edges.find(edge => edge.id === entry.connectionId && edge.source === entry.componentId);
+  const path = {components: new Set(initialEdge ? [initialEdge.source,initialEdge.target] : []),
+    connections: new Set(initialEdge ? [initialEdge.id] : [])};
   const hasPath = path.components.size > 0;
   const invalidIds = new Set(issues.flatMap(issue => {
     const match = /components\[(\d+)\]/.exec(issue.path);
@@ -119,29 +128,29 @@ function EditorCanvas() {
     const requestGeneration = ++generation.current;
     setIssues([]); setValidationStatus('checking'); setExecutionStatus('VALIDATING'); setValidationScope('scenario');
     try {
-      const architecture = toArchitectureV2(nodes, edges);
-      const request = { architecture, scenario };
-      const result = await archlabV2Client.validateScenario(request);
+      const architecture = toArchitectureV1(nodes, edges);
+      const request = toUnifiedRequestV41(architecture,entry,sessions,nodes,edges);
+      const result = await archlabV1Client.validateScenario(request);
       if (requestGeneration !== generation.current) return;
       if (!result.valid) {
         setIssues(result.violations.map(v => ({ code: v.code, path: v.path, message: v.message })));
         setValidationStatus('invalid'); setExecutionStatus('ERROR'); return;
       }
       setValidationStatus('valid'); setExecutionStatus('EXECUTING');
-      const response = await archlabV2Client.simulate(request);
+      const response = await archlabV1Client.simulate(request);
       if (requestGeneration !== generation.current) return;
       setTraceCursor({time:0,sequence:0});
-      setSimulationResultV2(response);
+      setSimulationResultV2(response as unknown as SimulationResponseV2);
       setV2PlaybackStatus('PAUSADA');
       setExecutionStatus('COMPLETED');
     } catch (cause) {
       if (requestGeneration !== generation.current) return;
       setSimulationResultV2(null); setExecutionStatus('ERROR'); setValidationStatus('error');
-      if (cause instanceof ArchlabV2HttpError) {
+      if (cause instanceof ArchlabV1HttpError) {
         const violations = cause.violations.map(v => ({ code: v.code, path: v.path, message: v.message }));
         setIssues(violations.length ? violations : [{ code: cause.problem?.code ?? 'HTTP_ERROR', path: '', message: `HTTP ${cause.status}: ${cause.problem?.detail ?? cause.message}` }]);
       } else {
-        setIssues([{ code: 'NETWORK_ERROR', path: '', message: cause instanceof Error ? cause.message : 'Falha de comunicação com a API v2.' }]);
+        setIssues([{ code: 'NETWORK_ERROR', path: '', message: cause instanceof Error ? cause.message : 'Falha de comunicação com a API v1.' }]);
       }
     }
   };
@@ -152,21 +161,21 @@ function EditorCanvas() {
     setIssues([]);
     setValidationStatus('checking');
     try {
-      const architecture = toArchitectureV2(nodes, edges);
+      const architecture = toArchitectureV1(nodes, edges);
       const response = scope === 'architecture'
-        ? await archlabV2Client.validateArchitecture(architecture)
-        : await archlabV2Client.validateScenario({ architecture, scenario });
+        ? await archlabV1Client.validateArchitecture(architecture)
+        : await archlabV1Client.validateScenario(toUnifiedRequestV41(architecture,entry,sessions,nodes,edges));
       setIssues(response.violations.map(v => ({ code: v.code, path: v.path, message: v.message })));
       setValidationStatus(response.valid ? 'valid' : 'invalid');
     } catch (cause) {
-      if (cause instanceof ArchlabV2HttpError) {
+      if (cause instanceof ArchlabV1HttpError) {
         const problem = cause.problem;
         const violations = cause.violations.map(v => ({ code: v.code, path: v.path, message: v.message }));
         setIssues(violations.length ? violations : [{
           code: problem?.code ?? 'HTTP_ERROR', path: '', message: `HTTP ${cause.status}: ${problem?.detail ?? problem?.title ?? cause.message}`,
         }]);
       } else {
-        setIssues([{ code: 'NETWORK_ERROR', path: '', message: cause instanceof Error ? cause.message : 'Falha na validação v2.' }]);
+        setIssues([{ code: 'NETWORK_ERROR', path: '', message: cause instanceof Error ? cause.message : 'Falha na validação v1.' }]);
       }
       setValidationStatus('error');
     }
@@ -227,7 +236,7 @@ function EditorCanvas() {
     if (!latencyMs.trim() || !validDuration(duration)) { setError('Latência deve ser um inteiro não negativo.'); return; }
     resetValidation();
     const created = createArchitectureEdge(node.id, destination.id, chosenProtocol, duration);
-    const kind = chosenProtocol === 'SOAP' ? 'SOAP_HTTP' : allowedIntegrationKinds(node.data.componentType, destination.data.componentType)[0];
+    const kind = kindForProtocol(chosenProtocol);
     setEdges((current) => [...current, { ...created, data: { ...created.data!, integration: defaultIntegration(kind) } }]);
     setError(''); setTargetId(''); setActionFeedback('Conexão criada no canvas.');
   };
@@ -240,13 +249,13 @@ function EditorCanvas() {
       setError('Protocolo incompatível ou latência inválida.'); return;
     }
     const targetNode = nodes.find(n => n.id === edge.target);
-    if (overrideDraft?.enabled && targetNode?.data.componentType !== 'API') { setError('Personalização permitida apenas para conexões de entrada de API.'); return; }
+    if (overrideDraft?.enabled && (targetNode?.data.componentType !== 'API' || source.data.componentType === 'BROKER')) { setError('Personalização permitida apenas para conexões Client/API → API.'); return; }
     const overridePre = Number(overrideDraft?.pre), overridePost = Number(overrideDraft?.post);
     if (overrideDraft?.enabled && (![overrideDraft.pre, overrideDraft.post].every(value => value.trim() !== '') || ![overridePre, overridePost].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000))) { setError('Pré e pós-processamento devem ser inteiros entre 0 e 1000000000 ms.'); return; }
     resetValidation();
     setEdges((current) => current.map((item) => {
       if (item.id !== edge.id) return item;
-      const kind = edgeDraft.protocol === 'SOAP' ? 'SOAP_HTTP' : allowedIntegrationKinds(source.data.componentType, target.data.componentType)[0];
+      const kind = kindForProtocol(edgeDraft.protocol);
       const integration = item.data?.protocol === edgeDraft.protocol || item.data?.integration?.kind === kind ? (item.data?.integration ?? defaultIntegration(kind)) : defaultIntegration(kind);
       return { ...item, label: edgeDraft.protocol, data: { ...item.data!, protocol: edgeDraft.protocol, integration, latencyMs: ms, apiProcessingOverride: overrideDraft?.enabled ? { preProcessingMs: overridePre, postProcessingMs: overridePost } : undefined } };
     }));
@@ -266,10 +275,10 @@ function EditorCanvas() {
     if (selection.kind === 'node') {
       const result = removeComponent(nodes, edges, selection.id);
       setNodes(result.nodes); setEdges(result.edges);
-      setScenario((current) => reconcileScenario(current, result.nodes, result.edges));
+      if (entry.componentId === selection.id) setEntry(emptyEntryV41());
     } else setEdges((current) => {
       const remaining = current.filter((item) => item.id !== selection.id);
-      setScenario((value) => reconcileScenario(value, nodes, remaining));
+      if (entry.connectionId === selection.id) setEntry(value => ({...value,connectionId:'',operation:''}));
       return remaining;
     });
     select(null);
@@ -292,15 +301,16 @@ function EditorCanvas() {
         </section>)}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura v2</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário v2</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
         {actionFeedback && <p className="action-feedback" role="status" aria-live="polite">{actionFeedback}</p>}
         <div className="execution-status" role="status">Execução: {simulationResultV2 ? v2PlaybackStatus : executionStatus}{simulationResultV2 && <span> · Tempo virtual total: {simulationResultV2.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
           {validationStatus === 'checking' && <p>Validando arquitetura...</p>}
-          {validationStatus === 'valid' && <p>{validationScope === 'architecture' ? 'Arquitetura v2 válida pelo backend.' : 'Cenário v2 válido pelo backend.'}</p>}
+          {validationStatus === 'valid' && <p>{validationScope === 'architecture' ? 'Arquitetura válida pelo backend.' : 'Cenário válido pelo backend.'}</p>}
           {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? (validationScope === 'architecture' ? 'Arquitetura inválida' : 'Cenário inválido') : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
-        <ScenarioEditor nodes={nodes} edges={edges} value={scenario} onChange={(next) => { setScenario(next); resetValidation(); }} disabled={executionLocked} />
+        <UnifiedScenarioEditorV41 nodes={nodes} edges={edges} entry={entry} sessions={sessions}
+          onEntry={next => {setEntry(next);resetValidation();}} onSessions={next => {setSessions(next);resetValidation();}} disabled={executionLocked}/>
         {simulationResultV2 && <SimulationPlaybackV2 result={simulationResultV2} onStatus={setV2PlaybackStatus} onCursor={setTraceCursor} />}
         <div className="editor-canvas" ref={canvasRef} onDrop={(event) => { if (!executionLocked) onDrop(event); }} onDragOver={(event) => { if (!executionLocked) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} aria-label="Canvas da arquitetura">
           <ReactFlow nodes={shownNodes} edges={shownEdges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
@@ -324,8 +334,12 @@ function EditorCanvas() {
           {node.data.componentType === 'API' && <>
             <label>Pré-processamento (ms)<input aria-label="Pré-processamento (ms)" type="number" min="0" step="1" value={node.data.preProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('preProcessingMs', e.target.value)} /></label>
             <label>Pós-processamento (ms)<input aria-label="Pós-processamento (ms)" type="number" min="0" step="1" value={node.data.postProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('postProcessingMs', e.target.value)} /></label>
+            <BehaviorEditorV41 node={node} nodes={nodes} edges={edges} behaviors={node.data.behaviors ?? []} disabled={executionLocked}
+              onChange={behaviors => {setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,behaviors}}:item));resetValidation();}}/>
           </>}
           {node.data.componentType === 'DATABASE' && <label>Processamento (ms)<input aria-label="Processamento (ms)" type="number" min="0" step="1" value={node.data.processingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('processingMs', e.target.value)} /></label>}
+          {node.data.componentType === 'BROKER' && <BrokerEditor node={node} nodes={nodes} edges={edges} disabled={executionLocked}
+            onChange={(destinations,subscriptions) => { setNodes(current => current.map(item => item.id === node.id ? {...item,data:{...item.data,destinations,subscriptions}} : item)); resetValidation(); }}/>}
           <h3>Conectar</h3>
           <label>Destino
             <select aria-label="Destino" value={targetId} disabled={executionLocked} onChange={(e) => { setTargetId(e.target.value); const target = nodes.find((n) => n.id === e.target.value); const protocols = target ? allowedProtocols(node.data.componentType, target.data.componentType) : []; setProtocol(protocols[0] ?? 'REST'); setError(''); }}>
@@ -347,7 +361,7 @@ function EditorCanvas() {
             </select>
           </label>
           <label>Latência (ms)<input aria-label="Editar latência (ms)" type="number" min="0" step="1" value={edgeDraft?.latencyMs ?? String(edge.data?.latencyMs ?? 0)} disabled={executionLocked} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, latencyMs: e.target.value } : null)} /></label>
-          {nodes.find(n => n.id === edge.target)?.data.componentType === 'API' && <section className="api-override-editor" aria-label="Processamento da API de destino">
+          {nodes.find(n => n.id === edge.target)?.data.componentType === 'API' && nodes.find(n => n.id === edge.source)?.data.componentType !== 'BROKER' && <section className="api-override-editor" aria-label="Processamento da API de destino">
             <h3>Processamento da API de destino</h3>
             <p>{nodes.find(n => n.id === edge.target)?.data.displayName ?? nodes.find(n => n.id === edge.target)?.data.label} · padrão: pré {nodes.find(n => n.id === edge.target)?.data.preProcessingMs ?? 0} ms / pós {nodes.find(n => n.id === edge.target)?.data.postProcessingMs ?? 0} ms</p>
             <label>Configuração de processamento
@@ -363,7 +377,7 @@ function EditorCanvas() {
           </section>}
           <IntegrationEditor key={edge.id} value={edge.data?.integration ?? defaultIntegration(allowedIntegrationKinds(nodes.find(n => n.id === edge.source)!.data.componentType, nodes.find(n => n.id === edge.target)!.data.componentType)[0])}
             source={nodes.find(n => n.id === edge.source)!.data.componentType} target={nodes.find(n => n.id === edge.target)!.data.componentType}
-            disabled={executionLocked} onSave={(integration) => { setEdges(current => current.map(item => item.id === edge.id ? { ...item, data: { ...item.data!, integration } } : item)); resetValidation(); }} />
+            disabled={executionLocked} onSave={(integration) => { setEdges(current => current.map(item => item.id === edge.id ? { ...item, label: protocolForKind(integration.kind), data: { ...item.data!, protocol: protocolForKind(integration.kind), integration } } : item)); setEdgeDraft(current => current ? {...current,protocol:protocolForKind(integration.kind)} : current); resetValidation(); }} />
           <p className="property-help">Protocolo, latência e override são aplicados ao clicar em Confirmar alterações. Cancelar restaura os valores atuais.</p>
           <div className="property-actions"><button type="button" disabled={executionLocked} onClick={confirmEdge}><Check size={16} aria-hidden="true" /> Confirmar alterações</button><button type="button" disabled={executionLocked} onClick={cancelEdge}><X size={16} aria-hidden="true" /> Cancelar alterações</button></div>
         </>}

@@ -7,7 +7,8 @@ type Props = { nodes: ArchitectureNode[]; edges: ArchitectureEdge[]; value: Scen
 export function ScenarioEditor({ nodes, edges, value, onChange, disabled }: Props) {
   const scenario = reconcileScenario(value, nodes, edges);
   const clients = nodes.filter(n => isClientType(n.data.componentType));
-  const entryConnections = edges.filter(e => e.source === scenario.entryComponentId && nodes.some(n => n.id === e.target && n.data.componentType === 'API'));
+  const entryConnections = edges.filter(e => e.source === scenario.entryComponentId && e.data?.integration?.kind !== 'WEBSOCKET'
+    && nodes.some(n => n.id === e.target && n.data.componentType === 'API'));
   const visited = new Set<string>();
   let target = edges.find(e => e.id === scenario.entryConnectionId)?.target;
   while (target && !visited.has(target)) {
@@ -35,7 +36,8 @@ export function ScenarioEditor({ nodes, edges, value, onChange, disabled }: Prop
     </label>
     {nodes.filter(n => n.data.componentType === 'API').map(api => {
       const active = visited.has(api.id);
-      const options = edges.filter(e => e.source === api.id && nodes.some(n => n.id === e.target && ['API', 'DATABASE'].includes(n.data.componentType)));
+      const options = edges.filter(e => e.source === api.id && e.data?.integration?.kind !== 'WEBSOCKET'
+        && nodes.some(n => n.id === e.target && ['API', 'DATABASE'].includes(n.data.componentType)));
       return <label key={api.id}>Dependência de {api.data.displayName ?? api.data.label}{!active && ' (inativa)'}
         <select aria-label={`Dependência de ${api.data.displayName ?? api.data.label}`} disabled={disabled || !active} value={scenario.apiExecutions.find(e => e.componentId === api.id)?.dependencyConnectionId ?? ''}
           onChange={e => onChange(reconcileScenario({ ...scenario, apiExecutions: [...scenario.apiExecutions.filter(item => item.componentId !== api.id), ...(e.target.value ? [{ componentId: api.id, dependencyConnectionId: e.target.value }] : [])] }, nodes, edges))}>
@@ -44,6 +46,6 @@ export function ScenarioEditor({ nodes, edges, value, onChange, disabled }: Prop
         </select>
       </label>;
     })}
-    <p aria-live="polite">{issues.length ? issues.join(' ') : 'Caminho selecionado localmente. Use Simular para executar no backend v2.'}</p>
+    <p aria-live="polite">{issues.length ? issues.join(' ') : 'Caminho selecionado localmente. Use Simular para executar no backend v1.'}</p>
   </section>;
 }

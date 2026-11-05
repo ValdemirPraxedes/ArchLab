@@ -9,11 +9,12 @@ export function reconcileScenario(scenario: ScenarioDraft, nodes: ArchitectureNo
   const clients = new Set(nodes.filter(n => isClientType(n.data.componentType)).map(n => n.id));
   const apis = new Set(nodes.filter(n => n.data.componentType === 'API').map(n => n.id));
   const entryComponentId = clients.has(scenario.entryComponentId) ? scenario.entryComponentId : '';
-  const entryEdge = edges.find(e => e.id === scenario.entryConnectionId && e.source === entryComponentId && apis.has(e.target));
+  const entryEdge = edges.find(e => e.id === scenario.entryConnectionId && e.source === entryComponentId && apis.has(e.target)
+    && e.data?.integration?.kind !== 'WEBSOCKET');
   const entryConnectionId = entryEdge?.id ?? '';
   const apiExecutions = scenario.apiExecutions.filter(e =>
     apis.has(e.componentId) && edges.some(edge =>
-      edge.id === e.dependencyConnectionId && edge.source === e.componentId &&
+      edge.id === e.dependencyConnectionId && edge.source === e.componentId && edge.data?.integration?.kind !== 'WEBSOCKET' &&
       nodes.some(n => n.id === edge.target && (n.data.componentType === 'API' || n.data.componentType === 'DATABASE'))));
   const reachable = new Set<string>();
   let current = entryEdge?.target;

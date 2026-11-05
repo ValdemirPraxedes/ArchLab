@@ -1,0 +1,65 @@
+{
+  "architecture": {
+    "components": [
+      {
+        "id": "client-1",
+        "type": "BOT",
+        "displayName": "client-1"
+      },
+      {
+        "id": "broker-1",
+        "type": "BROKER",
+        "displayName": "broker-1",
+        "destinations": [
+          {
+            "name": "sensors/temperature",
+            "kind": "MQTT"
+          }
+        ],
+        "subscriptions": [
+          {
+            "destinationName": "sensors/temperature",
+            "consumerComponentId": "api-1",
+            "connectionId": "conn-consumer-1"
+          }
+        ]
+      },
+      {
+        "id": "api-1",
+        "type": "API",
+        "displayName": "api-1"
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-entry",
+        "sourceId": "client-1",
+        "targetId": "broker-1",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "MQTT",
+          "topic": "sensors/temperature",
+          "qos": 0
+        }
+      },
+      {
+        "id": "conn-consumer-1",
+        "sourceId": "broker-1",
+        "targetId": "api-1",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "MQTT",
+          "topic": "sensors/temperature",
+          "qos": 0
+        }
+      }
+    ]
+  },
+  "scenario": {
+    "kind": "MESSAGE_PUBLISH",
+    "entryComponentId": "client-1",
+    "entryConnectionId": "conn-entry",
+    "destinationName": "sensors/temperature",
+    "publishCount": 1
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "scripts": {
+    "validate": "node validate.cjs",
+    "verify:live": "node verify-live.cjs"
+  },
+  "devDependencies": {
+    "ajv": "^8.20.0",
+    "yaml": "^1.10.3"
+  }
+}

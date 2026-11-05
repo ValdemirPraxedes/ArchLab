@@ -1,0 +1,442 @@
+{
+  "architecture": {
+    "components": [
+      {
+        "id": "client-1",
+        "type": "MOBILE_APP",
+        "displayName": "client-1"
+      },
+      {
+        "id": "api-1",
+        "type": "API",
+        "displayName": "api-1"
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-entry",
+        "sourceId": "client-1",
+        "targetId": "api-1",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "WEBSOCKET",
+          "path": "/events",
+          "connectTimeoutMs": 5000,
+          "idleTimeoutMs": null,
+          "closeMode": "AUTOMATIC",
+          "messages": [
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            },
+            {
+              "sender": "SOURCE",
+              "intervalMs": 0
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "scenario": {
+    "kind": "WEBSOCKET_SESSION",
+    "entryComponentId": "client-1",
+    "entryConnectionId": "conn-entry"
+  }
+}

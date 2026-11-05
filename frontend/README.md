@@ -1,9 +1,9 @@
-# ArchLab — Frontend MVP v0.1
+# ArchLab — editor visual v0.4
 
-React + TypeScript + Vite. Primeira etapa do editor visual: paleta e canvas React Flow, adição de Client/API/Database e movimentação visual. Conexões, edição, simulação e playback virão nas próximas entregas.
+O editor React + TypeScript usa os três endpoints canônicos `/api/v1` para validar arquitetura, validar cenário e simular. A geração de tipos parte de `../docs/api/openapi.yaml`.
 
 ## Requisitos
-Node.js 22 LTS e npm.
+Node.js 22 e npm; backend local na porta 8080.
 
 ## Executar
 ```bash
@@ -13,13 +13,22 @@ npm run dev
 ```
 Acesse http://localhost:5173.
 
-## Scripts
-- `npm run typegen`: gera tipos a partir de `../docs/api/openapi.yaml`.
-- `npm test`: Vitest com mocks MSW e React Testing Library.
-- `npm run build`: TypeScript + Vite.
-- `npm run lint`: ESLint.
-
 ## Editor
-Arraste Client, API ou Database da paleta para o canvas; também é possível clicar para adicionar. São permitidas múltiplas instâncias, cada uma com ID único. Componentes podem ser movimentados no canvas. As regras de validação e execução continuam no backend.
+
+- Adicione um dos seis tipos de cliente, API, Database ou Broker; configure latência e perfil em cada conexão.
+- A matriz oferece HTTP REST, SOAP HTTP, HTTP genérico, GraphQL HTTP, gRPC unary, CoAP e WebSocket para cliente/API → API; `DATABASE_QUERY` para API → Database; Queue, Topic e MQTT QoS 0 para cliente/API → Broker e Broker → API.
+- Configure destinos e assinaturas no Broker. Uma assinatura usa uma conexão Broker → API do mesmo perfil do destino.
+- Escolha `REQUEST_RESPONSE`, `WEBSOCKET_SESSION` ou `MESSAGE_PUBLISH`. Para WebSocket, edite mensagens e fechamento na conexão. Para publicação, selecione destino e quantidade.
+- A reprodução usa o trace e o relógio virtual do backend; mostra recursos, mensagens, métricas e os resultados principal e global.
+
+## Verificar
+
+```bash
+npm test
+npm run lint
+npm run build
+```
+
+Os exemplos executáveis e a verificação de contrato ao vivo estão em `../docs/api/examples/v0.4`.
 
 O cliente REST usa `/api/v1` via proxy do Vite para http://localhost:8080. Sob outra URL, configure `VITE_API_BASE_URL` em `.env.local`.

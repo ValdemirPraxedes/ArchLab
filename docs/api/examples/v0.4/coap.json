@@ -1,0 +1,36 @@
+{
+  "architecture": {
+    "components": [
+      {
+        "id": "client-1",
+        "type": "WEB_BROWSER",
+        "displayName": "client-1"
+      },
+      {
+        "id": "api-1",
+        "type": "API",
+        "displayName": "api-1"
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-entry",
+        "sourceId": "client-1",
+        "targetId": "api-1",
+        "latencyMs": 10,
+        "integration": {
+          "kind": "COAP",
+          "method": "GET",
+          "resource": "/sensors/temperature",
+          "mode": "CON"
+        }
+      }
+    ]
+  },
+  "scenario": {
+    "kind": "REQUEST_RESPONSE",
+    "entryComponentId": "client-1",
+    "entryConnectionId": "conn-entry",
+    "apiExecutions": []
+  }
+}

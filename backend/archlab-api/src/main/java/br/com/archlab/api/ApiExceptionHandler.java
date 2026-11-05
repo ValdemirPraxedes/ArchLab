@@ -23,8 +23,13 @@ public class ApiExceptionHandler {
 
     @ExceptionHandler({IllegalArgumentException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<Map<String, Object>> invalidRequest(Exception exception, HttpServletRequest request) {
+        String detail = request.getRequestURI().startsWith("/api/v1/")
+                && exception instanceof IllegalArgumentException
+                && "Missing field: kind".equals(exception.getMessage())
+                ? "scenario.kind é obrigatório no contrato /api/v1."
+                : "Não foi possível interpretar os dados enviados.";
         return respond(400, "/problems/invalid-request", "Requisição inválida",
-                "Não foi possível interpretar os dados enviados.", "INVALID_REQUEST", request);
+                detail, "INVALID_REQUEST", request);
     }
 
     @ExceptionHandler(HttpMediaTypeNotSupportedException.class)

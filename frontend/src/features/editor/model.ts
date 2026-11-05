@@ -1,11 +1,13 @@
 import type { Edge, Node } from '@xyflow/react';
-import type { IntegrationV2, ApiProcessingOverrideV2 } from '../../api/archlabV2Client';
+import type { IntegrationV1, BrokerDestinationV1, BrokerSubscriptionV1 } from '../../api/archlabV1Client';
+import type { BehaviorV41 } from '../../api/archlabV1Client';
+import type { ApiProcessingOverrideV2 } from '../../api/archlabV2Client';
 
 export const VISUAL_CLIENT_TYPES = ['WEB_BROWSER', 'MOBILE_APP', 'DESKTOP_APP', 'CLI', 'BOT', 'EMBEDDED_SYSTEM'] as const;
-export const COMPONENT_TYPES = ['CLIENT', ...VISUAL_CLIENT_TYPES, 'API', 'DATABASE'] as const;
+export const COMPONENT_TYPES = ['CLIENT', ...VISUAL_CLIENT_TYPES, 'API', 'DATABASE', 'BROKER'] as const;
 export type ComponentType = (typeof COMPONENT_TYPES)[number];
 export type VisualClientType = (typeof VISUAL_CLIENT_TYPES)[number];
-export type Protocol = 'REST' | 'SOAP' | 'TCP';
+export type Protocol = 'REST' | 'SOAP' | 'TCP' | 'HTTP_GENERIC' | 'GRAPHQL_HTTP' | 'GRPC_UNARY' | 'COAP' | 'WEBSOCKET' | 'QUEUE' | 'TOPIC' | 'MQTT';
 export type ArchitectureNode = Node<{
   componentType: ComponentType;
   label: string;
@@ -14,11 +16,14 @@ export type ArchitectureNode = Node<{
   preProcessingMs?: number;
   postProcessingMs?: number;
   processingMs?: number;
+  destinations?: BrokerDestinationV1[];
+  subscriptions?: BrokerSubscriptionV1[];
+  behaviors?: BehaviorV41[];
 }>;
-export type ArchitectureEdge = Edge<{ protocol: Protocol; latencyMs: number; integration?: IntegrationV2; apiProcessingOverride?: ApiProcessingOverrideV2 }>;
+export type ArchitectureEdge = Edge<{ protocol: Protocol; latencyMs: number; integration?: IntegrationV1; apiProcessingOverride?: ApiProcessingOverrideV2 }>;
 export const COMPONENT_LABELS: Record<ComponentType, string> = {
   CLIENT: 'Client', WEB_BROWSER: 'Web Browser', MOBILE_APP: 'Mobile App', DESKTOP_APP: 'Desktop App',
-  CLI: 'CLI', BOT: 'Bot', EMBEDDED_SYSTEM: 'Embedded System', API: 'API', DATABASE: 'Database',
+  CLI: 'CLI', BOT: 'Bot', EMBEDDED_SYSTEM: 'Embedded System', API: 'API', DATABASE: 'Database', BROKER: 'Broker',
 };
 
 export function isVisualClientType(type: ComponentType): type is VisualClientType {
@@ -43,8 +48,9 @@ export function createArchitectureNode(type: ComponentType, position: { x: numbe
     id: crypto.randomUUID(), type: 'architecture', position,
     data: {
       componentType: type, label: displayName, displayName,
-      ...(type === 'API' ? { preProcessingMs: 0, postProcessingMs: 0 } : {}),
+      ...(type === 'API' ? { preProcessingMs: 0, postProcessingMs: 0, behaviors: [] } : {}),
       ...(type === 'DATABASE' ? { processingMs: 0 } : {}),
+      ...(type === 'BROKER' ? { destinations: [], subscriptions: [] } : {}),
     },
   };
 }
@@ -52,9 +58,10 @@ export function validDuration(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0;
 }
 export function allowedProtocols(source: ComponentType, target: ComponentType): Protocol[] {
-  if (isClientType(source) && target === 'API') return ['REST', 'SOAP'];
-  if (source === 'API' && target === 'API') return ['REST', 'SOAP'];
+  if ((isClientType(source) || source === 'API') && target === 'API') return ['REST', 'SOAP', 'HTTP_GENERIC', 'GRAPHQL_HTTP', 'GRPC_UNARY', 'COAP', 'WEBSOCKET'];
   if (source === 'API' && target === 'DATABASE') return ['TCP'];
+  if ((isClientType(source) || source === 'API') && target === 'BROKER') return ['QUEUE', 'TOPIC', 'MQTT'];
+  if (source === 'BROKER' && target === 'API') return ['QUEUE', 'TOPIC', 'MQTT'];
   return [];
 }
 export function validateConnection(nodes: ArchitectureNode[], edges: ArchitectureEdge[], sourceId: string, targetId: string): string | null {
@@ -62,7 +69,7 @@ export function validateConnection(nodes: ArchitectureNode[], edges: Architectur
   const source = nodes.find((node) => node.id === sourceId);
   const target = nodes.find((node) => node.id === targetId);
   if (!source || !target) return 'Selecione componentes existentes.';
-  if (!allowedProtocols(source.data.componentType, target.data.componentType).length) return 'Conexão incompatível: use Client → API ou API → Database.';
+  if (!allowedProtocols(source.data.componentType, target.data.componentType).length) return 'Conexão incompatível com a matriz v0.4.';
   if (edges.some((edge) => (edge.source === sourceId && edge.target === targetId) || (edge.source === targetId && edge.target === sourceId))) {
     return 'Já existe uma conexão entre esses componentes.';
   }

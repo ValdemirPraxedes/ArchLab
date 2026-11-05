@@ -1,9 +1,11 @@
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
+import type { SimulationResponseV1 } from '../../api/archlabV1Client';
 
 type Props = { result: SimulationResponseV2 };
 export function SimulationMetricsV2({ result }: Props) {
   const { metrics } = result;
-  return <section aria-label="Análise de métricas v2" className="metrics-v2">
+  const canonical = metrics as unknown as Partial<SimulationResponseV1['metrics']>;
+  return <section aria-label="Análise de métricas v1" className="metrics-v2">
     <h3>Métricas da execução</h3>
     <p><strong>Tempo virtual total: {metrics.totalDurationMs} ms</strong></p>
     <p className="metrics-v2-note">Processamento, comunicação, espera e duração inclusiva são métricas independentes. Esperas aninhadas podem se sobrepor e não devem ser somadas ao tempo total.</p>
@@ -21,5 +23,11 @@ export function SimulationMetricsV2({ result }: Props) {
         <table><thead><tr><th>Exchange</th><th>Caller → Callee</th><th>Intervalo</th><th>Duração</th></tr></thead><tbody>{metrics.exchanges.map(item => <tr key={item.exchangeId}><td>{item.exchangeId}</td><td>{item.callerComponentId} → {item.calleeComponentId}</td><td>{item.startMs}–{item.endMs} ms</td><td>{item.durationMs} ms</td></tr>)}</tbody></table>
       </section>
     </div>
+    {(canonical.websocket?.length ?? 0) > 0 && <section aria-label="Métricas WebSocket"><h4>Sessões WebSocket</h4>
+      {canonical.websocket?.map(item => <p key={item.connectionId}>{item.connectionId}: {item.messagesSent} enviadas, {item.messagesReceived} recebidas, {item.durationMs} ms</p>)}
+    </section>}
+    {(canonical.messaging?.length ?? 0) > 0 && <section aria-label="Métricas de mensageria"><h4>Mensageria</h4>
+      {canonical.messaging?.map(item => <p key={item.connectionId}>{item.connectionId}: {item.published} publicadas, {item.delivered} entregues, {item.processed} processadas, {item.failures ?? 0} falhas</p>)}
+    </section>}
   </section>;
 }

@@ -1,10 +1,19 @@
-import type { paths } from './generated/schema';
-
-type ValidationPath = paths['/api/v1/architectures/validate']['post'];
-type SimulationPath = paths['/api/v1/simulations']['post'];
-export type ArchitectureRequest = NonNullable<ValidationPath['requestBody']>['content']['application/json'];
-export type ValidationResponse = ValidationPath['responses'][200]['content']['application/json'];
-export type SimulationResponse = SimulationPath['responses'][200]['content']['application/json'];
+/** Historical v0.1 payload retained for regression views. The editor uses ArchlabV1Client. */
+export type ArchitectureRequest = {
+  components: Array<{id: string; type: 'CLIENT' | 'API' | 'DATABASE'; preProcessingMs?: number;
+    postProcessingMs?: number; processingMs?: number}>;
+  connections: Array<{id: string; sourceId: string; targetId: string; protocol: 'REST' | 'SOAP' | 'TCP'; latencyMs: number}>;
+};
+export type ValidationResponse = {valid: boolean; violations: Array<{code: string; path: string; message: string}>};
+export type SimulationResponse = {
+  execution: {id: string; status: string; totalDurationMs: number};
+  initialState: {components: Record<string,string>; requests: Record<string,string>; exchanges: Record<string,string>};
+  trace: Array<{sequence: number; timestampMs: number; type: string; entityKind?: 'COMPONENT' | 'REQUEST' | 'EXCHANGE';
+    entityId?: string; newState?: string; [key: string]: unknown}>;
+  timeline: Array<{id: string; kind: string; startMs: number; endMs: number; durationMs: number; [key: string]: unknown}>;
+  metrics: {apiPreProcessingMs: number; apiPostProcessingMs: number; databaseProcessingMs: number;
+    communicationMs: number; apiWaitingMs: number};
+};
 
 export class ArchlabHttpError extends Error {
   constructor(public readonly status: number, public readonly problem: unknown) {

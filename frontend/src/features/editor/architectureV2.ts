@@ -24,12 +24,14 @@ export function toArchitectureV2(nodes: ArchitectureNode[], edges: ArchitectureE
       const kind = allowedIntegrationKinds(source.data.componentType, target.data.componentType)[0];
       if (!kind) throw new Error('Conexão incompatível.');
       const integration = e.data?.integration ?? defaultIntegration(kind);
+      if (!['HTTP_REST','SOAP_HTTP','DATABASE_QUERY'].includes(integration.kind)) throw new Error('Perfil incompatível com a API v2.');
       const error = integrationError(integration, source.data.componentType, target.data.componentType);
       if (error) throw new Error(error);
       const override = e.data?.apiProcessingOverride;
       if (override && target.data.componentType !== 'API') throw new Error('Override de processamento permitido somente para API de destino.');
       if (override && (![override.preProcessingMs, override.postProcessingMs].every(ms => Number.isSafeInteger(ms) && ms >= 0 && ms <= 1_000_000_000))) throw new Error('Tempos personalizados devem estar entre 0 e 1000000000 ms.');
-      return { id: e.id, sourceId: e.source, targetId: e.target, latencyMs: e.data?.latencyMs ?? 0, integration, ...(override ? { apiProcessingOverride: override } : {}) };
+      return { id: e.id, sourceId: e.source, targetId: e.target, latencyMs: e.data?.latencyMs ?? 0,
+        integration: integration as ArchitectureV2['connections'][number]['integration'], ...(override ? { apiProcessingOverride: override } : {}) };
     }),
   };
 }

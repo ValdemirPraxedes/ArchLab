@@ -19,7 +19,7 @@ describe('canvas v2 DAG', () => {
   });
   it('permite API→Database, impede direção inversa e Client→Database', () => {
     const { client, apiA, db } = setup();
-    expect(allowedProtocols('API', 'API')).toEqual(['REST', 'SOAP']);
+    expect(allowedProtocols('API', 'API')).toEqual(['REST', 'SOAP', 'HTTP_GENERIC', 'GRAPHQL_HTTP', 'GRPC_UNARY', 'COAP', 'WEBSOCKET']);
     expect(allowedProtocols('API', 'DATABASE')).toEqual(['TCP']);
     expect(validateConnection([client, apiA, db], [], client.id, db.id)).toMatch(/incompatível/);
     expect(validateConnection([client, apiA, db], [], db.id, apiA.id)).toMatch(/incompatível/);
