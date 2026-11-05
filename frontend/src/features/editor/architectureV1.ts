@@ -7,7 +7,7 @@ export function toArchitectureV1(nodes: ArchitectureNode[], edges: ArchitectureE
   const components = nodes.map(node => {
     const base = {id:node.id, displayName:node.data.displayName ?? node.data.label};
     switch (node.data.componentType) {
-      case 'API': return {...base,type:'API' as const,preProcessingMs:node.data.preProcessingMs ?? 0,postProcessingMs:node.data.postProcessingMs ?? 0};
+      case 'API': return {...base,type:'API' as const,preProcessingMs:node.data.preProcessingMs ?? 0,postProcessingMs:node.data.postProcessingMs ?? 0,behaviors:node.data.behaviors ?? []};
       case 'DATABASE': return {...base,type:'DATABASE' as const,processingMs:node.data.processingMs ?? 0};
       case 'BROKER': return {...base,type:'BROKER' as const,destinations:node.data.destinations ?? [],subscriptions:node.data.subscriptions ?? []};
       default: return {...base,type:node.data.componentType};
