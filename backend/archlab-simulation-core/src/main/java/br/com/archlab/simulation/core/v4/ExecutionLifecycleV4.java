@@ -16,6 +16,7 @@ public final class ExecutionLifecycleV4 {
     private static final int MAX_EVENTS = 50_000;
     private final Map<String, Resource> resources = new LinkedHashMap<>();
     private MainStatus mainStatus;
+    private boolean derivedFailure;
     private long lastTimeMs;
     private int eventCount;
 
@@ -44,6 +45,8 @@ public final class ExecutionLifecycleV4 {
         mainStatus = status;
     }
 
+    public void markDerivedFailure() { derivedFailure = true; }
+
     public MainStatus mainStatus() { return mainStatus; }
     public long totalDurationMs() { return lastTimeMs; }
     public int eventCount() { return eventCount; }
@@ -57,7 +60,7 @@ public final class ExecutionLifecycleV4 {
             return null;
         if (mainStatus == MainStatus.FAILED) return GlobalStatus.FAILED;
         if (mainStatus == MainStatus.TIMED_OUT) return GlobalStatus.TIMED_OUT;
-        return resources.values().stream().anyMatch(r -> r.status() != ResourceStatus.COMPLETED)
+        return derivedFailure || resources.values().stream().anyMatch(r -> r.status() != ResourceStatus.COMPLETED)
                 ? GlobalStatus.COMPLETED_WITH_ERRORS : GlobalStatus.COMPLETED;
     }
 }

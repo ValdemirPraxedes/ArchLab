@@ -25,8 +25,7 @@ public final class BrokerRuntimeV4 {
         for (var connection : architecture.connections()) connections.put(connection.id(),connection);
         Map<String,ApiV2> apis = new HashMap<>();
         for (var component : architecture.components()) if (component instanceof ApiV2 api) apis.put(api.id(),api);
-        List<BrokerSubscriptionV2> eligible = broker.subscriptions().stream()
-                .filter(s -> destinationName.equals(s.destinationName())).toList();
+        List<BrokerSubscriptionV2> eligible = BrokerRoutingV4.eligible(broker,destinationName);
         if (kind != IntegrationKindV2.QUEUE && (long)publishCount * eligible.size() > 1000)
             throw new IllegalArgumentException("Derived delivery limit exceeded");
 
@@ -45,8 +44,7 @@ public final class BrokerRuntimeV4 {
                 continue;
             }
             lifecycle.finish(messageId,ExecutionLifecycleV4.ResourceStatus.COMPLETED);
-            List<BrokerSubscriptionV2> recipients = kind == IntegrationKindV2.QUEUE
-                    ? List.of(eligible.get((i-1)%eligible.size())) : eligible;
+            List<BrokerSubscriptionV2> recipients = BrokerRoutingV4.recipients(eligible,kind,i-1);
             for (BrokerSubscriptionV2 subscription : recipients) {
                 ConnectionV2 connection = Objects.requireNonNull(connections.get(subscription.connectionId()));
                 ApiV2 api = Objects.requireNonNull(apis.get(subscription.consumerComponentId()));
