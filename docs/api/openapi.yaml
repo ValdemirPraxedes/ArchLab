@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ArchLab Simulation API (unificada /api/v1)
-  version: 0.4.1
+  version: 0.5.0-contract-draft
   description: Contrato canônico v1 com cenário unificado e formatos anteriores; simulação semântica determinística sem protocolos de rede reais.
 servers:
 - url: /
@@ -581,7 +581,7 @@ components:
         id: {$ref: '#/components/schemas/Identifier'}
         trigger:
           type: string
-          enum: [REQUEST_RECEIVED, MESSAGE_CONSUMED, WS_MESSAGE_RECEIVED, SESSION_OPENED]
+          enum: [REQUEST_RECEIVED, MESSAGE_CONSUMED, WS_MESSAGE_RECEIVED, SESSION_OPENED, SCHEDULED_TRIGGER]
         match:
           $ref: '#/components/schemas/BehaviorMatcher'
         actions:
@@ -597,6 +597,7 @@ components:
         operation: {type: string, minLength: 1, maxLength: 256}
         destinationName: {type: string, minLength: 1, maxLength: 256}
         websocketPath: {type: string, minLength: 1, maxLength: 2048}
+        scheduleId: {$ref: '#/components/schemas/Identifier'}
       minProperties: 1
       description: Tipo de filtro aplicável ao gatilho é validado semanticamente.
     ActionDependencies:
@@ -617,6 +618,22 @@ components:
       - $ref: '#/components/schemas/CloseSessionAction'
       - $ref: '#/components/schemas/ForkAction'
       - $ref: '#/components/schemas/JoinAction'
+      - $ref: '#/components/schemas/BranchActionV5'
+      - $ref: '#/components/schemas/CacheGetActionV5'
+      - $ref: '#/components/schemas/CachePutActionV5'
+      - $ref: '#/components/schemas/CacheInvalidateActionV5'
+      - $ref: '#/components/schemas/ObjectGetActionV5'
+      - $ref: '#/components/schemas/ObjectPutActionV5'
+      - $ref: '#/components/schemas/ObjectDeleteActionV5'
+      - $ref: '#/components/schemas/SendNotificationActionV5'
+      - $ref: '#/components/schemas/IndexDocumentActionV5'
+      - $ref: '#/components/schemas/SearchDocumentsActionV5'
+      - $ref: '#/components/schemas/RegisterServiceActionV5'
+      - $ref: '#/components/schemas/UnregisterServiceActionV5'
+      - $ref: '#/components/schemas/DiscoverServiceActionV5'
+      - $ref: '#/components/schemas/EvaluateRuleActionV5'
+      - $ref: '#/components/schemas/ScheduleTriggerActionV5'
+      - $ref: '#/components/schemas/TransformActionV5'
       discriminator:
         propertyName: kind
         mapping:
@@ -629,6 +646,22 @@ components:
           CLOSE_SESSION: '#/components/schemas/CloseSessionAction'
           FORK: '#/components/schemas/ForkAction'
           JOIN: '#/components/schemas/JoinAction'
+          BRANCH: '#/components/schemas/BranchActionV5'
+          CACHE_GET: '#/components/schemas/CacheGetActionV5'
+          CACHE_PUT: '#/components/schemas/CachePutActionV5'
+          CACHE_INVALIDATE: '#/components/schemas/CacheInvalidateActionV5'
+          OBJECT_GET: '#/components/schemas/ObjectGetActionV5'
+          OBJECT_PUT: '#/components/schemas/ObjectPutActionV5'
+          OBJECT_DELETE: '#/components/schemas/ObjectDeleteActionV5'
+          SEND_NOTIFICATION: '#/components/schemas/SendNotificationActionV5'
+          INDEX_DOCUMENT: '#/components/schemas/IndexDocumentActionV5'
+          SEARCH_DOCUMENTS: '#/components/schemas/SearchDocumentsActionV5'
+          REGISTER_SERVICE: '#/components/schemas/RegisterServiceActionV5'
+          UNREGISTER_SERVICE: '#/components/schemas/UnregisterServiceActionV5'
+          DISCOVER_SERVICE: '#/components/schemas/DiscoverServiceActionV5'
+          EVALUATE_RULE: '#/components/schemas/EvaluateRuleActionV5'
+          SCHEDULE_TRIGGER: '#/components/schemas/ScheduleTriggerActionV5'
+          TRANSFORM: '#/components/schemas/TransformActionV5'
     ProcessAction:
       type: object
       additionalProperties: false
@@ -725,6 +758,465 @@ components:
           maxItems: 100
           uniqueItems: true
           items: {$ref: '#/components/schemas/Identifier'}
+    VirtualScheduleV5:
+      type: object
+      additionalProperties: false
+      required: [id, firstAtMs, intervalMs, occurrenceCount]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        firstAtMs: {type: integer, minimum: 0, maximum: 3600000}
+        intervalMs: {type: integer, minimum: 0, maximum: 3600000}
+        occurrenceCount: {type: integer, minimum: 1, maximum: 100}
+        behaviorId: {$ref: '#/components/schemas/Identifier'}
+    ServiceRouteV5:
+      type: object
+      additionalProperties: false
+      required: [operation, connectionId]
+      properties:
+        operation: {type: string, minLength: 1, maxLength: 256}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+    DecisionRuleV5:
+      type: object
+      additionalProperties: false
+      required: [id, field, operator, expectedValue, decision]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        field: {type: string, minLength: 1, maxLength: 256}
+        operator: {type: string, enum: [EQ, NE, GT, GTE, LT, LTE, IN]}
+        expectedValue:
+          oneOf:
+          - {type: string, maxLength: 2048}
+          - {type: number}
+          - {type: boolean}
+        priority: {type: integer, minimum: 0, maximum: 10000, default: 0}
+        decision: {type: string, enum: [ALLOW, DENY, REVIEW]}
+    ResourceOutcomeV5:
+      type: object
+      additionalProperties: false
+      required: [actionId, status, resultCode]
+      properties:
+        actionId: {$ref: '#/components/schemas/Identifier'}
+        status: {type: string, enum: [SUCCEEDED, FAILED, TIMED_OUT]}
+        resultCode:
+          type: string
+          enum: [HIT, MISS, STORED, REMOVED, NOT_FOUND, FOUND, CREATED, REPLACED, DELETED, SENT, INDEXED, UPDATED, REGISTERED, UNAVAILABLE, ALLOW, DENY, REVIEW]
+        resultRef: {$ref: '#/components/schemas/Identifier'}
+        timestampMs: {$ref: '#/components/schemas/DurationMs'}
+    ServiceV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: SERVICE}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+    ApiGatewayV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: API_GATEWAY}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        routes:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/ServiceRouteV5'}
+    BffV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: BFF}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+    WorkerV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: WORKER}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+    SchedulerV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: SCHEDULER}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        schedules:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/VirtualScheduleV5'}
+    AuthenticationServiceV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: AUTHENTICATION_SERVICE}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+    WebhookReceiverV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: WEBHOOK_RECEIVER}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+    OrchestratorServiceV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: ORCHESTRATOR_SERVICE}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+    IntegrationBusV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: INTEGRATION_BUS}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+    CacheV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: CACHE}
+        defaultTtlMs: {$ref: '#/components/schemas/DurationMs'}
+    ObjectStorageV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: OBJECT_STORAGE}
+    NotificationServiceV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: NOTIFICATION_SERVICE}
+        behaviors:
+          type: array
+          maxItems: 100
+          default: []
+          items: {$ref: '#/components/schemas/Behavior'}
+        preProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+        postProcessingMs: {$ref: '#/components/schemas/DurationMs'}
+    SearchEngineV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: SEARCH_ENGINE}
+    ServiceRegistryV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: SERVICE_REGISTRY}
+    RulesEngineV5:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: RULES_ENGINE}
+        rules:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/DecisionRuleV5'}
+        defaultDecision: {type: string, enum: [ALLOW, DENY, REVIEW]}
+    BranchCaseV5:
+      type: object
+      additionalProperties: false
+      required: [equals, actionIds]
+      properties:
+        equals: {type: string, minLength: 1, maxLength: 128}
+        actionIds:
+          type: array
+          minItems: 1
+          maxItems: 100
+          uniqueItems: true
+          items: {$ref: '#/components/schemas/Identifier'}
+    BranchActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, resultRef, cases]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: BRANCH}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        resultRef: {$ref: '#/components/schemas/Identifier'}
+        cases:
+          type: array
+          minItems: 1
+          maxItems: 20
+          items: {$ref: '#/components/schemas/BranchCaseV5'}
+        defaultActionIds:
+          type: array
+          maxItems: 100
+          items: {$ref: '#/components/schemas/Identifier'}
+    CacheGetActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, key]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: CACHE_GET}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        key: {type: string, minLength: 1, maxLength: 256}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    CachePutActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, key, valueMetadata]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: CACHE_PUT}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        key: {type: string, minLength: 1, maxLength: 256}
+        valueMetadata: {type: string, maxLength: 2048}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        ttlMs: {$ref: '#/components/schemas/DurationMs'}
+    CacheInvalidateActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, key]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: CACHE_INVALIDATE}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        key: {type: string, minLength: 1, maxLength: 256}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    ObjectGetActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, objectKey]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: OBJECT_GET}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        objectKey: {type: string, minLength: 1, maxLength: 512}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    ObjectPutActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, objectKey, sizeBytes]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: OBJECT_PUT}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        objectKey: {type: string, minLength: 1, maxLength: 512}
+        sizeBytes: {type: integer, minimum: 0, maximum: 1000000000}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    ObjectDeleteActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, objectKey]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: OBJECT_DELETE}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        objectKey: {type: string, minLength: 1, maxLength: 512}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    SendNotificationActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, channel, recipientAlias]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: SEND_NOTIFICATION}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        channel: {type: string, enum: [EMAIL, SMS, PUSH]}
+        recipientAlias: {$ref: '#/components/schemas/Identifier'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    IndexDocumentActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, indexName, documentId]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: INDEX_DOCUMENT}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        indexName: {$ref: '#/components/schemas/Identifier'}
+        documentId: {$ref: '#/components/schemas/Identifier'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        tags:
+          type: object
+          maxProperties: 32
+          additionalProperties: {type: string, maxLength: 256}
+    SearchDocumentsActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, indexName]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: SEARCH_DOCUMENTS}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        indexName: {$ref: '#/components/schemas/Identifier'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        tags:
+          type: object
+          maxProperties: 32
+          additionalProperties: {type: string, maxLength: 256}
+    RegisterServiceActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, serviceName, instanceId, targetComponentId]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: REGISTER_SERVICE}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        serviceName: {$ref: '#/components/schemas/Identifier'}
+        instanceId: {$ref: '#/components/schemas/Identifier'}
+        targetComponentId: {$ref: '#/components/schemas/Identifier'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    UnregisterServiceActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, serviceName, instanceId]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: UNREGISTER_SERVICE}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        serviceName: {$ref: '#/components/schemas/Identifier'}
+        instanceId: {$ref: '#/components/schemas/Identifier'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    DiscoverServiceActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, serviceName]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: DISCOVER_SERVICE}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        serviceName: {$ref: '#/components/schemas/Identifier'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    EvaluateRuleActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: EVALUATE_RULE}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+    ScheduleTriggerActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, scheduleId]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: SCHEDULE_TRIGGER}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        scheduleId: {$ref: '#/components/schemas/Identifier'}
+    TransformActionV5:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: TRANSFORM}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        metadata:
+          type: object
+          maxProperties: 32
+          additionalProperties: {type: string, maxLength: 256}
     Component:
       oneOf:
       - $ref: '#/components/schemas/Client'
@@ -737,6 +1229,21 @@ components:
       - $ref: '#/components/schemas/Api'
       - $ref: '#/components/schemas/Database'
       - $ref: '#/components/schemas/Broker'
+      - $ref: '#/components/schemas/ServiceV5'
+      - $ref: '#/components/schemas/ApiGatewayV5'
+      - $ref: '#/components/schemas/BffV5'
+      - $ref: '#/components/schemas/WorkerV5'
+      - $ref: '#/components/schemas/SchedulerV5'
+      - $ref: '#/components/schemas/AuthenticationServiceV5'
+      - $ref: '#/components/schemas/WebhookReceiverV5'
+      - $ref: '#/components/schemas/OrchestratorServiceV5'
+      - $ref: '#/components/schemas/IntegrationBusV5'
+      - $ref: '#/components/schemas/CacheV5'
+      - $ref: '#/components/schemas/ObjectStorageV5'
+      - $ref: '#/components/schemas/NotificationServiceV5'
+      - $ref: '#/components/schemas/SearchEngineV5'
+      - $ref: '#/components/schemas/ServiceRegistryV5'
+      - $ref: '#/components/schemas/RulesEngineV5'
       discriminator:
         propertyName: type
         mapping:
@@ -750,6 +1257,21 @@ components:
           API: '#/components/schemas/Api'
           DATABASE: '#/components/schemas/Database'
           BROKER: '#/components/schemas/Broker'
+          SERVICE: '#/components/schemas/ServiceV5'
+          API_GATEWAY: '#/components/schemas/ApiGatewayV5'
+          BFF: '#/components/schemas/BffV5'
+          WORKER: '#/components/schemas/WorkerV5'
+          SCHEDULER: '#/components/schemas/SchedulerV5'
+          AUTHENTICATION_SERVICE: '#/components/schemas/AuthenticationServiceV5'
+          WEBHOOK_RECEIVER: '#/components/schemas/WebhookReceiverV5'
+          ORCHESTRATOR_SERVICE: '#/components/schemas/OrchestratorServiceV5'
+          INTEGRATION_BUS: '#/components/schemas/IntegrationBusV5'
+          CACHE: '#/components/schemas/CacheV5'
+          OBJECT_STORAGE: '#/components/schemas/ObjectStorageV5'
+          NOTIFICATION_SERVICE: '#/components/schemas/NotificationServiceV5'
+          SEARCH_ENGINE: '#/components/schemas/SearchEngineV5'
+          SERVICE_REGISTRY: '#/components/schemas/ServiceRegistryV5'
+          RULES_ENGINE: '#/components/schemas/RulesEngineV5'
     ApiProcessingOverride:
       type: object
       additionalProperties: false
@@ -945,6 +1467,15 @@ components:
           - UNBOUNDED_EXECUTION
           - EXECUTION_LIMIT_EXCEEDED
           - LEGACY_SCENARIO_MIGRATION_REQUIRED
+          - INVALID_COMPONENT_CAPABILITY
+          - INVALID_RESOURCE_CONNECTION
+          - INVALID_ROUTING_RULE
+          - INVALID_SCHEDULE
+          - INVALID_VIRTUAL_RESOURCE_OPERATION
+          - INVALID_DECISION_RULE
+          - UNRESOLVED_SERVICE
+          - VIRTUAL_RESOURCE_NOT_FOUND
+          - VIRTUAL_RESOURCE_EXPIRED
         path:
           type: string
           maxLength: 2048
