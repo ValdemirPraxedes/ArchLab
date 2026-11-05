@@ -2187,6 +2187,51 @@ components:
           entry: {componentId: browser, connectionId: browser-orders, operation: 'POST /pedidos'}
           sessionSetup:
           - {connectionId: notifications-websocket, sessionAlias: notifications-session, autoCloseAtEnd: true}
+    v5CacheBranchScenario:
+      summary: Service consulta Cache e executa ramo MISS explicitamente
+      description: Exemplo de contrato v0.5 proposto; a API atual ainda não executa estas actions.
+      value:
+        architecture:
+          components:
+          - {id: browser, type: WEB_BROWSER, displayName: Web Browser}
+          - id: orders
+            type: SERVICE
+            displayName: Serviço de Pedidos
+            behaviors:
+            - id: read-order
+              trigger: REQUEST_RECEIVED
+              match: {operation: 'GET /pedidos'}
+              actions:
+              - {id: cache-read, kind: CACHE_GET, connectionId: orders-cache, key: order-1, outputRef: cache-result}
+              - id: choose
+                kind: BRANCH
+                dependsOn: [cache-read]
+                resultRef: cache-result
+                cases:
+                - {equals: HIT, actionIds: [respond-hit]}
+                - {equals: MISS, actionIds: [db-read]}
+              - {id: db-read, kind: CALL, connectionId: orders-database, dependsOn: [choose]}
+              - {id: respond-hit, kind: RESPOND, statusCode: 200, dependsOn: [choose]}
+          - {id: cache, type: CACHE, displayName: Cache Pedidos, defaultTtlMs: 30000}
+          - {id: database, type: DATABASE, displayName: Banco de Dados, processingMs: 10}
+          connections:
+          - id: browser-orders
+            sourceId: browser
+            targetId: orders
+            latencyMs: 5
+            integration: {kind: HTTP_REST, request: {method: GET, path: /pedidos}}
+          - id: orders-cache
+            sourceId: orders
+            targetId: cache
+            latencyMs: 1
+            integration: {kind: HTTP_REST, request: {method: GET, path: /cache/orders}}
+          - id: orders-database
+            sourceId: orders
+            targetId: database
+            latencyMs: 10
+            integration: {kind: DATABASE_QUERY}
+        scenario:
+          entry: {componentId: browser, connectionId: browser-orders, operation: 'GET /pedidos'}
     simulationRequest:
       summary: Client → API Pedidos → API Estoque (100 ms)
       value:
