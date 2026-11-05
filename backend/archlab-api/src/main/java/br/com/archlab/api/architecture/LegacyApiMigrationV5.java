@@ -9,8 +9,9 @@ import java.util.List;
 public final class LegacyApiMigrationV5 {
     private LegacyApiMigrationV5() {}
 
-    public record Report(int convertedCount, List<String> componentIds) {
-        public Report { componentIds = List.copyOf(componentIds); }
+    public record Conversion(String componentId,String previousType,String resultingType) {}
+    public record Report(int convertedCount, List<String> componentIds, List<Conversion> conversions) {
+        public Report { componentIds = List.copyOf(componentIds); conversions=List.copyOf(conversions); }
     }
     public record Result(JsonNode document, Report report) {}
 
@@ -43,6 +44,7 @@ public final class LegacyApiMigrationV5 {
                 converted.add(id.asText());
             }
         }
-        return new Result(copy, new Report(converted.size(), converted));
+        List<Conversion> rows=converted.stream().map(id -> new Conversion(id,"API","SERVICE")).toList();
+        return new Result(copy, new Report(converted.size(), converted, rows));
     }
 }

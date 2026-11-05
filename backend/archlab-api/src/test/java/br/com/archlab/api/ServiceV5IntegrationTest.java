@@ -67,6 +67,10 @@ class ServiceV5IntegrationTest {
         JsonNode invalidConnection=json.readTree(post("/api/v1/scenarios/validate",wrong).body());
         assertFalse(invalidConnection.get("valid").asBoolean());
         assertTrue(invalidConnection.get("violations").toString().contains("INVALID_RESOURCE_CONNECTION"));
+        String unknownCode=CACHE_MISS.replace("\"equals\":\"MISS\"", "\"equals\":\"UNKNOWN\"");
+        JsonNode invalidCase=json.readTree(post("/api/v1/scenarios/validate",unknownCode).body());
+        assertFalse(invalidCase.get("valid").asBoolean());
+        assertTrue(invalidCase.get("violations").toString().contains("producer result domain"));
     }
     private static final String GATEWAY_BFF="""
         {"architecture":{"components":[

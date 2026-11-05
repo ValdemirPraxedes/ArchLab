@@ -201,6 +201,9 @@ final class UnifiedPlanV41 {
                                 || ("PUBLISH".equals(action.kind()) && !connection.integration().kind().isMessaging())
                                 || ("OPEN_SESSION".equals(action.kind()) && connection.integration().kind()!=IntegrationKindV2.WEBSOCKET))
                             error("INVALID_ACTION_CAPABILITY",actionPath,"Connection profile is incompatible with action");
+                        else if ("CALL".equals(action.kind()) && components.get(connection.targetId())!=null
+                                && components.get(connection.targetId()).type().isVirtualResource())
+                            error("INVALID_ACTION_CAPABILITY",actionPath,"Virtual resources require their typed Action");
                     }
                     if ("PUBLISH".equals(action.kind()) && connection!=null && components.get(connection.targetId()) instanceof BrokerV2 broker
                             && broker.destinations().stream().noneMatch(d -> d.name().equals(action.destinationName()) && d.kind()==connection.integration().kind()))
@@ -314,6 +317,8 @@ final class UnifiedPlanV41 {
                     error("INVALID_ACTION_DEPENDENCY",branchPath+".cases","Invalid BRANCH case");continue;
                 }
                 if (!values.add(equals)) error("INVALID_ACTION_DEPENDENCY",branchPath+".cases","Duplicate resultCode case");
+                if (producer!=null && !resultDomain(producer.kind()).contains(equals))
+                    error("INVALID_ACTION_DEPENDENCY",branchPath+".cases","Case value is outside the producer result domain");
                 for (Object target:ids) {
                     if (!(target instanceof String id) || !targets.add(id) || !actions.containsKey(id)
                             || !ancestors(actions.get(id),actions).contains(branch.id())
@@ -374,6 +379,24 @@ final class UnifiedPlanV41 {
             case "REGISTER_SERVICE","UNREGISTER_SERVICE","DISCOVER_SERVICE" -> "SERVICE_REGISTRY";
             case "EVALUATE_RULE" -> "RULES_ENGINE";
             default -> null;
+        };
+    }
+    private static Set<String> resultDomain(String kind) {
+        return switch(kind) {
+            case "CACHE_GET" -> Set.of("HIT","MISS");
+            case "CACHE_PUT" -> Set.of("STORED");
+            case "CACHE_INVALIDATE","UNREGISTER_SERVICE" -> Set.of("REMOVED","NOT_FOUND");
+            case "OBJECT_GET" -> Set.of("FOUND","NOT_FOUND");
+            case "OBJECT_PUT" -> Set.of("CREATED","REPLACED");
+            case "OBJECT_DELETE" -> Set.of("DELETED","NOT_FOUND");
+            case "SEND_NOTIFICATION" -> Set.of("SENT","FAILED","TIMED_OUT");
+            case "INDEX_DOCUMENT" -> Set.of("INDEXED","UPDATED");
+            case "SEARCH_DOCUMENTS" -> Set.of("FOUND");
+            case "DISCOVER_SERVICE" -> Set.of("FOUND","UNAVAILABLE");
+            case "REGISTER_SERVICE" -> Set.of("REGISTERED");
+            case "EVALUATE_RULE" -> Set.of("ALLOW","DENY","REVIEW");
+            case "TRANSFORM" -> Set.of("TRANSFORMED");
+            default -> Set.of();
         };
     }
     private void validateActionShape(Action action,String path) {

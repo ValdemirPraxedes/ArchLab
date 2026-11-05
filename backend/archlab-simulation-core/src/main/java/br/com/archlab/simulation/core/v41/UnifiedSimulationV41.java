@@ -203,9 +203,12 @@ public final class UnifiedSimulationV41 {
                 if ("JOIN".equals(action.kind())) dependencies.addAll(action.actionIds());
                 if (dependencies.stream().anyMatch(id -> "SKIPPED".equals(status.get(id)))) {
                     status.put(action.id(),"SKIPPED"); actionEvent(api.id(),action.id(),"SKIPPED","BRANCH_NOT_SELECTED",parent);
-                } else if (dependencies.stream().anyMatch(id -> "FAILED".equals(status.get(id)))) {
+                } else if (dependencies.stream().anyMatch(id -> "FAILED".equals(status.get(id)))
+                        && !("BRANCH".equals(action.kind())
+                            && resultCodes.containsKey(action.options().get("resultRef")))) {
                     status.put(action.id(),"FAILED"); actionEvent(api.id(),action.id(),"FAILED","DEPENDENCY_FAILED",parent);
-                } else if (dependencies.stream().allMatch(id -> "COMPLETED".equals(status.get(id)))) {
+                } else if (dependencies.stream().allMatch(id -> "COMPLETED".equals(status.get(id))
+                        || "BRANCH".equals(action.kind()) && "FAILED".equals(status.get(id)))) {
                     status.put(action.id(),"SCHEDULED");
                     schedule(now,() -> execute(action));
                 }
@@ -266,13 +269,16 @@ public final class UnifiedSimulationV41 {
                     if (config==null) {finish.finish(false);break;}
                     for (int i=0;i<config.occurrenceCount();i++) {
                         int occurrence=i+1;
-                        long at=add(now,Math.addExact(config.firstAtMs(),
-                                Math.multiplyExact(config.intervalMs(),i)));
+                        long planned=Math.addExact(config.firstAtMs(),
+                                Math.multiplyExact(config.intervalMs(),i));
+                        long at=Math.max(now,planned);
                         schedule(at,() -> {
                             String child="schedule-"+scheduleId+"-"+occurrence;
                             event(fields("type","SCHEDULED_TRIGGER","componentId",scheduler.id(),
                                     "operationId",child,"parentExchangeId",parent,
-                                    "scheduleId",scheduleId,"occurrenceIndex",occurrence));
+                                    "rootOperationId","request-1","scheduleId",scheduleId,
+                                    "occurrenceId",child,"occurrenceIndex",occurrence,
+                                    "scheduledAtMs",planned,"firedAtMs",now));
                             Behavior selected=config.behaviorId()==null
                                     ?plan.match(scheduler.id(),"SCHEDULED_TRIGGER",null,null,null)
                                     :plan.behaviors().getOrDefault(scheduler.id(),List.of()).stream()

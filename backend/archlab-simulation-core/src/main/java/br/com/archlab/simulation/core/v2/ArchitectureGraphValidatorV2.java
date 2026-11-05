@@ -53,6 +53,10 @@ public final class ArchitectureGraphValidatorV2 {
                     add(errors,"INVALID_COMPONENT_CAPABILITY",path+".schedules","Only Scheduler accepts schedules");
                 if (!service.routes().isEmpty() && service.type()!=ComponentTypeV2.API_GATEWAY)
                     add(errors,"INVALID_COMPONENT_CAPABILITY",path+".routes","Only API Gateway accepts routes");
+                if (service.type()==ComponentTypeV2.API_GATEWAY && service.routes().isEmpty())
+                    add(errors,"INVALID_ROUTING_RULE",path+".routes","API Gateway needs at least one route");
+                if (service.type()==ComponentTypeV2.SCHEDULER && service.schedules().isEmpty())
+                    add(errors,"INVALID_SCHEDULE",path+".schedules","Scheduler needs at least one finite schedule");
                 if ((!service.rules().isEmpty() || service.defaultDecision()!=null)
                         && service.type()!=ComponentTypeV2.RULES_ENGINE)
                     add(errors,"INVALID_COMPONENT_CAPABILITY",path+".rules","Only Rules Engine accepts rules");

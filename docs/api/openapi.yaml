@@ -70,6 +70,8 @@ paths:
             examples:
               sample:
                 $ref: '#/components/examples/scenario'
+              cacheBranchV5:
+                $ref: '#/components/examples/v5CacheBranchScenario'
       responses:
         '200':
           description: Operação concluída.
@@ -109,6 +111,8 @@ paths:
                 $ref: '#/components/examples/simulationRequest'
               mixedCommunication:
                 $ref: '#/components/examples/mixedCommunicationRequest'
+              cacheBranchV5:
+                $ref: '#/components/examples/v5CacheBranchScenario'
       responses:
         '200':
           description: Operação concluída.
@@ -1757,6 +1761,19 @@ components:
           - WEBSOCKET_MESSAGE
           - BROKER_PUBLISH
           - BROKER_DELIVERY
+          - CACHE_GET
+          - CACHE_PUT
+          - CACHE_INVALIDATE
+          - OBJECT_GET
+          - OBJECT_PUT
+          - OBJECT_DELETE
+          - SEND_NOTIFICATION
+          - INDEX_DOCUMENT
+          - SEARCH_DOCUMENTS
+          - REGISTER_SERVICE
+          - UNREGISTER_SERVICE
+          - DISCOVER_SERVICE
+          - EVALUATE_RULE
         correlation: {$ref: '#/components/schemas/Correlation'}
       required:
       - sequence
@@ -1797,6 +1814,7 @@ components:
           - API_POST_PROCESSING
           - DATABASE_PROCESSING
           - API_MESSAGE_PROCESSING
+          - VIRTUAL_RESOURCE_PROCESSING
         correlation: {$ref: '#/components/schemas/Correlation'}
       required:
       - sequence
@@ -1812,6 +1830,7 @@ components:
       - $ref: '#/components/schemas/MessageTrace'
       - $ref: '#/components/schemas/ProcessingTrace'
       - $ref: '#/components/schemas/ActionTrace'
+      - $ref: '#/components/schemas/ScheduledTriggerTraceV5'
       discriminator:
         propertyName: type
         mapping:
@@ -1819,6 +1838,28 @@ components:
           MESSAGE_EVENT: '#/components/schemas/MessageTrace'
           PROCESSING_EVENT: '#/components/schemas/ProcessingTrace'
           ACTION_EVENT: '#/components/schemas/ActionTrace'
+          SCHEDULED_TRIGGER: '#/components/schemas/ScheduledTriggerTraceV5'
+    ScheduledTriggerTraceV5:
+      type: object
+      additionalProperties: false
+      required: [sequence, timestampMs, type, componentId, operationId, scheduleId, occurrenceId, occurrenceIndex, rootOperationId, scheduledAtMs, firedAtMs]
+      properties:
+        sequence: *id003
+        timestampMs: *id004
+        type: {type: string, const: SCHEDULED_TRIGGER}
+        componentId: {$ref: '#/components/schemas/Identifier'}
+        operationId: {$ref: '#/components/schemas/Identifier'}
+        parentExchangeId:
+          oneOf:
+          - {$ref: '#/components/schemas/Identifier'}
+          - {type: 'null'}
+        scheduleId: {$ref: '#/components/schemas/Identifier'}
+        occurrenceId: {$ref: '#/components/schemas/Identifier'}
+        occurrenceIndex: {type: integer, minimum: 1, maximum: 100}
+        rootOperationId: {$ref: '#/components/schemas/Identifier'}
+        scheduledAtMs: {$ref: '#/components/schemas/DurationMs'}
+        firedAtMs: {$ref: '#/components/schemas/DurationMs'}
+        correlation: {$ref: '#/components/schemas/Correlation'}
     ActionTrace:
       type: object
       additionalProperties: false

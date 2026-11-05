@@ -19,6 +19,7 @@ class LegacyApiMigrationV5Test {
         var result = LegacyApiMigrationV5.migrate(input);
         assertEquals(2, result.report().convertedCount());
         assertEquals(java.util.List.of("old-1", "old-2"), result.report().componentIds());
+        assertEquals("SERVICE",result.report().conversions().get(0).resultingType());
         var components = result.document().get("architecture").get("components");
         assertEquals("SERVICE", components.get(0).get("type").asText());
         assertEquals("API_GATEWAY", components.get(1).get("type").asText());
