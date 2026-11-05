@@ -1,6 +1,6 @@
 # ArchLab v0.4.1 — Requisitos de cenários com comunicação mista
 
-> Status: referência de requisitos. Backend implementado na branch `feat/v0.4.1-behavior-plan`; frontend permanece em tarefas FE separadas.
+> Status: referência de requisitos. Backend incorporado em `develop`; frontend implementado na branch `feat/v0.4.1-frontend-unified` para revisão.
 > Base: v0.4 em `develop`, especialmente [mvp-v0.4](mvp-v0.4.md), [DM-V4-001](../architecture/DM-V4-001.md), [API-V4-002](../api/API-V4-002.md) e [openapi.yaml](../api/openapi.yaml).
 
 ## 1. Problema e objetivo

@@ -1,5 +1,6 @@
 import type { Edge, Node } from '@xyflow/react';
 import type { IntegrationV1, BrokerDestinationV1, BrokerSubscriptionV1 } from '../../api/archlabV1Client';
+import type { BehaviorV41 } from '../../api/archlabV1Client';
 import type { ApiProcessingOverrideV2 } from '../../api/archlabV2Client';
 
 export const VISUAL_CLIENT_TYPES = ['WEB_BROWSER', 'MOBILE_APP', 'DESKTOP_APP', 'CLI', 'BOT', 'EMBEDDED_SYSTEM'] as const;
@@ -17,6 +18,7 @@ export type ArchitectureNode = Node<{
   processingMs?: number;
   destinations?: BrokerDestinationV1[];
   subscriptions?: BrokerSubscriptionV1[];
+  behaviors?: BehaviorV41[];
 }>;
 export type ArchitectureEdge = Edge<{ protocol: Protocol; latencyMs: number; integration?: IntegrationV1; apiProcessingOverride?: ApiProcessingOverrideV2 }>;
 export const COMPONENT_LABELS: Record<ComponentType, string> = {
@@ -46,7 +48,7 @@ export function createArchitectureNode(type: ComponentType, position: { x: numbe
     id: crypto.randomUUID(), type: 'architecture', position,
     data: {
       componentType: type, label: displayName, displayName,
-      ...(type === 'API' ? { preProcessingMs: 0, postProcessingMs: 0 } : {}),
+      ...(type === 'API' ? { preProcessingMs: 0, postProcessingMs: 0, behaviors: [] } : {}),
       ...(type === 'DATABASE' ? { processingMs: 0 } : {}),
       ...(type === 'BROKER' ? { destinations: [], subscriptions: [] } : {}),
     },

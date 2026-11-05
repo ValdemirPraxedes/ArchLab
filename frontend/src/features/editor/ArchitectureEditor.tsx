@@ -11,16 +11,15 @@ import { IntegrationEditor } from './IntegrationEditor';
 import { BrokerEditor } from './BrokerEditor';
 import { defaultIntegration, allowedIntegrationKinds } from './integration';
 import type { IntegrationKind } from './integration';
-import { ScenarioEditor } from './ScenarioEditor';
-import { AsyncScenarioEditor } from './AsyncScenarioEditor';
+import { UnifiedScenarioEditorV41 } from './UnifiedScenarioEditorV41';
+import { BehaviorEditorV41 } from './BehaviorEditorV41';
+import { emptyEntryV41, toUnifiedRequestV41 } from './unifiedScenarioV41';
+import type { EntryDraftV41, SessionDraftV41 } from './unifiedScenarioV41';
 import { SimulationPlaybackV2 } from './SimulationPlaybackV2';
 import { inFlightMessages, traceStateAt } from './traceV2';
 import type { TraceCursor } from './traceV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
-import { emptyScenario, reconcileScenario, selectedPath } from './scenario';
-import type { ScenarioDraft } from './scenario';
-import { toArchitectureV1, toRequestV1, toAsyncRequestV1, emptyAsyncScenario } from './architectureV1';
-import type { AsyncScenarioKind } from './architectureV1';
+import { toArchitectureV1 } from './architectureV1';
 import { archlabV1Client, ArchlabV1HttpError } from '../../api/archlabV1Client';
 import type { ValidationIssue } from './validation';
 import {
@@ -44,9 +43,8 @@ const PALETTE_CATEGORIES = [
 function EditorCanvas() {
   const [nodes, setNodes, onNodesChange] = useNodesState<ArchitectureNodeType>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<ArchitectureEdge>([]);
-  const [scenario, setScenario] = useState<ScenarioDraft>(emptyScenario);
-  const [scenarioKind,setScenarioKind] = useState<'REQUEST_RESPONSE' | AsyncScenarioKind>('REQUEST_RESPONSE');
-  const [asyncScenario,setAsyncScenario] = useState(emptyAsyncScenario);
+  const [entry, setEntry] = useState<EntryDraftV41>(emptyEntryV41);
+  const [sessions, setSessions] = useState<SessionDraftV41[]>([]);
   const [selection, setSelection] = useState<{ kind: 'node' | 'edge'; id: string } | null>(null);
   const [targetId, setTargetId] = useState('');
   const [protocol, setProtocol] = useState<Protocol>('REST');
@@ -91,17 +89,9 @@ function EditorCanvas() {
   const traceState = simulationResultV2 ? traceStateAt(simulationResultV2,traceCursor) : null;
   const flying = simulationResultV2 ? inFlightMessages(simulationResultV2.trace,traceCursor) : [];
   const flyingConnections = new Set(flying.map(e => e.connectionId));
-  const path = scenarioKind === 'REQUEST_RESPONSE' ? selectedPath(scenario, nodes, edges) : (() => {
-    const components = new Set<string>(); const connections = new Set<string>();
-    const entry = edges.find(edge => edge.id === asyncScenario.entryConnectionId && edge.source === asyncScenario.entryComponentId);
-    if (entry) {
-      components.add(entry.source); components.add(entry.target); connections.add(entry.id);
-      if (scenarioKind === 'MESSAGE_PUBLISH') for (const edge of edges.filter(edge => edge.source === entry.target && edge.data?.integration?.kind === entry.data?.integration?.kind)) {
-        components.add(edge.target); connections.add(edge.id);
-      }
-    }
-    return {components,connections};
-  })();
+  const initialEdge = edges.find(edge => edge.id === entry.connectionId && edge.source === entry.componentId);
+  const path = {components: new Set(initialEdge ? [initialEdge.source,initialEdge.target] : []),
+    connections: new Set(initialEdge ? [initialEdge.id] : [])};
   const hasPath = path.components.size > 0;
   const invalidIds = new Set(issues.flatMap(issue => {
     const match = /components\[(\d+)\]/.exec(issue.path);
@@ -139,7 +129,7 @@ function EditorCanvas() {
     setIssues([]); setValidationStatus('checking'); setExecutionStatus('VALIDATING'); setValidationScope('scenario');
     try {
       const architecture = toArchitectureV1(nodes, edges);
-      const request = scenarioKind === 'REQUEST_RESPONSE' ? toRequestV1(architecture, scenario) : toAsyncRequestV1(architecture, scenarioKind, asyncScenario);
+      const request = toUnifiedRequestV41(architecture,entry,sessions,nodes,edges);
       const result = await archlabV1Client.validateScenario(request);
       if (requestGeneration !== generation.current) return;
       if (!result.valid) {
@@ -174,7 +164,7 @@ function EditorCanvas() {
       const architecture = toArchitectureV1(nodes, edges);
       const response = scope === 'architecture'
         ? await archlabV1Client.validateArchitecture(architecture)
-        : await archlabV1Client.validateScenario(scenarioKind === 'REQUEST_RESPONSE' ? toRequestV1(architecture, scenario) : toAsyncRequestV1(architecture, scenarioKind, asyncScenario));
+        : await archlabV1Client.validateScenario(toUnifiedRequestV41(architecture,entry,sessions,nodes,edges));
       setIssues(response.violations.map(v => ({ code: v.code, path: v.path, message: v.message })));
       setValidationStatus(response.valid ? 'valid' : 'invalid');
     } catch (cause) {
@@ -285,10 +275,10 @@ function EditorCanvas() {
     if (selection.kind === 'node') {
       const result = removeComponent(nodes, edges, selection.id);
       setNodes(result.nodes); setEdges(result.edges);
-      setScenario((current) => reconcileScenario(current, result.nodes, result.edges));
+      if (entry.componentId === selection.id) setEntry(emptyEntryV41());
     } else setEdges((current) => {
       const remaining = current.filter((item) => item.id !== selection.id);
-      setScenario((value) => reconcileScenario(value, nodes, remaining));
+      if (entry.connectionId === selection.id) setEntry(value => ({...value,connectionId:'',operation:''}));
       return remaining;
     });
     select(null);
@@ -311,22 +301,16 @@ function EditorCanvas() {
         </section>)}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura v1</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário v1</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
         {actionFeedback && <p className="action-feedback" role="status" aria-live="polite">{actionFeedback}</p>}
         <div className="execution-status" role="status">Execução: {simulationResultV2 ? v2PlaybackStatus : executionStatus}{simulationResultV2 && <span> · Tempo virtual total: {simulationResultV2.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
           {validationStatus === 'checking' && <p>Validando arquitetura...</p>}
-          {validationStatus === 'valid' && <p>{validationScope === 'architecture' ? 'Arquitetura v1 válida pelo backend.' : 'Cenário v1 válido pelo backend.'}</p>}
+          {validationStatus === 'valid' && <p>{validationScope === 'architecture' ? 'Arquitetura válida pelo backend.' : 'Cenário válido pelo backend.'}</p>}
           {(validationStatus === 'invalid' || validationStatus === 'error' || executionStatus === 'ERROR') && <><strong>{validationStatus === 'invalid' ? (validationScope === 'architecture' ? 'Arquitetura inválida' : 'Cenário inválido') : 'Erro de validação'}</strong><ul>{issues.map((issue, index) => <li key={index}><strong>{issue.code}</strong>: {issue.message} {issue.path && <small>({issue.path})</small>}</li>)}</ul></>}
         </section>}
-        <label>Tipo de cenário<select aria-label="Tipo de cenário" disabled={executionLocked} value={scenarioKind}
-          onChange={event => { setScenarioKind(event.target.value as typeof scenarioKind); resetValidation(); }}>
-          <option value="REQUEST_RESPONSE">REQUEST_RESPONSE</option><option value="WEBSOCKET_SESSION">WEBSOCKET_SESSION</option><option value="MESSAGE_PUBLISH">MESSAGE_PUBLISH</option>
-        </select></label>
-        {scenarioKind === 'REQUEST_RESPONSE'
-          ? <ScenarioEditor nodes={nodes} edges={edges} value={scenario} onChange={(next) => { setScenario(next); resetValidation(); }} disabled={executionLocked} />
-          : <AsyncScenarioEditor kind={scenarioKind} nodes={nodes} edges={edges} value={asyncScenario}
-              onChange={next => { setAsyncScenario(next); resetValidation(); }} disabled={executionLocked} />}
+        <UnifiedScenarioEditorV41 nodes={nodes} edges={edges} entry={entry} sessions={sessions}
+          onEntry={next => {setEntry(next);resetValidation();}} onSessions={next => {setSessions(next);resetValidation();}} disabled={executionLocked}/>
         {simulationResultV2 && <SimulationPlaybackV2 result={simulationResultV2} onStatus={setV2PlaybackStatus} onCursor={setTraceCursor} />}
         <div className="editor-canvas" ref={canvasRef} onDrop={(event) => { if (!executionLocked) onDrop(event); }} onDragOver={(event) => { if (!executionLocked) { event.preventDefault(); event.dataTransfer.dropEffect = 'copy'; } }} aria-label="Canvas da arquitetura">
           <ReactFlow nodes={shownNodes} edges={shownEdges} nodeTypes={nodeTypes} onNodesChange={(changes) => { onNodesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select' && (c.type !== 'position' || !c.dragging))) resetValidation(); }} onEdgesChange={(changes) => { onEdgesChange(executionLocked ? changes.filter((c) => c.type === 'select') : changes); if (changes.some((c) => c.type !== 'select')) resetValidation(); }}
@@ -350,6 +334,8 @@ function EditorCanvas() {
           {node.data.componentType === 'API' && <>
             <label>Pré-processamento (ms)<input aria-label="Pré-processamento (ms)" type="number" min="0" step="1" value={node.data.preProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('preProcessingMs', e.target.value)} /></label>
             <label>Pós-processamento (ms)<input aria-label="Pós-processamento (ms)" type="number" min="0" step="1" value={node.data.postProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('postProcessingMs', e.target.value)} /></label>
+            <BehaviorEditorV41 node={node} nodes={nodes} edges={edges} behaviors={node.data.behaviors ?? []} disabled={executionLocked}
+              onChange={behaviors => {setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,behaviors}}:item));resetValidation();}}/>
           </>}
           {node.data.componentType === 'DATABASE' && <label>Processamento (ms)<input aria-label="Processamento (ms)" type="number" min="0" step="1" value={node.data.processingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('processingMs', e.target.value)} /></label>}
           {node.data.componentType === 'BROKER' && <BrokerEditor node={node} nodes={nodes} edges={edges} disabled={executionLocked}
