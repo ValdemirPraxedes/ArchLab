@@ -437,7 +437,8 @@ final class UnifiedPlanV41 {
             case API_GATEWAY -> Set.of("PROCESS","CALL","RESPOND","BRANCH").contains(kind);
             case WORKER -> Set.of("PROCESS","CALL","PUBLISH","FORK","JOIN","BRANCH").contains(kind)
                     || resources.contains(kind);
-            case SCHEDULER -> "PROCESS".equals(kind);
+            case SCHEDULER -> "PROCESS".equals(kind)
+                    || "SCHEDULED_TRIGGER".equals(trigger) && Set.of("CALL","PUBLISH").contains(kind);
             case AUTHENTICATION_SERVICE -> Set.of("PROCESS","EVALUATE_RULE","BRANCH","RESPOND").contains(kind);
             case WEBHOOK_RECEIVER -> Set.of("PROCESS","CALL","PUBLISH","RESPOND").contains(kind);
             case INTEGRATION_BUS -> Set.of("PROCESS","CALL","PUBLISH","RESPOND","BRANCH").contains(kind);

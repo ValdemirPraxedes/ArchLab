@@ -28,4 +28,35 @@ public enum ComponentTypeV2 {
             default -> false;
         };
     }
+
+    public boolean receivesRequest() {
+        return isVirtualResource() || switch(this) {
+            case API,SERVICE,API_GATEWAY,BFF,SCHEDULER,AUTHENTICATION_SERVICE,
+                    WEBHOOK_RECEIVER,ORCHESTRATOR_SERVICE,INTEGRATION_BUS,NOTIFICATION_SERVICE -> true;
+            default -> false;
+        };
+    }
+
+    public boolean consumesMessage() {
+        return switch(this) {
+            case API,SERVICE,WORKER,NOTIFICATION_SERVICE,ORCHESTRATOR_SERVICE,INTEGRATION_BUS -> true;
+            default -> false;
+        };
+    }
+
+    public boolean initiatesRequest() {
+        return isClient() || switch(this) {
+            case API,SERVICE,API_GATEWAY,BFF,WORKER,SCHEDULER,ORCHESTRATOR_SERVICE,
+                    WEBHOOK_RECEIVER,INTEGRATION_BUS,AUTHENTICATION_SERVICE -> true;
+            default -> false;
+        };
+    }
+
+    public boolean publishesMessage() {
+        return isClient() || switch(this) {
+            case API,SERVICE,WORKER,SCHEDULER,ORCHESTRATOR_SERVICE,WEBHOOK_RECEIVER,
+                    INTEGRATION_BUS,NOTIFICATION_SERVICE -> true;
+            default -> false;
+        };
+    }
 }

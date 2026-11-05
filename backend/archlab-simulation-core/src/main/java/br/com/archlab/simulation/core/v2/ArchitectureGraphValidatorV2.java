@@ -132,12 +132,11 @@ public final class ArchitectureGraphValidatorV2 {
             // Include every resolvable edge in the directed graph, even if its type is invalid.
             // This catches cycles outside the selected execution path.
             graph.get(connection.sourceId()).add(connection.targetId());
-            boolean http = ((source.type().isClient() || source.type().isProcessor())
-                    && (target.type().isProcessor() || target.type().isVirtualResource()));
-            boolean db = source.type().isProcessor() && target.type() == ComponentTypeV2.DATABASE;
-            boolean messaging = ((source.type().isClient() || source.type().isProcessor())
+            boolean http = source.type().initiatesRequest() && target.type().receivesRequest();
+            boolean db = source.type().initiatesRequest() && target.type() == ComponentTypeV2.DATABASE;
+            boolean messaging = (source.type().publishesMessage()
                     && target.type() == ComponentTypeV2.BROKER)
-                    || (source.type() == ComponentTypeV2.BROKER && target.type().isProcessor());
+                    || (source.type() == ComponentTypeV2.BROKER && target.type().consumesMessage());
             if (override != null && !http) {
                 add(errors, "INVALID_INTEGRATION", path + ".apiProcessingOverride",
                         "Processing override is permitted only for connections entering an API");
@@ -149,7 +148,12 @@ public final class ArchitectureGraphValidatorV2 {
             if (integration == null || (http && integration.kind() == IntegrationKindV2.DATABASE_QUERY)
                     || (http && integration.kind().isMessaging())
                     || (db && integration.kind() != IntegrationKindV2.DATABASE_QUERY)
-                    || (messaging && !integration.kind().isMessaging())) {
+                    || (messaging && !integration.kind().isMessaging())
+                    || (target.type().isVirtualResource() && integration.kind()==IntegrationKindV2.WEBSOCKET)
+                    || (integration.kind()==IntegrationKindV2.WEBSOCKET
+                        && !((source.type().isClient() || source.type()==ComponentTypeV2.API
+                                || source.type()==ComponentTypeV2.SERVICE)
+                            && (target.type()==ComponentTypeV2.API || target.type()==ComponentTypeV2.SERVICE)))) {
                 add(errors, "INVALID_INTEGRATION", path + ".integration",
                         "Integration kind is incompatible with connection endpoints");
             } else if (messaging) {
