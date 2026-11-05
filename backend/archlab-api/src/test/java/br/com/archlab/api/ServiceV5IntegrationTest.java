@@ -1,0 +1,191 @@
+package br.com.archlab.api;
+
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.test.context.SpringBootTest;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.json.JsonMapper;
+import java.net.URI;
+import java.net.http.*;
+import static org.junit.jupiter.api.Assertions.*;
+
+@SpringBootTest(webEnvironment=SpringBootTest.WebEnvironment.RANDOM_PORT)
+class ServiceV5IntegrationTest {
+    @Value("${local.server.port}") int port;
+    @Autowired JsonMapper json;
+    private final HttpClient client=HttpClient.newHttpClient();
+    private HttpResponse<String> post(String endpoint,String body) throws Exception {
+        return client.send(HttpRequest.newBuilder(URI.create("http://localhost:"+port+endpoint))
+            .header("Content-Type","application/json").POST(HttpRequest.BodyPublishers.ofString(body)).build(),
+            HttpResponse.BodyHandlers.ofString());
+    }
+    private static final String CACHE_MISS="""
+        {"architecture":{"components":[
+          {"id":"browser","type":"WEB_BROWSER","displayName":"Browser"},
+          {"id":"orders","type":"SERVICE","displayName":"Orders","behaviors":[
+            {"id":"read","trigger":"REQUEST_RECEIVED","match":{"operation":"GET /orders"},"actions":[
+              {"id":"get","kind":"CACHE_GET","connectionId":"to-cache","key":"order-1","outputRef":"cache-result"},
+              {"id":"branch","kind":"BRANCH","dependsOn":["get"],"resultRef":"cache-result",
+               "cases":[{"equals":"HIT","actionIds":["respond-hit"]},
+                        {"equals":"MISS","actionIds":["db","respond-miss"]}]},
+              {"id":"db","kind":"CALL","connectionId":"to-db","dependsOn":["branch"]},
+              {"id":"respond-miss","kind":"RESPOND","dependsOn":["db"],"statusCode":200},
+              {"id":"respond-hit","kind":"RESPOND","dependsOn":["branch"],"statusCode":204}]}]},
+          {"id":"cache","type":"CACHE","displayName":"Cache","defaultTtlMs":100},
+          {"id":"db","type":"DATABASE","displayName":"Database","processingMs":2}
+        ],"connections":[
+          {"id":"in","sourceId":"browser","targetId":"orders","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/orders"}}},
+          {"id":"to-cache","sourceId":"orders","targetId":"cache","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/cache"}}},
+          {"id":"to-db","sourceId":"orders","targetId":"db","latencyMs":1,
+           "integration":{"kind":"DATABASE_QUERY"}}
+        ]},"scenario":{"entry":{"componentId":"browser","connectionId":"in","operation":"GET /orders"}}}
+        """;
+
+    @Test void cacheMissSelectsOnlyDatabaseBranchAndReplaysIdentically() throws Exception {
+        var validation=post("/api/v1/scenarios/validate",CACHE_MISS);
+        assertEquals(200,validation.statusCode(),validation.body());
+        assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
+        var first=post("/api/v1/simulations",CACHE_MISS);
+        assertEquals(200,first.statusCode(),first.body());
+        JsonNode result=json.readTree(first.body());
+        assertEquals("MISS",result.get("resourceOutcomes").get(0).get("resultCode").asText());
+        assertEquals(200,result.get("execution").get("responseStatusCode").asInt());
+        assertTrue(result.get("trace").toString().contains("BRANCH_NOT_SELECTED"));
+        assertEquals(first.body(),post("/api/v1/simulations",CACHE_MISS).body());
+    }
+    @Test void rejectsBranchWithoutPredecessorResultAndWrongResourceConnection() throws Exception {
+        String missing=CACHE_MISS.replace("\"resultRef\":\"cache-result\",",
+                "\"resultRef\":\"missing\",");
+        JsonNode invalidRef=json.readTree(post("/api/v1/scenarios/validate",missing).body());
+        assertFalse(invalidRef.get("valid").asBoolean());
+        assertTrue(invalidRef.get("violations").toString().contains("INVALID_ACTION_DEPENDENCY"));
+        String wrong=CACHE_MISS.replace("\"kind\":\"CACHE_GET\",\"connectionId\":\"to-cache\"",
+                "\"kind\":\"CACHE_GET\",\"connectionId\":\"to-db\"");
+        JsonNode invalidConnection=json.readTree(post("/api/v1/scenarios/validate",wrong).body());
+        assertFalse(invalidConnection.get("valid").asBoolean());
+        assertTrue(invalidConnection.get("violations").toString().contains("INVALID_RESOURCE_CONNECTION"));
+    }
+    private static final String GATEWAY_BFF="""
+        {"architecture":{"components":[
+          {"id":"browser","type":"WEB_BROWSER","displayName":"Browser"},
+          {"id":"gateway","type":"API_GATEWAY","displayName":"Gateway",
+           "routes":[{"operation":"GET /home","connectionId":"gateway-bff"}],
+           "behaviors":[{"id":"route","trigger":"REQUEST_RECEIVED","match":{"operation":"GET /home"},
+             "actions":[{"id":"forward","kind":"CALL","connectionId":"gateway-bff"},
+                        {"id":"response","kind":"RESPOND","dependsOn":["forward"],"statusCode":200}]}]},
+          {"id":"bff","type":"BFF","displayName":"BFF","behaviors":[
+            {"id":"compose","trigger":"REQUEST_RECEIVED","actions":[
+              {"id":"first","kind":"CALL","connectionId":"bff-a"},
+              {"id":"second","kind":"CALL","connectionId":"bff-b","dependsOn":["first"]},
+              {"id":"response","kind":"RESPOND","dependsOn":["second"],"statusCode":200}]}]},
+          {"id":"a","type":"SERVICE","displayName":"A","behaviors":[
+            {"id":"handle","trigger":"REQUEST_RECEIVED","actions":[{"id":"work","kind":"PROCESS","durationMs":2},
+              {"id":"response","kind":"RESPOND","dependsOn":["work"],"statusCode":200}]}]},
+          {"id":"b","type":"SERVICE","displayName":"B","behaviors":[
+            {"id":"handle","trigger":"REQUEST_RECEIVED","actions":[{"id":"work","kind":"PROCESS","durationMs":3},
+              {"id":"response","kind":"RESPOND","dependsOn":["work"],"statusCode":200}]}]}
+        ],"connections":[
+          {"id":"browser-gateway","sourceId":"browser","targetId":"gateway","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/home"}}},
+          {"id":"gateway-bff","sourceId":"gateway","targetId":"bff","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/home"}}},
+          {"id":"bff-a","sourceId":"bff","targetId":"a","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/a"}}},
+          {"id":"bff-b","sourceId":"bff","targetId":"b","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/b"}}}
+        ]},"scenario":{"entry":{"componentId":"browser","connectionId":"browser-gateway","operation":"GET /home"}}}
+        """;
+
+    @Test void gatewayRoutesToBffWhichComposesExplicitCalls() throws Exception {
+        var validation=post("/api/v1/scenarios/validate",GATEWAY_BFF);
+        assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
+        var result=post("/api/v1/simulations",GATEWAY_BFF);
+        assertEquals(200,result.statusCode(),result.body());
+        JsonNode body=json.readTree(result.body());
+        assertEquals("COMPLETED",body.get("execution").get("mainStatus").asText());
+        assertEquals(4,body.get("metrics").get("exchanges").size());
+        assertEquals(result.body(),post("/api/v1/simulations",GATEWAY_BFF).body());
+    }
+    private static final String WORKER_NOTIFICATION="""
+        {"architecture":{"components":[
+          {"id":"browser","type":"WEB_BROWSER","displayName":"Browser"},
+          {"id":"orders","type":"SERVICE","displayName":"Orders","behaviors":[
+            {"id":"accept","trigger":"REQUEST_RECEIVED","actions":[
+              {"id":"publish","kind":"PUBLISH","connectionId":"to-broker","destinationName":"created"},
+              {"id":"respond","kind":"RESPOND","dependsOn":["publish"],"statusCode":202}]}]},
+          {"id":"broker","type":"BROKER","displayName":"Broker",
+           "destinations":[{"name":"created","kind":"QUEUE"}],
+           "subscriptions":[{"destinationName":"created","consumerComponentId":"worker","connectionId":"to-worker"}]},
+          {"id":"worker","type":"WORKER","displayName":"Worker","behaviors":[
+            {"id":"consume","trigger":"MESSAGE_CONSUMED","match":{"destinationName":"created"},
+             "actions":[{"id":"notify","kind":"SEND_NOTIFICATION","connectionId":"to-notify",
+               "channel":"EMAIL","recipientAlias":"customer-1","outputRef":"notification-result"}]}]},
+          {"id":"notifications","type":"NOTIFICATION_SERVICE","displayName":"Notifications"}
+        ],"connections":[
+          {"id":"in","sourceId":"browser","targetId":"orders","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/orders"}}},
+          {"id":"to-broker","sourceId":"orders","targetId":"broker","latencyMs":1,
+           "integration":{"kind":"QUEUE","queueName":"created"}},
+          {"id":"to-worker","sourceId":"broker","targetId":"worker","latencyMs":1,
+           "integration":{"kind":"QUEUE","queueName":"created"}},
+          {"id":"to-notify","sourceId":"worker","targetId":"notifications","latencyMs":2,
+           "integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/notify"}}}
+        ]},"scenario":{"entry":{"componentId":"browser","connectionId":"in","operation":"POST /orders"}}}
+        """;
+
+    @Test void brokerWorkerAndNotificationPreserveCausalityAndMainResponse() throws Exception {
+        var validation=post("/api/v1/scenarios/validate",WORKER_NOTIFICATION);
+        assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
+        var response=post("/api/v1/simulations",WORKER_NOTIFICATION);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode result=json.readTree(response.body());
+        assertEquals("SENT",result.get("resourceOutcomes").get(0).get("resultCode").asText());
+        assertEquals(202,result.get("execution").get("responseStatusCode").asInt());
+        assertTrue(result.get("trace").toString().contains("BROKER_DELIVERY"));
+        assertEquals(1,result.get("metrics").get("messaging").get(0).get("processed").asInt());
+    }
+
+    @Test void notificationFailureIsObservableAfterMainResponse() throws Exception {
+        String failure=WORKER_NOTIFICATION.replace("\"outputRef\":\"notification-result\"",
+                "\"outputRef\":\"notification-result\",\"simulatedResult\":\"FAILED\"");
+        var response=post("/api/v1/simulations",failure);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode result=json.readTree(response.body());
+        assertEquals("FAILED",result.get("resourceOutcomes").get(0).get("status").asText());
+        assertEquals("COMPLETED",result.get("execution").get("mainStatus").asText());
+        assertEquals("COMPLETED_WITH_ERRORS",result.get("execution").get("status").asText());
+    }
+    private static final String AUTH_RULES="""
+        {"architecture":{"components":[
+          {"id":"browser","type":"WEB_BROWSER","displayName":"Browser"},
+          {"id":"auth","type":"AUTHENTICATION_SERVICE","displayName":"Auth","behaviors":[
+            {"id":"check","trigger":"REQUEST_RECEIVED","actions":[
+              {"id":"evaluate","kind":"EVALUATE_RULE","connectionId":"auth-rules","outputRef":"decision"},
+              {"id":"branch","kind":"BRANCH","dependsOn":["evaluate"],"resultRef":"decision",
+               "cases":[{"equals":"ALLOW","actionIds":["allow"]},
+                        {"equals":"DENY","actionIds":["deny"]}]},
+              {"id":"allow","kind":"RESPOND","dependsOn":["branch"],"statusCode":200},
+              {"id":"deny","kind":"RESPOND","dependsOn":["branch"],"statusCode":403}]}]},
+          {"id":"rules","type":"RULES_ENGINE","displayName":"Rules","defaultDecision":"DENY"}
+        ],"connections":[
+          {"id":"in","sourceId":"browser","targetId":"auth","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/secure"}}},
+          {"id":"auth-rules","sourceId":"auth","targetId":"rules","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/decide"}}}
+        ]},"scenario":{"entry":{"componentId":"browser","connectionId":"in","operation":"GET /secure"}}}
+        """;
+
+    @Test void authenticationUsesTypedRulesDecisionAndExclusiveResponse() throws Exception {
+        var validation=post("/api/v1/scenarios/validate",AUTH_RULES);
+        assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
+        var response=post("/api/v1/simulations",AUTH_RULES);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode result=json.readTree(response.body());
+        assertEquals("DENY",result.get("resourceOutcomes").get(0).get("resultCode").asText());
+        assertEquals(403,result.get("execution").get("responseStatusCode").asInt());
+        assertTrue(result.get("trace").toString().contains("BRANCH_NOT_SELECTED"));
+    }
+}

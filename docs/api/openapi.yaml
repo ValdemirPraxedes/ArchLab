@@ -790,6 +790,11 @@ components:
           - {type: string, maxLength: 2048}
           - {type: number}
           - {type: boolean}
+          - type: array
+            minItems: 1
+            maxItems: 32
+            uniqueItems: true
+            items: {type: [string, number, boolean]}
         priority: {type: integer, minimum: 0, maximum: 10000, default: 0}
         decision: {type: string, enum: [ALLOW, DENY, REVIEW]}
     LegacyApiMigrationV5:
@@ -814,7 +819,7 @@ components:
         status: {type: string, enum: [SUCCEEDED, FAILED, TIMED_OUT]}
         resultCode:
           type: string
-          enum: [HIT, MISS, STORED, REMOVED, NOT_FOUND, FOUND, CREATED, REPLACED, DELETED, SENT, INDEXED, UPDATED, REGISTERED, UNAVAILABLE, ALLOW, DENY, REVIEW]
+          enum: [HIT, MISS, STORED, REMOVED, NOT_FOUND, FOUND, CREATED, REPLACED, DELETED, SENT, FAILED, TIMED_OUT, TRANSFORMED, INDEXED, UPDATED, REGISTERED, UNAVAILABLE, ALLOW, DENY, REVIEW]
         resultRef: {$ref: '#/components/schemas/Identifier'}
         timestampMs: {$ref: '#/components/schemas/DurationMs'}
         operationId: {$ref: '#/components/schemas/Identifier'}
@@ -1140,6 +1145,9 @@ components:
         channel: {type: string, enum: [EMAIL, SMS, PUSH]}
         recipientAlias: {$ref: '#/components/schemas/Identifier'}
         outputRef: {$ref: '#/components/schemas/Identifier'}
+        durationMs: {$ref: '#/components/schemas/DurationMs'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+        simulatedResult: {type: string, enum: [SENT, FAILED, TIMED_OUT], default: SENT}
     IndexDocumentActionV5:
       type: object
       additionalProperties: false
