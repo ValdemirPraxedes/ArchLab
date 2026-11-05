@@ -1931,6 +1931,7 @@ components:
           - API_POST_PROCESSING
           - DATABASE_PROCESSING
           - API_MESSAGE_PROCESSING
+          - VIRTUAL_RESOURCE_PROCESSING
         startMs: *id005
         endMs: *id006
         durationMs: *id007

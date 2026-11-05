@@ -49,7 +49,7 @@ sequenceDiagram
 
 ## Component roles
 
-`SERVICE` hosts general Behaviors and explicit Actions. `API_GATEWAY` requires request operation matches and route connections. `BFF` composes explicit CALL Actions. `WORKER` consumes Broker deliveries; `NOTIFICATION_SERVICE` is a virtual destination with EMAIL, SMS, and PUSH outcomes. `SCHEDULER` emits finite `SCHEDULED_TRIGGER` events on the shared queue. `AUTHENTICATION_SERVICE` uses `EVALUATE_RULE` and BRANCH for fictitious authorization. `WEBHOOK_RECEIVER` accepts virtual HTTP and forwards by Action. `ORCHESTRATOR_SERVICE` coordinates explicit CALL/PUBLISH dependencies. `INTEGRATION_BUS` performs a descriptive TRANSFORM and explicit forwarding. `CACHE`, `OBJECT_STORAGE`, `SEARCH_ENGINE`, `SERVICE_REGISTRY`, and `RULES_ENGINE` own bounded per-run state or decisions.
+`SERVICE` hosts general Behaviors and explicit Actions. `API_GATEWAY` requires request operation matches and route connections. `BFF` composes explicit CALL Actions. `WORKER` consumes Broker deliveries; `NOTIFICATION_SERVICE` is a virtual destination with EMAIL, SMS, and PUSH outcomes. `SCHEDULER` emits finite `SCHEDULED_TRIGGER` events on the shared queue. `firstAtMs` is an absolute virtual timestamp; an occurrence already due when its parent Action runs fires at the current virtual time. `AUTHENTICATION_SERVICE` uses `EVALUATE_RULE` and BRANCH for fictitious authorization. `WEBHOOK_RECEIVER` accepts virtual HTTP and forwards by Action. `ORCHESTRATOR_SERVICE` coordinates explicit CALL/PUBLISH dependencies. `INTEGRATION_BUS` performs a descriptive TRANSFORM and explicit forwarding. `CACHE`, `OBJECT_STORAGE`, `SEARCH_ENGINE`, `SERVICE_REGISTRY`, and `RULES_ENGINE` own bounded per-run state or decisions.
 
 Resource Actions require a directed request/response connection to the matching resource type. Discovery returns logical target IDs and never adds graph edges. Search matches exact tags and sorts document IDs. Cache TTL expires at `now >= expiresAt`; zero TTL is never readable. Object Storage retains size and bounded metadata only. Rules are sorted by descending priority and use declaration order for ties; missing matches use an explicit default decision. Notifications simulate delivery and never contact a provider.
 
@@ -57,7 +57,7 @@ The runtime appends `resourceOutcomes` to the existing `/api/v1/simulations` res
 
 ## Known limits pending final review
 
-- The legacy API migration adapter is not yet wired into an import flow. Historical API scenarios continue through their existing path.
+- The legacy API migration service is explicit and validates the converted architecture, but it is not yet wired into a product import flow. Historical API scenarios continue through their existing path.
 - Some type specific validation and failure semantics remain to be hardened before BE5-03 through BE5-15 can be called complete.
 - Rules currently compare prior Action result codes; the contract does not yet expose scenario attributes as rule inputs.
 - Gateway route fallback and Scheduler policies for main/global status need additional acceptance tests.

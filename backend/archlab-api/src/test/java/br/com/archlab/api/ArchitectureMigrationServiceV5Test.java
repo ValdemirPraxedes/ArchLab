@@ -1,6 +1,7 @@
 package br.com.archlab.api;
 
 import br.com.archlab.api.v2.V2RequestMapper;
+import br.com.archlab.simulation.core.v41.UnifiedSimulationV41;
 import org.junit.jupiter.api.Test;
 import tools.jackson.databind.json.JsonMapper;
 import static org.junit.jupiter.api.Assertions.*;
@@ -42,5 +43,16 @@ class ArchitectureMigrationServiceV5Test {
                 () -> migration.migrate(input));
         assertFalse(problem.violations().isEmpty());
         assertEquals(original,input.toString());
+    }
+    @Test void legacyAndMigratedScenariosHaveEquivalentVirtualResults() {
+        String scenario="\"scenario\":{\"entry\":{\"componentId\":\"client\",\"connectionId\":\"in\",\"operation\":\"GET /one\"}}";
+        var original=json.readTree("{\"architecture\":"+OLD+","+scenario+"}");
+        var converted=migration.migrate(original).document();
+        var mapper=new V2RequestMapper();
+        var before=mapper.canonicalArchitecture(original.get("architecture"));
+        var after=mapper.canonicalArchitecture(converted.get("architecture"));
+        var beforeRun=new UnifiedSimulationV41(UnifiedPlanV41.parse(original,before).toExecutionPlan()).run();
+        var afterRun=new UnifiedSimulationV41(UnifiedPlanV41.parse(converted,after).toExecutionPlan()).run();
+        assertEquals(beforeRun,afterRun);
     }
 }
