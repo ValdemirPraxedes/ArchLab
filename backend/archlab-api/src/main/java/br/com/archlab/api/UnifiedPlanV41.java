@@ -120,6 +120,14 @@ final class UnifiedPlanV41 {
             if (first != null && entry.operation() != null && first.integration() instanceof HttpRestIntegrationV2 rest
                     && rest.request() != null && !entry.operation().equals(rest.request().method()+" "+rest.request().path()))
                 error("INVALID_ENTRY_OPERATION","scenario.entry.operation","Operation does not match entry connection");
+            if (first != null && components.get(first.targetId()) instanceof ServiceComponentV5 gateway
+                    && gateway.type()==ComponentTypeV2.API_GATEWAY) {
+                String operation=entry.operation();
+                if (operation==null && first.integration() instanceof HttpRestIntegrationV2 rest && rest.request()!=null)
+                    operation=rest.request().method()+" "+rest.request().path();
+                if (match(gateway.id(),"REQUEST_RECEIVED",operation,null,null)==null)
+                    error("INVALID_ROUTING_RULE","scenario.entry","Gateway has no matching explicit route Behavior");
+            }
         }
         Map<String,ConnectionV2> aliases = new HashMap<>();
         if (first != null && first.integration().kind()==IntegrationKindV2.WEBSOCKET) aliases.put(first.id(),first);
@@ -246,7 +254,7 @@ final class UnifiedPlanV41 {
                         error("INVALID_VIRTUAL_RESOURCE_OPERATION",actionPath+".targetComponentId",
                                 "Registered target must exist in the architecture");
                 }
-                validateBranches(actions,path);
+                validateBranches(actions,path,behavior.trigger());
                 if (cycle(actions)) error("INVALID_ACTION_DEPENDENCY",path+".actions","Action dependency cycle");
             }
         }
@@ -291,7 +299,7 @@ final class UnifiedPlanV41 {
                 && matches(a.destinationName(),b.destinationName()) && matches(a.websocketPath(),b.websocketPath());
     }
     private static boolean matches(String a,String b) {return a==null || b==null || a.equals(b);}
-    private void validateBranches(Map<String,Action> actions,String path) {
+    private void validateBranches(Map<String,Action> actions,String path,String trigger) {
         Map<String,Action> producers=new HashMap<>();
         for (Action action:actions.values()) {
             Object output=action.options().get("outputRef");
@@ -331,6 +339,13 @@ final class UnifiedPlanV41 {
                 if (!(target instanceof String id) || !targets.add(id) || !actions.containsKey(id)
                         || !ancestors(actions.get(id),actions).contains(branch.id()))
                     error("INVALID_ACTION_DEPENDENCY",branchPath+".defaultActionIds","Default target must be a unique descendant");
+            if ("REQUEST_RECEIVED".equals(trigger) && producer!=null
+                    && actions.values().stream().anyMatch(a -> "RESPOND".equals(a.kind())
+                        && ancestors(a,actions).contains(branch.id()))
+                    && (defaultRaw==null || defaultRaw instanceof List<?> defaults && defaults.isEmpty())
+                    && !values.containsAll(resultDomain(producer.kind())))
+                error("INVALID_RESPONSE_CONTEXT",branchPath,
+                        "Request BRANCH must cover every possible resultCode or declare a default response path");
             Set<String> allDirect=new HashSet<>();
             for (Action action:actions.values()) if (action.dependsOn().contains(branch.id())) allDirect.add(action.id());
             if (!targets.containsAll(allDirect))
@@ -463,7 +478,7 @@ final class UnifiedPlanV41 {
             case API_GATEWAY -> Set.of("PROCESS","CALL","RESPOND","BRANCH").contains(kind);
             case WORKER -> Set.of("PROCESS","CALL","PUBLISH","FORK","JOIN","BRANCH").contains(kind)
                     || resources.contains(kind);
-            case SCHEDULER -> "PROCESS".equals(kind)
+            case SCHEDULER -> "PROCESS".equals(kind) || "RESPOND".equals(kind)
                     || "SCHEDULED_TRIGGER".equals(trigger) && Set.of("CALL","PUBLISH").contains(kind);
             case AUTHENTICATION_SERVICE -> Set.of("PROCESS","EVALUATE_RULE","BRANCH","RESPOND").contains(kind);
             case WEBHOOK_RECEIVER -> Set.of("PROCESS","CALL","PUBLISH","RESPOND").contains(kind);

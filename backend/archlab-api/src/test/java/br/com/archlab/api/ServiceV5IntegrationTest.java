@@ -113,6 +113,13 @@ class ServiceV5IntegrationTest {
         assertEquals(4,body.get("metrics").get("exchanges").size());
         assertEquals(result.body(),post("/api/v1/simulations",GATEWAY_BFF).body());
     }
+    @Test void gatewayWithoutMatchingRouteProducesStructuredViolation() throws Exception {
+        String invalid=GATEWAY_BFF.replace("\"match\":{\"operation\":\"GET /home\"}",
+                "\"match\":{\"operation\":\"GET /other\"}");
+        JsonNode result=json.readTree(post("/api/v1/scenarios/validate",invalid).body());
+        assertFalse(result.get("valid").asBoolean());
+        assertTrue(result.get("violations").toString().contains("INVALID_ROUTING_RULE"));
+    }
     private static final String WORKER_NOTIFICATION="""
         {"architecture":{"components":[
           {"id":"browser","type":"WEB_BROWSER","displayName":"Browser"},
@@ -180,9 +187,11 @@ class ServiceV5IntegrationTest {
               {"id":"evaluate","kind":"EVALUATE_RULE","connectionId":"auth-rules","outputRef":"decision"},
               {"id":"branch","kind":"BRANCH","dependsOn":["evaluate"],"resultRef":"decision",
                "cases":[{"equals":"ALLOW","actionIds":["allow"]},
-                        {"equals":"DENY","actionIds":["deny"]}]},
+                        {"equals":"DENY","actionIds":["deny"]},
+                        {"equals":"REVIEW","actionIds":["review"]}]},
               {"id":"allow","kind":"RESPOND","dependsOn":["branch"],"statusCode":200},
-              {"id":"deny","kind":"RESPOND","dependsOn":["branch"],"statusCode":403}]}]},
+              {"id":"deny","kind":"RESPOND","dependsOn":["branch"],"statusCode":403},
+              {"id":"review","kind":"RESPOND","dependsOn":["branch"],"statusCode":202}]}]},
           {"id":"rules","type":"RULES_ENGINE","displayName":"Rules","defaultDecision":"DENY"}
         ],"connections":[
           {"id":"in","sourceId":"browser","targetId":"auth","latencyMs":1,
@@ -280,5 +289,40 @@ class ServiceV5IntegrationTest {
         assertEquals("TRANSFORMED",result.get("resourceOutcomes").get(0).get("resultCode").asText());
         assertEquals(4,result.get("metrics").get("exchanges").size());
         assertTrue(result.get("trace").toString().contains("VIRTUAL_TRANSFORM"));
+    }
+    private static final String SCHEDULED="""
+        {"architecture":{"components":[
+          {"id":"client","type":"WEB_BROWSER","displayName":"Client"},
+          {"id":"scheduler","type":"SCHEDULER","displayName":"Scheduler",
+           "schedules":[{"id":"three","firstAtMs":5,"intervalMs":5,"occurrenceCount":3,"behaviorId":"tick"}],
+           "behaviors":[
+             {"id":"start","trigger":"REQUEST_RECEIVED","actions":[
+               {"id":"plan","kind":"SCHEDULE_TRIGGER","scheduleId":"three"},
+               {"id":"respond","kind":"RESPOND","dependsOn":["plan"],"statusCode":202}]},
+             {"id":"tick","trigger":"SCHEDULED_TRIGGER","actions":[
+               {"id":"call","kind":"CALL","connectionId":"scheduler-service"}]}]},
+          {"id":"service","type":"SERVICE","displayName":"Target","behaviors":[
+            {"id":"handle","trigger":"REQUEST_RECEIVED","actions":[
+              {"id":"respond","kind":"RESPOND","statusCode":200}]}]}
+        ],"connections":[
+          {"id":"in","sourceId":"client","targetId":"scheduler","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/schedule"}}},
+          {"id":"scheduler-service","sourceId":"scheduler","targetId":"service","latencyMs":1,
+           "integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/work"}}}
+        ]},"scenario":{"entry":{"componentId":"client","connectionId":"in","operation":"POST /schedule"}}}
+        """;
+
+    @Test void schedulerFiresFiniteChildCallsThroughApiV1() throws Exception {
+        var validation=post("/api/v1/scenarios/validate",SCHEDULED);
+        assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
+        var response=post("/api/v1/simulations",SCHEDULED);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode result=json.readTree(response.body());
+        int fired=0;
+        for (JsonNode entry:result.get("trace"))
+            if ("SCHEDULED_TRIGGER".equals(entry.get("type").asText())) fired++;
+        assertEquals(3,fired);
+        assertEquals(202,result.get("execution").get("responseStatusCode").asInt());
+        assertEquals(4,result.get("metrics").get("exchanges").size());
     }
 }
