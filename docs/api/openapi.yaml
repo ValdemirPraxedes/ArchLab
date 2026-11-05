@@ -2211,6 +2211,7 @@ components:
                 - {equals: HIT, actionIds: [respond-hit]}
                 - {equals: MISS, actionIds: [db-read]}
               - {id: db-read, kind: CALL, connectionId: orders-database, dependsOn: [choose]}
+              - {id: respond-miss, kind: RESPOND, statusCode: 200, dependsOn: [db-read]}
               - {id: respond-hit, kind: RESPOND, statusCode: 200, dependsOn: [choose]}
           - {id: cache, type: CACHE, displayName: Cache Pedidos, defaultTtlMs: 30000}
           - {id: database, type: DATABASE, displayName: Banco de Dados, processingMs: 10}
