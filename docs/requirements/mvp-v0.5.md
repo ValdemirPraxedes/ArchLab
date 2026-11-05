@@ -65,6 +65,7 @@ O catálogo de v0.3 já selecionou dez nomes: nove serviços + Broker. O Broker 
 | RF-5-015 | UX | Canvas React Flow continua fluido; painéis contextuais mostram propriedades pertinentes ao tipo. |
 | RF-5-016 | Observabilidade | Timeline identifica papel/componente e Actions sem perder operação principal, derivadas e correlação. |
 | RF-5-017 | Limites | Gatilhos de Scheduler, roteamentos e ações respeitam profundidade, duração e limite de eventos finitos. |
+| RF-5-024 | Identidade visual dos componentes | Todos os 15 tipos v0.5 usam ícones Lucide padronizados na paleta e no canvas conforme [UI-V5-001](../architecture/UI-V5-001.md); tipos existentes mantêm seus ícones e `API` não aparece como item criável. |
 
 ## 5. Matriz preliminar de capacidades
 
