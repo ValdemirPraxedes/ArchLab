@@ -10,7 +10,7 @@ A v0.4.1 permite ao usuário combinar REST, Broker, WebSocket e Database em uma 
 
 **Não** criar um engine por componente. O perfil de comunicação continua na conexão; o tipo de nó define capacidades, defaults, propriedades e experiência contextual. A sequência de Actions continua definindo a atividade executada.
 
-Preservar `/api/v1`, o formato `UnifiedScenario`, IDs/trace correlacionado, mainStatus/globalStatus, relógio virtual e APIs legadas.
+Preservar `/api/v1`, `UnifiedScenario`, correlação, estados e relógio virtual. `API` deixa de ser componente criável na v0.5; importações antigas com `type: API` passam por migração explícita para `SERVICE`.
 
 ## 2. Catálogo e priorização proposta
 
@@ -34,7 +34,7 @@ O catálogo de v0.3 já selecionou dez nomes: nove serviços + Broker. O Broker 
 ## 3. Distinção entre comportamento e aparência
 
 - **Service** representa a unidade genérica de processamento, independente de REST ou outro transporte.
-- **API** existente deve continuar funcionando. Avaliar mantê-la como tipo com semântica atual e habilitar criação de `Service` sem renomear automaticamente arquivos antigos. Não converter silenciosamente `API` em `SERVICE`.
+- **Decisão aprovada:** `SERVICE` substitui o componente genérico `API` na paleta, criação e serialização de novas arquiteturas. API representa uma interface de comunicação exposta por um Service, não um nó. Arquiteturas antigas com `type: API` são aceitas apenas pelo adaptador de importação, migradas explicitamente para `SERVICE`, preservando IDs, conexões, Behaviors/Actions e processamento; a UI deve informar a conversão.
 - **BFF** especializa experiência e defaults de um serviço; não é novo motor nem exige rede real.
 - **Gateway** agrega roteamento de chamadas e resposta, mas não é Broker de mensagens.
 - **Worker** é orientado a gatilhos assíncronos; não retornar HTTP por padrão ao produtor.
@@ -61,7 +61,7 @@ O catálogo de v0.3 já selecionou dez nomes: nove serviços + Broker. O Broker 
 | RF-5-011 | Webhook Receiver | Entrada HTTP virtual desencadeia Behaviors configurados e operações derivadas. |
 | RF-5-012 | Orchestrator Service | Encadeia chamadas e ações condicionadas às dependências e estados; sem execução arbitrária de todas as arestas. |
 | RF-5-013 | ESB | Roteamento e transformação lógica observável, distinto de publish/delivery de Broker. |
-| RF-5-014 | Compatibilidade | Execuções de v0.1 a v0.4.1 continuam reproduzíveis; importação preserva tipo API e resultados relevantes. |
+| RF-5-014 | Compatibilidade e migração | Importações v0.1–v0.4.1 com `type: API` são convertidas explicitamente para `SERVICE` (IDs, conexões, Actions e tempos preservados); novos cenários só serializam `SERVICE`. Regressão semântica obrigatória. |
 | RF-5-015 | UX | Canvas React Flow continua fluido; painéis contextuais mostram propriedades pertinentes ao tipo. |
 | RF-5-016 | Observabilidade | Timeline identifica papel/componente e Actions sem perder operação principal, derivadas e correlação. |
 | RF-5-017 | Limites | Gatilhos de Scheduler, roteamentos e ações respeitam profundidade, duração e limite de eventos finitos. |
@@ -73,7 +73,7 @@ Legenda: R=request recebido; M=mensagem consumida; S=emissão agendada; W=mensag
 | Tipo | Gatilhos propostos | Actions principais | Observações |
 | --- | --- | --- | --- |
 | Service | R, M, W | PROCESS, C, P, X, WS_SEND, F | Responder só quando houver caller/request válido |
-| API (legado) | R, M, W | Preservar v0.4.1 | Sem mudança automática de tipo |
+| API (somente entrada legada) | R, M, W | Migrar para regras de Service na importação | Não aparece na paleta nem em novos arquivos v0.5 |
 | Gateway | R | PROCESS, C, X | Destino por rota ou Action; timeout configurado |
 | BFF | R | PROCESS, C, X, F | Agregação lógica, não HTTP real |
 | Worker | M, S | PROCESS, C, P, F | Não emitir RESPONSE sem request |
@@ -103,11 +103,11 @@ Legenda: R=request recebido; M=mensagem consumida; S=emissão agendada; W=mensag
 
 **CT-5-08 — ESB:** Service A → ESB → Service B ou Broker, com tempo de transformação/encaminhamento próprio, sem simular um produto ESB real.
 
-**CT-5-09 — Regressão:** cenário v0.4.1 Browser → API → Broker → API → Database segue executando sem conversão silenciosa de `API`.
+**CT-5-09 — Migração/regressão:** importar cenário v0.4.1 Browser → API → Broker → API → Database, registrar `API → SERVICE` explicitamente, preservar IDs e execução causal e reexportar sem `type: API`.
 
 ## 7. Arquitetura e contratos — decisões ainda necessárias
 
-1. Evoluir `ComponentV2` e `ComponentTypeV2` com novo catálogo, mantendo `API` e subclasses legadas no JSON.
+1. Evoluir `ComponentV2` e `ComponentTypeV2` com novo catálogo; novos JSONs utilizam `SERVICE`, enquanto o adaptador de entrada/migração lê temporariamente `API` para arquivos antigos.
 2. Modelar capacidades declarativas (`acceptedTriggers`, `allowedActions`, `allowedConnections`) compartilhadas, sem subclasses de runtime apenas cosméticas.
 3. Decidir se roteamento Gateway, composição BFF e transformação ESB são propriedades de Action, Behaviors especializados ou abstrações reutilizáveis; evitar três soluções incompatíveis.
 4. Definir um modelo único para disparo `SCHEDULED_TRIGGER` no cenário, limite de ocorrências, intervalo virtual e relação com `mainStatus`.
@@ -121,7 +121,7 @@ Legenda: R=request recebido; M=mensagem consumida; S=emissão agendada; W=mensag
 - **Etapa A — planejamento:** revisar requisitos deste documento, ADR de capacidade e contrato, aprovar escopo P0/P1.
 - **Etapa B — backend base P0:** tipo Service, Gateway, BFF e Worker; validar conexões, eventos e Actions existentes; regressão v0.4.1.
 - **Etapa C — backend P1:** Scheduler, Authentication Service, Webhook Receiver, Orchestrator Service, ESB, somente com regras normativas aprovadas.
-- **Etapa D — OpenAPI e exemplos:** schemas discriminados, mapeamento API compatível e geração TypeScript.
+- **Etapa D — OpenAPI e exemplos:** schemas discriminados, `SERVICE` canônico, `API` deprecated somente na entrada legada e geração TypeScript.
 - **Etapa E — frontend:** paleta, ícones, formulários contextuais, serialização e visualização de resultados.
 - **Etapa F — testes finais:** CT-5-01 a CT-5-09, integração, limites e performance do editor.
 
@@ -134,7 +134,7 @@ Sistemas de rede reais, provisionamento de serviços, OAuth/JWT reais, cron real
 ## 10. Critérios de aprovação do planejamento
 
 - Confirmar catálogo e prioridade P0/P1;
-- Revisar modelagem de Service genérico versus API legada;
+- Verificar remoção de `API` da paleta e migração explícita `API → SERVICE` na importação;
 - Aprovar abordagem compartilhada de capacidades e de Actions;
 - Aprovar política de Scheduler finito e semântica de Gateway/Auth/ESB;
 - Definir o contrato normativo antes da implementação.
@@ -142,7 +142,7 @@ Sistemas de rede reais, provisionamento de serviços, OAuth/JWT reais, cron real
 
 ## 11. Ampliação do catálogo aprovada pelo responsável pelo produto (2026-11-05)
 
-O responsável pelo produto confirmou a inclusão de **seis novos componentes lógicos** na v0.5. Eles se somam aos nove componentes de serviço já selecionados no planejamento anterior, preservando `API`, `Database`, `Broker` e os tipos de cliente existentes. A inclusão no catálogo está aprovada; os contratos e comportamentos detalhados ainda exigem refinamento.
+O responsável pelo produto confirmou a inclusão de **seis novos componentes lógicos** na v0.5. Eles se somam aos nove componentes de serviço já selecionados no planejamento anterior. `Database`, `Broker` e tipos Client continuam; o antigo tipo `API` é substituído por `SERVICE` para novos modelos, com adaptação explícita de arquivos históricos. A inclusão no catálogo está aprovada; os contratos e comportamentos detalhados ainda exigem refinamento.
 
 | ID | Novo componente aprovado | Responsabilidade simulada mínima | Prioridade proposta |
 | --- | --- | --- | --- |
