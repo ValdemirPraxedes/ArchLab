@@ -483,6 +483,8 @@ components:
       - type
       - displayName
     Api:
+      description: 'DEPRECATED v0.5: tipo de componente aceito somente para importação/migração de arquiteturas anteriores. Novos modelos devem usar SERVICE; API é interface exposta pelo Service, não nó independente.'
+      deprecated: true
       type: object
       additionalProperties: false
       properties:
@@ -790,6 +792,19 @@ components:
           - {type: boolean}
         priority: {type: integer, minimum: 0, maximum: 10000, default: 0}
         decision: {type: string, enum: [ALLOW, DENY, REVIEW]}
+    LegacyApiMigrationV5:
+      type: object
+      additionalProperties: false
+      description: Relatório opcional de migração no fluxo de importação de arquiteturas antigas; não é parte obrigatória de SimulationResponse.
+      required: [componentId, previousType, resultingType]
+      properties:
+        componentId: {$ref: '#/components/schemas/Identifier'}
+        previousType: {type: string, const: API}
+        resultingType: {type: string, const: SERVICE}
+        migrationNotes:
+          type: array
+          maxItems: 20
+          items: {type: string, maxLength: 512}
     ResourceOutcomeV5:
       type: object
       additionalProperties: false
@@ -810,6 +825,7 @@ components:
           maxProperties: 32
           additionalProperties: {type: [string, number, boolean, 'null']}
     ServiceV5:
+      description: 'Componente genérico canônico da v0.5; substitui o antigo nó API. Os perfis HTTP/GraphQL/gRPC/etc. pertencem às interfaces/conexões declaradas, não ao tipo do nó.'
       type: object
       additionalProperties: false
       required: [id, displayName, type]
@@ -1233,7 +1249,7 @@ components:
       - $ref: '#/components/schemas/CLIClient'
       - $ref: '#/components/schemas/BOTClient'
       - $ref: '#/components/schemas/EMBEDDED_SYSTEMClient'
-      - $ref: '#/components/schemas/Api'
+      - $ref: '#/components/schemas/Api' # DEPRECATED: apenas importação de arquitetura histórica; reexportar SERVICE
       - $ref: '#/components/schemas/Database'
       - $ref: '#/components/schemas/Broker'
       - $ref: '#/components/schemas/ServiceV5'
@@ -1261,7 +1277,7 @@ components:
           CLI: '#/components/schemas/CLIClient'
           BOT: '#/components/schemas/BOTClient'
           EMBEDDED_SYSTEM: '#/components/schemas/EMBEDDED_SYSTEMClient'
-          API: '#/components/schemas/Api'
+          API: '#/components/schemas/Api' # deprecated legacy import only
           DATABASE: '#/components/schemas/Database'
           BROKER: '#/components/schemas/Broker'
           SERVICE: '#/components/schemas/ServiceV5'
@@ -1282,7 +1298,7 @@ components:
     ApiProcessingOverride:
       type: object
       additionalProperties: false
-      description: Tempos efetivos de pré e pós-processamento da API de destino quando ativada por esta conexão de entrada. Ambos obrigatórios; não permitido em API→Database. A regra de compatibilidade de arestas é validada pelo domínio.
+      description: Tempos efetivos de pré e pós-processamento do destino, para API histórica ou SERVICE quando esta política for aplicável. Ambos obrigatórios; não permitido em conexão a Database. Regras de compatibilidade validadas pelo domínio.
       properties:
         preProcessingMs:
           $ref: '#/components/schemas/DurationMs'
@@ -1309,15 +1325,15 @@ components:
           $ref: '#/components/schemas/Integration'
         apiProcessingOverride:
           $ref: '#/components/schemas/ApiProcessingOverride'
-          description: Substitui os tempos padrão da API destinatária, somente em conexões Client→API ou API→API; ausente preserva padrões de Api.
+          description: Campo histórico apiProcessingOverride mantido por compatibilidade. No v0.5, também pode definir tempos de SERVICE destinatário em conexão de request/response compatível; ausente preserva padrão do componente.
       required:
       - id
       - sourceId
       - targetId
       - integration
       description: Conexão lógica dirigida; resposta percorre a conexão em sentido inverso. Unicidade por par
-        não ordenado de componentes. apiProcessingOverride é opcional, aplicável só à API de destino em Client→API ou API→API;
-        se ausente, prevalecem os valores de Api (padrão 0 ms para propriedades omitidas). DATABASE_QUERY não aceita override.
+        não ordenado de componentes. apiProcessingOverride é opcional para API antiga ou SERVICE de destino em chamadas request/response compatíveis;
+        se ausente, prevalecem os tempos padrão do componente (0 ms para omitidos). DATABASE_QUERY não aceita override.
     Architecture:
       type: object
       additionalProperties: false
@@ -1335,7 +1351,7 @@ components:
       required:
       - components
       - connections
-      description: Candidata à validação, podendo estar incompleta. Regras de topologia/ciclo aplicadas no
+      description: Candidata à validação, podendo estar incompleta. Para criação v0.5 usar SERVICE (não API). Entrada histórica type API é tolerada somente pelo adaptador explícito de migração. Regras de topologia/ciclo aplicadas no
         domínio.
     ApiExecution:
       type: object
