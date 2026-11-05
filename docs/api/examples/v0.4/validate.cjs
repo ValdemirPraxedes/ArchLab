@@ -14,6 +14,10 @@ function domainValid(request) {
   const {architecture, scenario} = request;
   const components = new Map(architecture.components.map(component => [component.id, component]));
   const connections = new Map(architecture.connections.map(connection => [connection.id, connection]));
+  if (scenario.entry) {
+    const entry = connections.get(scenario.entry.connectionId);
+    return Boolean(entry && entry.sourceId === scenario.entry.componentId && components.has(entry.targetId));
+  }
   const entry = connections.get(scenario.entryConnectionId);
   if (!entry || entry.sourceId !== scenario.entryComponentId) return false;
   if (architecture.connections.some(connection => !components.has(connection.sourceId) || !components.has(connection.targetId))) return false;
@@ -34,7 +38,7 @@ function domainValid(request) {
 }
 
 let failed = 0;
-for (const file of fs.readdirSync(__dirname).filter(name => name.endsWith('.json') && name !== 'package.json').sort()) {
+for (const file of fs.readdirSync(__dirname).filter(name => name.endsWith('.json') && !name.startsWith('package')).sort()) {
   const request = JSON.parse(fs.readFileSync(path.join(__dirname, file), 'utf8'));
   const schemaValid = validateRequest(request);
   const semanticValid = domainValid(request);
@@ -42,5 +46,11 @@ for (const file of fs.readdirSync(__dirname).filter(name => name.endsWith('.json
   const passed = (schemaValid && semanticValid) === expected;
   console.log(`${passed ? 'PASS' : 'FAIL'} ${file} (schema=${schemaValid}, domain=${semanticValid})`);
   if (!passed) failed++;
+}
+for (const name of ['mixedCommunicationRequest', 'simulationRequest']) {
+  const request = openapi.components.examples[name].value;
+  const passed = validateRequest(request);
+  console.log(`${passed ? 'PASS' : 'FAIL'} OpenAPI example ${name}`);
+  if (!passed) { console.log(validateRequest.errors); failed++; }
 }
 process.exitCode = failed ? 1 : 0;

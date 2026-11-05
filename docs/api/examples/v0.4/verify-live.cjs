@@ -11,7 +11,7 @@ for (const [name, schema] of Object.entries(openapi.components.schemas)) {
   ajv.addSchema(schema, '#/components/schemas/' + name);
 }
 const responseValid = ajv.compile({$ref: '#/components/schemas/SimulationResponse'});
-const positives = fs.readdirSync(root).filter(name => name.endsWith('.json') && name !== 'package.json' && !name.endsWith('.invalid.json'));
+const positives = fs.readdirSync(root).filter(name => name.endsWith('.json') && !name.startsWith('package') && !name.endsWith('.invalid.json'));
 const negatives = fs.readdirSync(root).filter(name => name.endsWith('.invalid.json'));
 
 async function post(route, payload) {

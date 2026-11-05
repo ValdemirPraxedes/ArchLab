@@ -1,6 +1,6 @@
 # API-V4.1-001 — Plano de evolução de contrato para cenário unificado
 
-> Status: **Rascunho de contrato OpenAPI 3.1 atualizado na branch**, pendente de parser, lint, exemplos, geração TypeScript e implementação. O documento descreve decisões e lacunas; o contrato canônico proposto está em `docs/api/openapi.yaml`.
+> Status: **histórico de planejamento**. A implementação backend e as verificações do contrato estão em [BE-V4.1-IMPLEMENTATION](../architecture/BE-V4.1-IMPLEMENTATION.md) e [OPENAPI-V4.1-VALIDATION](OPENAPI-V4.1-VALIDATION.md). O contrato canônico vigente está em `docs/api/openapi.yaml`.
 > Relacionados: [mvp-v0.4.1](../requirements/mvp-v0.4.1.md), [ADR-V4.1-001](../architecture/ADR-V4.1-001.md), [API-V4-002](API-V4-002.md).
 
 ## 1. Objetivo
