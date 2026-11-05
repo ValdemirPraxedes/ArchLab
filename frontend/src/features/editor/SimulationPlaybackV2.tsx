@@ -35,6 +35,7 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
   const frameTime = useRef<number | null>(null);
   const total = result.execution.totalDurationMs;
   const canonical = result as unknown as Partial<SimulationResponseV1>;
+  const unified = canonical.execution?.mode === 'UNIFIED';
   const sorted = orderedTrace(result.trace);
   useEffect(() => {
     if (!playing || step) { frameTime.current = null; return; }
@@ -71,6 +72,16 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
     <p>Eventos até o instante: {events.length} / {result.trace.length}. Atividades iniciadas: {activities.length} / {result.timeline.length}.</p>
     <p>Estado no relógio: operação {state.requests[canonical.execution?.requestId ?? ''] ?? 'CREATED'} · global {time >= total && (cursor.sequence === Number.POSITIVE_INFINITY || events.length === result.trace.length) ? result.execution.status : 'EM ANDAMENTO'}</p>
     <p>Resultado final — Operação principal: <strong>{canonical.execution?.mainStatus ?? result.execution.status}</strong> · Conclusão global: <strong>{result.execution.status}</strong></p>
+    {unified && <section aria-label="Fluxo correlacionado">
+      <h3>Fluxo correlacionado</h3>
+      {canonical.execution?.responseStatusCode && <p>Resposta HTTP: {canonical.execution.responseStatusCode}</p>}
+      <ol>{canonical.trace?.filter(event => event.timestampMs < cursor.time || event.timestampMs === cursor.time && event.sequence <= cursor.sequence)
+        .map(event => <li key={event.sequence}>#{event.sequence} · {event.timestampMs} ms · {event.type}
+          {event.correlation?.operationId && ` · operação ${event.correlation.operationId}`}
+          {event.correlation?.parentOperationId && ` ← ${event.correlation.parentOperationId}`}
+          {event.correlation?.profile && ` · ${event.correlation.profile}`}
+          {event.correlation?.sessionId && ` · sessão ${event.correlation.sessionId}`}</li>)}</ol>
+    </section>}
     {canonical.resourceStates && canonical.resourceStates.length > 0 && <section aria-label="Recursos da execução">
       <h3>Recursos da execução</h3><ul>{canonical.resourceStates.map(resource => <li key={resource.id}>
         {resource.kind} {resource.id}: {state.resources[`${resource.kind}:${resource.id}`] ?? 'não iniciado'}
