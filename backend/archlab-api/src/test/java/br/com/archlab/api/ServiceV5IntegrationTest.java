@@ -158,6 +158,16 @@ class ServiceV5IntegrationTest {
         assertEquals("COMPLETED",result.get("execution").get("mainStatus").asText());
         assertEquals("COMPLETED_WITH_ERRORS",result.get("execution").get("status").asText());
     }
+    @Test void notificationTimeoutUsesVirtualDeadline() throws Exception {
+        String timeout=WORKER_NOTIFICATION.replace("\"outputRef\":\"notification-result\"",
+                "\"outputRef\":\"notification-result\",\"durationMs\":10,\"timeoutMs\":2");
+        var response=post("/api/v1/simulations",timeout);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode result=json.readTree(response.body());
+        assertEquals("TIMED_OUT",result.get("resourceOutcomes").get(0).get("status").asText());
+        assertEquals("COMPLETED",result.get("execution").get("mainStatus").asText());
+        assertEquals("COMPLETED_WITH_ERRORS",result.get("execution").get("status").asText());
+    }
     private static final String AUTH_RULES="""
         {"architecture":{"components":[
           {"id":"browser","type":"WEB_BROWSER","displayName":"Browser"},
@@ -187,5 +197,84 @@ class ServiceV5IntegrationTest {
         assertEquals("DENY",result.get("resourceOutcomes").get(0).get("resultCode").asText());
         assertEquals(403,result.get("execution").get("responseStatusCode").asInt());
         assertTrue(result.get("trace").toString().contains("BRANCH_NOT_SELECTED"));
+    }
+    private static final String RESOURCES="""
+        {"architecture":{"components":[
+          {"id":"client","type":"WEB_BROWSER","displayName":"Client"},
+          {"id":"service","type":"SERVICE","displayName":"Service","behaviors":[
+            {"id":"run","trigger":"REQUEST_RECEIVED","actions":[
+              {"id":"cache-put","kind":"CACHE_PUT","connectionId":"cache-edge","key":"k","valueMetadata":"v","ttlMs":100},
+              {"id":"cache-get","kind":"CACHE_GET","connectionId":"cache-edge","key":"k","dependsOn":["cache-put"]},
+              {"id":"object-put","kind":"OBJECT_PUT","connectionId":"object-edge","objectKey":"o","sizeBytes":8,"dependsOn":["cache-get"]},
+              {"id":"object-get","kind":"OBJECT_GET","connectionId":"object-edge","objectKey":"o","dependsOn":["object-put"]},
+              {"id":"object-delete","kind":"OBJECT_DELETE","connectionId":"object-edge","objectKey":"o","dependsOn":["object-get"]},
+              {"id":"index","kind":"INDEX_DOCUMENT","connectionId":"search-edge","indexName":"i","documentId":"d","tags":{"type":"order"},"dependsOn":["object-delete"]},
+              {"id":"search","kind":"SEARCH_DOCUMENTS","connectionId":"search-edge","indexName":"i","tags":{"type":"order"},"dependsOn":["index"]},
+              {"id":"register","kind":"REGISTER_SERVICE","connectionId":"registry-edge","serviceName":"orders","instanceId":"one","targetComponentId":"service","dependsOn":["search"]},
+              {"id":"discover","kind":"DISCOVER_SERVICE","connectionId":"registry-edge","serviceName":"orders","dependsOn":["register"]},
+              {"id":"unregister","kind":"UNREGISTER_SERVICE","connectionId":"registry-edge","serviceName":"orders","instanceId":"one","dependsOn":["discover"]},
+              {"id":"respond","kind":"RESPOND","dependsOn":["unregister"],"statusCode":200}]}]},
+          {"id":"cache","type":"CACHE","displayName":"Cache"},
+          {"id":"objects","type":"OBJECT_STORAGE","displayName":"Objects"},
+          {"id":"search","type":"SEARCH_ENGINE","displayName":"Search"},
+          {"id":"registry","type":"SERVICE_REGISTRY","displayName":"Registry"}
+        ],"connections":[
+          {"id":"in","sourceId":"client","targetId":"service","latencyMs":1,"integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/run"}}},
+          {"id":"cache-edge","sourceId":"service","targetId":"cache","latencyMs":1,"integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/cache"}}},
+          {"id":"object-edge","sourceId":"service","targetId":"objects","latencyMs":1,"integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/objects"}}},
+          {"id":"search-edge","sourceId":"service","targetId":"search","latencyMs":1,"integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/search"}}},
+          {"id":"registry-edge","sourceId":"service","targetId":"registry","latencyMs":1,"integration":{"kind":"HTTP_REST","request":{"method":"GET","path":"/registry"}}}
+        ]},"scenario":{"entry":{"componentId":"client","connectionId":"in","operation":"GET /run"}}}
+        """;
+
+    @Test void resourceActionsShareOneEngineAndIsolatedState() throws Exception {
+        var validation=post("/api/v1/scenarios/validate",RESOURCES);
+        assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
+        var response=post("/api/v1/simulations",RESOURCES);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode outcomes=json.readTree(response.body()).get("resourceOutcomes");
+        assertEquals(10,outcomes.size());
+        assertEquals("HIT",outcomes.get(1).get("resultCode").asText());
+        assertEquals("FOUND",outcomes.get(3).get("resultCode").asText());
+        assertEquals("DELETED",outcomes.get(4).get("resultCode").asText());
+        assertEquals("FOUND",outcomes.get(8).get("resultCode").asText());
+        assertEquals(response.body(),post("/api/v1/simulations",RESOURCES).body());
+    }
+    private static final String WEBHOOK_ORCHESTRATOR_BUS="""
+        {"architecture":{"components":[
+          {"id":"client","type":"WEB_BROWSER","displayName":"Client"},
+          {"id":"webhook","type":"WEBHOOK_RECEIVER","displayName":"Webhook","behaviors":[
+            {"id":"receive","trigger":"REQUEST_RECEIVED","actions":[
+              {"id":"forward","kind":"CALL","connectionId":"webhook-orchestrator"},
+              {"id":"respond","kind":"RESPOND","dependsOn":["forward"],"statusCode":202}]}]},
+          {"id":"orchestrator","type":"ORCHESTRATOR_SERVICE","displayName":"Orchestrator","behaviors":[
+            {"id":"coordinate","trigger":"REQUEST_RECEIVED","actions":[
+              {"id":"bus","kind":"CALL","connectionId":"orchestrator-bus"},
+              {"id":"respond","kind":"RESPOND","dependsOn":["bus"],"statusCode":200}]}]},
+          {"id":"bus","type":"INTEGRATION_BUS","displayName":"ESB","behaviors":[
+            {"id":"transform","trigger":"REQUEST_RECEIVED","actions":[
+              {"id":"transform","kind":"TRANSFORM","connectionId":"bus-service","outputRef":"mapped","metadata":{"format":"normalized"}},
+              {"id":"call","kind":"CALL","connectionId":"bus-service","dependsOn":["transform"]},
+              {"id":"respond","kind":"RESPOND","dependsOn":["call"],"statusCode":200}]}]},
+          {"id":"service","type":"SERVICE","displayName":"Service","behaviors":[
+            {"id":"handle","trigger":"REQUEST_RECEIVED","actions":[
+              {"id":"respond","kind":"RESPOND","statusCode":200}]}]}
+        ],"connections":[
+          {"id":"in","sourceId":"client","targetId":"webhook","latencyMs":1,"integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/webhook"}}},
+          {"id":"webhook-orchestrator","sourceId":"webhook","targetId":"orchestrator","latencyMs":1,"integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/coordinate"}}},
+          {"id":"orchestrator-bus","sourceId":"orchestrator","targetId":"bus","latencyMs":1,"integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/bus"}}},
+          {"id":"bus-service","sourceId":"bus","targetId":"service","latencyMs":1,"integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/service"}}}
+        ]},"scenario":{"entry":{"componentId":"client","connectionId":"in","operation":"POST /webhook"}}}
+        """;
+
+    @Test void webhookOrchestratorAndEsbPreserveCausalTrace() throws Exception {
+        var validation=post("/api/v1/scenarios/validate",WEBHOOK_ORCHESTRATOR_BUS);
+        assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
+        var response=post("/api/v1/simulations",WEBHOOK_ORCHESTRATOR_BUS);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode result=json.readTree(response.body());
+        assertEquals("TRANSFORMED",result.get("resourceOutcomes").get(0).get("resultCode").asText());
+        assertEquals(4,result.get("metrics").get("exchanges").size());
+        assertTrue(result.get("trace").toString().contains("VIRTUAL_TRANSFORM"));
     }
 }

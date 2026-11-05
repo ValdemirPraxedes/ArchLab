@@ -1121,6 +1121,10 @@ components:
         connectionId: {$ref: '#/components/schemas/Identifier'}
         objectKey: {type: string, minLength: 1, maxLength: 512}
         sizeBytes: {type: integer, minimum: 0, maximum: 1000000000}
+        metadata:
+          type: object
+          maxProperties: 32
+          additionalProperties: {type: string, maxLength: 256}
         outputRef: {$ref: '#/components/schemas/Identifier'}
     ObjectDeleteActionV5:
       type: object
@@ -1161,6 +1165,10 @@ components:
         documentId: {$ref: '#/components/schemas/Identifier'}
         outputRef: {$ref: '#/components/schemas/Identifier'}
         tags:
+          type: object
+          maxProperties: 32
+          additionalProperties: {type: string, maxLength: 256}
+        metadata:
           type: object
           maxProperties: 32
           additionalProperties: {type: string, maxLength: 256}
@@ -2226,7 +2234,7 @@ components:
           - {connectionId: notifications-websocket, sessionAlias: notifications-session, autoCloseAtEnd: true}
     v5CacheBranchScenario:
       summary: Service consulta Cache e executa ramo MISS explicitamente
-      description: Exemplo de contrato v0.5 proposto; a API atual ainda não executa estas actions.
+      description: Exemplo executável de Cache MISS com seleção explícita do ramo Database.
       value:
         architecture:
           components:

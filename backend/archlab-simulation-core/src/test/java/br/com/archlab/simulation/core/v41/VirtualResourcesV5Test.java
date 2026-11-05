@@ -28,8 +28,11 @@ class VirtualResourcesV5Test {
     @Test void storageSearchRegistryAndRulesAreDeterministic() {
         var state=new VirtualResourcesV5();
         var storage=resource(ComponentTypeV2.OBJECT_STORAGE,0);
-        assertEquals("CREATED",state.execute(storage,action("OBJECT_PUT",Map.of("objectKey","x","sizeBytes",8L)),0,Map.of()).resultCode());
-        assertEquals("FOUND",state.execute(storage,action("OBJECT_GET",Map.of("objectKey","x")),1,Map.of()).resultCode());
+        assertEquals("CREATED",state.execute(storage,action("OBJECT_PUT",Map.of("objectKey","x","sizeBytes",8L,
+                "metadata",Map.of("owner","alias"))),0,Map.of()).resultCode());
+        var object=state.execute(storage,action("OBJECT_GET",Map.of("objectKey","x")),1,Map.of());
+        assertEquals("FOUND",object.resultCode());
+        assertTrue(object.details().get("metadata").toString().contains("owner=alias"));
         assertEquals("DELETED",state.execute(storage,action("OBJECT_DELETE",Map.of("objectKey","x")),2,Map.of()).resultCode());
         assertEquals("NOT_FOUND",state.execute(storage,action("OBJECT_GET",Map.of("objectKey","x")),3,Map.of()).resultCode());
         var search=resource(ComponentTypeV2.SEARCH_ENGINE,0);

@@ -10,8 +10,8 @@ final class VirtualResourcesV5 {
         Outcome { details=Map.copyOf(details); }
     }
     private record CacheEntry(String metadata,long expiresAt) {}
-    private record ObjectEntry(long sizeBytes) {}
-    private record DocumentEntry(Map<String,String> tags) {}
+    private record ObjectEntry(long sizeBytes,Map<String,String> metadata) {}
+    private record DocumentEntry(Map<String,String> tags,Map<String,String> metadata) {}
     private record Instance(String id,String target) {}
     private final Map<String,Map<String,CacheEntry>> caches=new HashMap<>();
     private final Map<String,Map<String,ObjectEntry>> objects=new HashMap<>();
@@ -45,12 +45,13 @@ final class VirtualResourcesV5 {
             case "OBJECT_GET" -> {
                 ObjectEntry entry=objects.getOrDefault(id,Map.of()).get(str(p,"objectKey"));
                 yield entry==null?new Outcome("NOT_FOUND",Map.of())
-                    : new Outcome("FOUND",Map.of("sizeBytes",entry.sizeBytes()));
+                    : new Outcome("FOUND",Map.of("sizeBytes",entry.sizeBytes(),
+                            "metadata",entry.metadata().toString()));
             }
             case "OBJECT_PUT" -> {
                 Map<String,ObjectEntry> entries=objects.computeIfAbsent(id,k -> new LinkedHashMap<>());
                 String key=str(p,"objectKey"); limit(entries,key);
-                ObjectEntry previous=entries.put(key,new ObjectEntry(number(p,"sizeBytes")));
+                ObjectEntry previous=entries.put(key,new ObjectEntry(number(p,"sizeBytes"),metadata(p)));
                 yield new Outcome(previous==null?"CREATED":"REPLACED",Map.of("sizeBytes",number(p,"sizeBytes")));
             }
             case "OBJECT_DELETE" -> {
@@ -60,11 +61,13 @@ final class VirtualResourcesV5 {
             }
             case "INDEX_DOCUMENT" -> {
                 String index=str(p,"indexName"), document=str(p,"documentId");
-                Map<String,DocumentEntry> entries=indexes.computeIfAbsent(id,k -> new HashMap<>())
-                    .computeIfAbsent(index,k -> new TreeMap<>());
+                Map<String,Map<String,DocumentEntry>> resourceIndexes=indexes.computeIfAbsent(id,k -> new HashMap<>());
+                limit(resourceIndexes,index);
+                Map<String,DocumentEntry> entries=resourceIndexes.computeIfAbsent(index,k -> new TreeMap<>());
                 limit(entries,document);
-                DocumentEntry previous=entries.put(document,new DocumentEntry(tags(p)));
-                yield new Outcome(previous==null?"INDEXED":"UPDATED",Map.of("documentId",document));
+                DocumentEntry previous=entries.put(document,new DocumentEntry(tags(p),metadata(p)));
+                yield new Outcome(previous==null?"INDEXED":"UPDATED",Map.of("documentId",document,
+                        "metadata",metadata(p).toString()));
             }
             case "SEARCH_DOCUMENTS" -> {
                 Map<String,String> criteria=tags(p);
@@ -79,8 +82,9 @@ final class VirtualResourcesV5 {
             }
             case "REGISTER_SERVICE" -> {
                 String name=str(p,"serviceName"), instance=str(p,"instanceId");
-                Map<String,Instance> entries=registries.computeIfAbsent(id,k -> new HashMap<>())
-                    .computeIfAbsent(name,k -> new TreeMap<>());
+                Map<String,Map<String,Instance>> services=registries.computeIfAbsent(id,k -> new HashMap<>());
+                limit(services,name);
+                Map<String,Instance> entries=services.computeIfAbsent(name,k -> new TreeMap<>());
                 limit(entries,instance);
                 entries.put(instance,new Instance(instance,str(p,"targetComponentId")));
                 yield new Outcome("REGISTERED",Map.of("instanceId",instance));
@@ -129,6 +133,16 @@ final class VirtualResourcesV5 {
         if (value==null) return Map.of();
         Map<String,Object> raw=(Map<String,Object>)value;
         if (raw.size()>32) throw new IllegalArgumentException("Too many tags");
+        Map<String,String> result=new TreeMap<>();
+        raw.forEach((k,v) -> result.put(k,(String)v));
+        return result;
+    }
+    @SuppressWarnings("unchecked")
+    private static Map<String,String> metadata(Map<String,Object> options) {
+        Object value=options.get("metadata");
+        if (value==null) return Map.of();
+        Map<String,Object> raw=(Map<String,Object>)value;
+        if (raw.size()>32) throw new IllegalArgumentException("Too many metadata fields");
         Map<String,String> result=new TreeMap<>();
         raw.forEach((k,v) -> result.put(k,(String)v));
         return result;

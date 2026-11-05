@@ -74,9 +74,10 @@ final class UnifiedPlanV41 {
                         case "CACHE_GET", "CACHE_INVALIDATE" -> only(action,"id","kind","dependsOn","connectionId","key","outputRef");
                         case "CACHE_PUT" -> only(action,"id","kind","dependsOn","connectionId","key","valueMetadata","ttlMs","outputRef");
                         case "OBJECT_GET", "OBJECT_DELETE" -> only(action,"id","kind","dependsOn","connectionId","objectKey","outputRef");
-                        case "OBJECT_PUT" -> only(action,"id","kind","dependsOn","connectionId","objectKey","sizeBytes","outputRef");
+                        case "OBJECT_PUT" -> only(action,"id","kind","dependsOn","connectionId","objectKey","sizeBytes","metadata","outputRef");
                         case "SEND_NOTIFICATION" -> only(action,"id","kind","dependsOn","connectionId","channel","recipientAlias","outputRef","durationMs","timeoutMs","simulatedResult");
-                        case "INDEX_DOCUMENT", "SEARCH_DOCUMENTS" -> only(action,"id","kind","dependsOn","connectionId","indexName","documentId","tags","outputRef");
+                        case "INDEX_DOCUMENT" -> only(action,"id","kind","dependsOn","connectionId","indexName","documentId","tags","metadata","outputRef");
+                        case "SEARCH_DOCUMENTS" -> only(action,"id","kind","dependsOn","connectionId","indexName","tags","outputRef");
                         case "REGISTER_SERVICE" -> only(action,"id","kind","dependsOn","connectionId","serviceName","instanceId","targetComponentId","outputRef");
                         case "UNREGISTER_SERVICE" -> only(action,"id","kind","dependsOn","connectionId","serviceName","instanceId","outputRef");
                         case "DISCOVER_SERVICE" -> only(action,"id","kind","dependsOn","connectionId","serviceName","outputRef");
@@ -237,6 +238,10 @@ final class UnifiedPlanV41 {
                     if ("SCHEDULE_TRIGGER".equals(action.kind()) && (!(components.get(componentId) instanceof ServiceComponentV5 scheduler)
                             || scheduler.schedules().stream().noneMatch(s -> s.id().equals(action.options().get("scheduleId")))))
                         error("INVALID_SCHEDULE",actionPath+".scheduleId","Unknown Scheduler scheduleId");
+                    if ("REGISTER_SERVICE".equals(action.kind()) &&
+                            !components.containsKey(action.options().get("targetComponentId")))
+                        error("INVALID_VIRTUAL_RESOURCE_OPERATION",actionPath+".targetComponentId",
+                                "Registered target must exist in the architecture");
                 }
                 validateBranches(actions,path);
                 if (cycle(actions)) error("INVALID_ACTION_DEPENDENCY",path+".actions","Action dependency cycle");
