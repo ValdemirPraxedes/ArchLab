@@ -47,7 +47,7 @@ for (const file of fs.readdirSync(__dirname).filter(name => name.endsWith('.json
   console.log(`${passed ? 'PASS' : 'FAIL'} ${file} (schema=${schemaValid}, domain=${semanticValid})`);
   if (!passed) failed++;
 }
-for (const name of ['mixedCommunicationRequest', 'simulationRequest']) {
+for (const name of ['mixedCommunicationRequest', 'simulationRequest', 'v5CacheBranchScenario']) {
   const request = openapi.components.examples[name].value;
   const passed = validateRequest(request);
   console.log(`${passed ? 'PASS' : 'FAIL'} OpenAPI example ${name}`);
