@@ -6,7 +6,7 @@ import type { ArchitectureV1, SimulationRequestV1 } from './archlabV1Client';
 
 const architecture: ArchitectureV1 = {
   components: [{id: 'c', type: 'WEB_BROWSER', displayName: 'Browser'},
-    {id: 'a', type: 'API', displayName: 'API', preProcessingMs: 0, postProcessingMs: 0}],
+    {id: 'a', type: 'API', displayName: 'API', behaviors: [], preProcessingMs: 0, postProcessingMs: 0}],
   connections: [{id: 'ca', sourceId: 'c', targetId: 'a', latencyMs: 0, integration: {kind: 'HTTP_REST'}}],
 };
 const request: SimulationRequestV1 = {architecture,
