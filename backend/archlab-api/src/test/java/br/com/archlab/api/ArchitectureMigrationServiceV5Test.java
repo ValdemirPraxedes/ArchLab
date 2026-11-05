@@ -55,4 +55,37 @@ class ArchitectureMigrationServiceV5Test {
         var afterRun=new UnifiedSimulationV41(UnifiedPlanV41.parse(converted,after).toExecutionPlan()).run();
         assertEquals(beforeRun,afterRun);
     }
+    @Test void preservesBrokerDeliveryAndDatabaseConnections() {
+        var input=json.readTree("""
+            {"components":[
+              {"id":"client","type":"CLIENT","displayName":"Client"},
+              {"id":"producer","type":"API","displayName":"Producer","behaviors":[
+                {"id":"request","trigger":"REQUEST_RECEIVED","actions":[
+                  {"id":"publish","kind":"PUBLISH","connectionId":"producer-broker","destinationName":"jobs"}]}]},
+              {"id":"broker","type":"BROKER","displayName":"Broker",
+               "destinations":[{"name":"jobs","kind":"QUEUE"}],
+               "subscriptions":[{"destinationName":"jobs","consumerComponentId":"consumer","connectionId":"broker-consumer"}]},
+              {"id":"consumer","type":"API","displayName":"Consumer","behaviors":[
+                {"id":"consume","trigger":"MESSAGE_CONSUMED","match":{"destinationName":"jobs"},
+                 "actions":[{"id":"read","kind":"CALL","connectionId":"consumer-db"}]}]},
+              {"id":"database","type":"DATABASE","displayName":"Database","processingMs":3}
+            ],"connections":[
+              {"id":"in","sourceId":"client","targetId":"producer","latencyMs":1,
+               "integration":{"kind":"HTTP_REST","request":{"method":"POST","path":"/jobs"}}},
+              {"id":"producer-broker","sourceId":"producer","targetId":"broker","latencyMs":1,
+               "integration":{"kind":"QUEUE","queueName":"jobs"}},
+              {"id":"broker-consumer","sourceId":"broker","targetId":"consumer","latencyMs":1,
+               "integration":{"kind":"QUEUE","queueName":"jobs"}},
+              {"id":"consumer-db","sourceId":"consumer","targetId":"database","latencyMs":1,
+               "integration":{"kind":"DATABASE_QUERY"}}
+            ]}
+            """);
+        var before=input.toString();
+        var result=migration.migrate(input);
+        assertEquals(2,result.report().convertedCount());
+        assertEquals("producer-broker",result.document().get("connections").get(1).get("id").asText());
+        assertEquals("broker-consumer",result.document().get("connections").get(2).get("id").asText());
+        assertEquals("consumer-db",result.document().get("connections").get(3).get("id").asText());
+        assertEquals(before,input.toString());
+    }
 }
