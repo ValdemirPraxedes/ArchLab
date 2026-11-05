@@ -76,10 +76,13 @@ public final class ArchitectureGraphValidatorV2 {
                     add(errors,"INVALID_DECISION_RULE",path+".defaultDecision","Unknown default decision");
                 Set<String> ruleIds=new HashSet<>();
                 for (var rule:service.rules()) {
-                    if (!ruleIds.add(rule.id()) || rule.priority()<0 || rule.priority()>10_000
+                    if (!identifier(rule.id()) || !identifier(rule.field()) || !ruleIds.add(rule.id())
+                            || rule.priority()<0 || rule.priority()>10_000
                             || !Set.of("EQ","NE","GT","GTE","LT","LTE","IN").contains(rule.operator())
                             || !Set.of("ALLOW","DENY","REVIEW").contains(rule.decision())
-                            || ("IN".equals(rule.operator()) != (rule.expectedValue() instanceof List<?>)))
+                            || ("IN".equals(rule.operator()) != (rule.expectedValue() instanceof List<?>))
+                            || Set.of("GT","GTE","LT","LTE").contains(rule.operator())
+                                && !(rule.expectedValue() instanceof Number))
                         add(errors,"INVALID_DECISION_RULE",path+".rules","Invalid or duplicate decision rule");
                 }
             } else if (component instanceof DatabaseV2 database) {

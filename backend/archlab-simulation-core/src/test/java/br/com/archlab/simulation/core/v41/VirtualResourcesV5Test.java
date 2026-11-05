@@ -23,6 +23,9 @@ class VirtualResourcesV5Test {
         assertEquals("STORED",first.execute(cache,put,5,Map.of()).resultCode());
         assertEquals("HIT",first.execute(cache,get,14,Map.of()).resultCode());
         assertEquals("MISS",first.execute(cache,get,15,Map.of()).resultCode());
+        first.execute(cache,put,20,Map.of());
+        assertEquals("REMOVED",first.execute(cache,action("CACHE_INVALIDATE",Map.of("key","k")),21,Map.of()).resultCode());
+        assertEquals("MISS",first.execute(cache,get,22,Map.of()).resultCode());
         assertEquals("MISS",new VirtualResourcesV5().execute(cache,get,6,Map.of()).resultCode());
     }
     @Test void storageSearchRegistryAndRulesAreDeterministic() {
@@ -45,8 +48,14 @@ class VirtualResourcesV5Test {
         assertEquals("FOUND",state.execute(registry,action("DISCOVER_SERVICE",Map.of("serviceName","orders")),1,Map.of()).resultCode());
         state.execute(registry,action("UNREGISTER_SERVICE",Map.of("serviceName","orders","instanceId","one")),2,Map.of());
         assertEquals("UNAVAILABLE",state.execute(registry,action("DISCOVER_SERVICE",Map.of("serviceName","orders")),3,Map.of()).resultCode());
+        state.execute(registry,action("REGISTER_SERVICE",Map.of("serviceName","orders","instanceId","two",
+                "targetComponentId","service","instanceStatus","INACTIVE")),4,Map.of());
+        assertEquals("UNAVAILABLE",state.execute(registry,action("DISCOVER_SERVICE",Map.of("serviceName","orders")),5,Map.of()).resultCode());
         var rules=new ServiceComponentV5("rules","Rules",ComponentTypeV2.RULES_ENGINE,0,0,0,
-                List.of(),List.of(),List.of(new ServiceComponentV5.Rule("deny","status","EQ","DENY",10,"DENY")),"REVIEW");
+                List.of(),List.of(),List.of(
+                    new ServiceComponentV5.Rule("allow-low","status","EQ","DENY",1,"ALLOW"),
+                    new ServiceComponentV5.Rule("deny","status","EQ","DENY",10,"DENY"),
+                    new ServiceComponentV5.Rule("review-tie","status","EQ","DENY",10,"REVIEW")),"REVIEW");
         assertEquals("DENY",state.execute(rules,action("EVALUATE_RULE",Map.of()),0,Map.of("status","DENY")).resultCode());
         assertEquals("REVIEW",state.execute(rules,action("EVALUATE_RULE",Map.of()),0,Map.of()).resultCode());
     }

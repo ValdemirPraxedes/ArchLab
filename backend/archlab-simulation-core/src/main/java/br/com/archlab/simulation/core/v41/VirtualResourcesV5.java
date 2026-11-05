@@ -12,7 +12,7 @@ final class VirtualResourcesV5 {
     private record CacheEntry(String metadata,long expiresAt) {}
     private record ObjectEntry(long sizeBytes,Map<String,String> metadata) {}
     private record DocumentEntry(Map<String,String> tags,Map<String,String> metadata) {}
-    private record Instance(String id,String target) {}
+    private record Instance(String id,String target,String status) {}
     private final Map<String,Map<String,CacheEntry>> caches=new HashMap<>();
     private final Map<String,Map<String,ObjectEntry>> objects=new HashMap<>();
     private final Map<String,Map<String,Map<String,DocumentEntry>>> indexes=new HashMap<>();
@@ -86,7 +86,8 @@ final class VirtualResourcesV5 {
                 limit(services,name);
                 Map<String,Instance> entries=services.computeIfAbsent(name,k -> new TreeMap<>());
                 limit(entries,instance);
-                entries.put(instance,new Instance(instance,str(p,"targetComponentId")));
+                entries.put(instance,new Instance(instance,str(p,"targetComponentId"),
+                        (String)p.getOrDefault("instanceStatus","ACTIVE")));
                 yield new Outcome("REGISTERED",Map.of("instanceId",instance));
             }
             case "UNREGISTER_SERVICE" -> {
@@ -98,9 +99,10 @@ final class VirtualResourcesV5 {
             case "DISCOVER_SERVICE" -> {
                 Map<String,Instance> entries=registries.getOrDefault(id,Map.of())
                     .getOrDefault(str(p,"serviceName"),Map.of());
-                String targets=entries.values().stream().map(Instance::target).sorted().distinct()
+                String targets=entries.values().stream().filter(e -> "ACTIVE".equals(e.status()))
+                    .map(Instance::target).sorted().distinct()
                     .reduce((a,b) -> a+","+b).orElse("");
-                yield new Outcome(entries.isEmpty()?"UNAVAILABLE":"FOUND",Map.of("targetComponentIds",targets));
+                yield new Outcome(targets.isEmpty()?"UNAVAILABLE":"FOUND",Map.of("targetComponentIds",targets));
             }
             case "EVALUATE_RULE" -> {
                 ServiceComponentV5.Rule selected=resource.rules().stream()

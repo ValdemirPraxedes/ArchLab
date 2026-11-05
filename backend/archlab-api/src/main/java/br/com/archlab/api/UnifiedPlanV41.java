@@ -78,7 +78,7 @@ final class UnifiedPlanV41 {
                         case "SEND_NOTIFICATION" -> only(action,"id","kind","dependsOn","connectionId","channel","recipientAlias","outputRef","durationMs","timeoutMs","simulatedResult");
                         case "INDEX_DOCUMENT" -> only(action,"id","kind","dependsOn","connectionId","indexName","documentId","tags","metadata","outputRef");
                         case "SEARCH_DOCUMENTS" -> only(action,"id","kind","dependsOn","connectionId","indexName","tags","outputRef");
-                        case "REGISTER_SERVICE" -> only(action,"id","kind","dependsOn","connectionId","serviceName","instanceId","targetComponentId","outputRef");
+                        case "REGISTER_SERVICE" -> only(action,"id","kind","dependsOn","connectionId","serviceName","instanceId","targetComponentId","instanceStatus","outputRef");
                         case "UNREGISTER_SERVICE" -> only(action,"id","kind","dependsOn","connectionId","serviceName","instanceId","outputRef");
                         case "DISCOVER_SERVICE" -> only(action,"id","kind","dependsOn","connectionId","serviceName","outputRef");
                         case "EVALUATE_RULE" -> only(action,"id","kind","dependsOn","connectionId","outputRef");
@@ -429,6 +429,9 @@ final class UnifiedPlanV41 {
             error("INVALID_VIRTUAL_RESOURCE_OPERATION",path+".ttlMs","TTL is outside virtual bounds");
         if (values.get("sizeBytes") instanceof Number size && (size.longValue()<0 || size.longValue()>1_000_000_000))
             error("INVALID_VIRTUAL_RESOURCE_OPERATION",path+".sizeBytes","Object size is outside virtual bounds");
+        if ("REGISTER_SERVICE".equals(action.kind())
+                && !Set.of("ACTIVE","INACTIVE").contains(String.valueOf(values.getOrDefault("instanceStatus","ACTIVE"))))
+            error("INVALID_VIRTUAL_RESOURCE_OPERATION",path+".instanceStatus","Unknown logical instance status");
     }
     private static boolean capability(ComponentV2 component,String trigger,String kind) {
         if (component==null) return false;

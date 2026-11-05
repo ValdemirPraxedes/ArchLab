@@ -1203,6 +1203,7 @@ components:
         serviceName: {$ref: '#/components/schemas/Identifier'}
         instanceId: {$ref: '#/components/schemas/Identifier'}
         targetComponentId: {$ref: '#/components/schemas/Identifier'}
+        instanceStatus: {type: string, enum: [ACTIVE, INACTIVE], default: ACTIVE}
         outputRef: {$ref: '#/components/schemas/Identifier'}
     UnregisterServiceActionV5:
       type: object
