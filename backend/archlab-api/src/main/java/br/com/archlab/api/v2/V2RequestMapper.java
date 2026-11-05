@@ -30,7 +30,7 @@ public class V2RequestMapper {
                     components.add(new ClientV2(text(c,"id"),text(c,"displayName"),
                             ComponentTypeV2.valueOf(type)));
                 }
-                case "API" -> { object(c,"id","type","displayName","preProcessingMs","postProcessingMs");
+                case "API" -> { object(c,"id","type","displayName","preProcessingMs","postProcessingMs","behaviors");
                     components.add(new ApiV2(text(c,"id"),text(c,"displayName"),
                             canonical ? numberOrZero(c,"preProcessingMs") : number(c,"preProcessingMs"),
                             canonical ? numberOrZero(c,"postProcessingMs") : number(c,"postProcessingMs"))); }

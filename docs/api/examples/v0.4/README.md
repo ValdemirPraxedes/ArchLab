@@ -2,8 +2,11 @@
 
 Cada JSON é uma requisição completa para `POST /api/v1/scenarios/validate` ou `POST /api/v1/simulations`. Os arquivos `.invalid.json` são casos negativos intencionais.
 
+`mixed-communication.json` usa `UnifiedScenario`: entrada REST, publicação Queue e notificação WebSocket em uma execução. As outras amostras preservam os formatos v0.4 e exercitam a compatibilidade.
+
 | Arquivo | Cobertura |
 | --- | --- |
+| `mixed-communication.json` | REST → Queue → WebSocket com sessão aberta por evento virtual |
 | `http-rest.json`, `soap-http.json`, `http-generic.json` | Perfis HTTP |
 | `graphql-http.json`, `grpc-unary.json`, `coap.json` | Outros perfis síncronos |
 | `database-query.json` | Integração legada API → Database |
@@ -23,7 +26,7 @@ npm install
 npm run validate
 ```
 
-O verificador confirma formato, entrada, destino e coerência básica das assinaturas. Para conferir as respostas reais dos 12 exemplos positivos e os erros dos 3 negativos, inicie o backend e execute:
+O verificador confirma formato, entrada, destino e coerência básica das assinaturas. Para conferir as respostas reais dos 13 exemplos positivos e os erros dos 3 negativos, inicie o backend e execute:
 
 ```sh
 ARCHLAB_API_URL=http://localhost:8080 npm run verify:live
