@@ -316,11 +316,12 @@ public final class UnifiedSimulationV41 {
                      "REGISTER_SERVICE", "UNREGISTER_SERVICE", "DISCOVER_SERVICE", "EVALUATE_RULE"
                      -> resourceAction(action,finish);
                 case "TRANSFORM" -> {
-                    Map<String,Object> result=fields("actionId",action.id(),"status","SUCCEEDED",
-                            "resultCode","TRANSFORMED","timestampMs",now,"componentId",api.id(),
-                            "connectionId",action.connectionId(),"operationId",parent==null?"request-1":parent);
                     Object ref=action.options().get("outputRef");
-                    if (ref instanceof String name) {result.put("resultRef",name);resultCodes.put(name,"TRANSFORMED");}
+                    if (ref instanceof String name) resultCodes.put(name,"TRANSFORMED");
+                    Map<String,Object> result=new ResourceOutcomeV5(action.id(),
+                            ResourceOutcomeV5.Status.SUCCEEDED,ResourceOutcomeV5.Code.TRANSFORMED,
+                            ref instanceof String name?name:null,now,
+                            parent==null?"request-1":parent,api.id(),action.connectionId(),Map.of()).toMap();
                     resourceOutcomes.add(result);
                     event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",api.id(),
                             "operationId",parent==null?"request-1":parent,"status","COMPLETED",
@@ -350,15 +351,16 @@ public final class UnifiedSimulationV41 {
                         ?new VirtualResourcesV5.Outcome("TIMED_OUT",Map.of())
                         :virtualResources.execute(resource,action,now,resultCodes);
                 boolean successful=!Set.of("FAILED","TIMED_OUT").contains(outcome.resultCode());
-                String outcomeStatus=successful?"SUCCEEDED":outcome.resultCode();
-                Map<String,Object> result=fields("actionId",action.id(),"status",outcomeStatus,
-                        "resultCode",outcome.resultCode(),"timestampMs",now,
-                        "operationId",operationId,"componentId",resource.id(),
-                        "connectionId",edge.id(),"details",outcome.details());
+                ResourceOutcomeV5.Status outcomeStatus=successful?ResourceOutcomeV5.Status.SUCCEEDED:
+                        ResourceOutcomeV5.Status.valueOf(outcome.resultCode());
                 Object ref=action.options().get("outputRef");
                 if (ref instanceof String name) {
-                    result.put("resultRef",name); resultCodes.put(name,outcome.resultCode());
+                    resultCodes.put(name,outcome.resultCode());
                 }
+                Map<String,Object> result=new ResourceOutcomeV5(action.id(),outcomeStatus,
+                        ResourceOutcomeV5.Code.valueOf(outcome.resultCode()),
+                        ref instanceof String name?name:null,now,operationId,
+                        resource.id(),edge.id(),outcome.details()).toMap();
                 resourceOutcomes.add(result);
                 event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",resource.id(),
                         "operationId",operationId,"status","COMPLETED","cause","RESOURCE_OPERATION",
