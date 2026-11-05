@@ -139,3 +139,50 @@ Sistemas de rede reais, provisionamento de serviços, OAuth/JWT reais, cron real
 - Aprovar política de Scheduler finito e semântica de Gateway/Auth/ESB;
 - Definir o contrato normativo antes da implementação.
 
+
+## 11. Ampliação do catálogo aprovada pelo responsável pelo produto (2026-11-05)
+
+O responsável pelo produto confirmou a inclusão de **seis novos componentes lógicos** na v0.5. Eles se somam aos nove componentes de serviço já selecionados no planejamento anterior, preservando `API`, `Database`, `Broker` e os tipos de cliente existentes. A inclusão no catálogo está aprovada; os contratos e comportamentos detalhados ainda exigem refinamento.
+
+| ID | Novo componente aprovado | Responsabilidade simulada mínima | Prioridade proposta |
+| --- | --- | --- | --- |
+| SC-10 | **Cache** | Operações de leitura/escrita/invalidação, cache hit/miss, TTL virtual e latência. Não é Database persistente. | P0 |
+| SC-11 | **Object Storage** | PUT/GET/DELETE de objetos, tamanho e tempos virtuais de operação; sem armazenar arquivos reais. | P0 |
+| SC-12 | **Notification Service** | Disparo de notificações lógicas por e-mail/SMS/push e estados de envio/falha simulados; sem provedores externos reais. | P1 |
+| SC-13 | **Search Engine** | Indexação e consulta lógica com latências distintas e estado de índice simulado; sem servidor Elasticsearch/OpenSearch. | P1 |
+| SC-14 | **Service Registry / Discovery** | Registro/consulta lógica de instâncias, descoberta de destinos e indisponibilidade virtual. | P1 |
+| SC-15 | **Rules Engine** | Avaliação determinística de regras e resultados (por exemplo elegível/não elegível), permitindo que Behavior/Actions ramifiquem o fluxo somente após definir semântica explícita. | P1 |
+
+As prioridades P0/P1 acima são **sugestões de faseamento**; a seleção dos seis itens para a versão foi aprovada sem obrigar que todos sejam implementados simultaneamente.
+
+### 11.1. Classificação de infraestrutura — fora da v0.5 de serviços
+
+- **Load Balancer:** classificado prioritariamente como componente de infraestrutura/roteamento de tráfego. Embora possa ser representado logicamente, sua semântica de distribuição entre instâncias exige modelagem de deployment, instâncias e health checks que não pertence à expansão inicial de serviços. **Não incluir na v0.5.**
+- **CDN:** classificado prioritariamente como infraestrutura de entrega e cache de borda; exige nós de borda/origem e topologia geográfica ou de rede. **Não incluir na v0.5.**
+- Ambos podem ser revisitados numa futura fase de **infraestrutura/deployment**, sem confundir API Gateway com Load Balancer nem CDN com Cache genérico.
+
+### 11.2. Critérios adicionais de aceite
+
+| ID | Requisito | Aceite |
+| --- | --- | --- |
+| RF-5-018 | Cache com TTL virtual | Cache hit evita uma chamada ao destino; cache miss executa fallback configurado; expiração usa relógio virtual. |
+| RF-5-019 | Armazenamento de objetos | Serviço pode enviar operação PUT/GET/DELETE ao Object Storage; timeline registra conclusão ou falha. |
+| RF-5-020 | Notificações | Um Worker ou Service pode solicitar notificação e observar estado simulado sem integração real. |
+| RF-5-021 | Busca/indexação | Simular indexação de documento e consulta, distinguindo tempos e efeitos previstos no modelo. |
+| RF-5-022 | Descoberta de serviço | Consultas ao Registry retornam destino elegível ou indisponibilidade de maneira determinística; não reescrever automaticamente conexões existentes. |
+| RF-5-023 | Regras de negócio | Rules Engine devolve decisão configurada e rastreável; nenhum JavaScript ou expressão arbitrária de usuário deve ser executado. |
+
+### 11.3. Novos cenários de aceitação
+
+- **CT-5-10:** Client → Gateway → Service → Cache; em miss, Service consulta Database, atualiza Cache e responde; nova chamada dentro do TTL produz hit.
+- **CT-5-11:** Service → Object Storage, com PUT seguido de GET e tempos virtuais reproduzíveis.
+- **CT-5-12:** Broker → Worker → Notification Service, permitindo falha simulada sem desfazer resposta principal.
+- **CT-5-13:** Worker indexa documento no Search Engine; Service consulta posteriormente e obtém resultado lógico.
+- **CT-5-14:** Service consulta Service Registry; destino inexistente ou indisponível produz falha explícita, não roteamento mágico.
+- **CT-5-15:** Service chama Rules Engine e recebe decisão; eventual ramificação condicional deve ser definida no contrato de Actions antes da implementação.
+
+### 11.4. Limites de escopo
+
+Não modelar provedores reais de cache, storage, SMS, busca, registry ou motor de regras. Simular operações e estados em memória com limite finito e resultados determinísticos. Não criar engine separado para cada tipo. Cache, Search Engine e Object Storage podem exigir estados virtuais específicos **dentro do contexto de execução**, além de Actions genéricas; isso deve ser especificado no ADR e contrato. Em especial, uma única simulação que contenha múltiplas entradas ou requisições precisa de regras explícitas de ordenação para demonstrar cache hit/miss e descoberta.
+
+**Atualização de aprovação:** o catálogo agora inclui **15 componentes de serviço selecionados para v0.5** (nove do planejamento anterior + seis novos). O Broker segue componente existente preservado, e Load Balancer/CDN não fazem parte dessa lista.
