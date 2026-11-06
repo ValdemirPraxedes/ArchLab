@@ -1,15 +1,11 @@
 import type { IntegrationV1 } from '../../api/archlabV1Client';
-import { isClientType } from './model';
+import { allowedProtocols } from './model';
 import type { ComponentType } from './model';
 
 export type IntegrationKind = IntegrationV1['kind'];
 export function allowedIntegrationKinds(source: ComponentType, target: ComponentType): IntegrationKind[] {
-  if ((isClientType(source) && target === 'API') || (source === 'API' && target === 'API'))
-    return ['HTTP_REST', 'SOAP_HTTP', 'HTTP_GENERIC', 'GRAPHQL_HTTP', 'GRPC_UNARY', 'COAP', 'WEBSOCKET'];
-  if (source === 'API' && target === 'DATABASE') return ['DATABASE_QUERY'];
-  if ((isClientType(source) || source === 'API') && target === 'BROKER') return ['QUEUE', 'TOPIC', 'MQTT'];
-  if (source === 'BROKER' && target === 'API') return ['QUEUE', 'TOPIC', 'MQTT'];
-  return [];
+  return allowedProtocols(source,target).map(protocol => protocol === 'REST' ? 'HTTP_REST' :
+    protocol === 'SOAP' ? 'SOAP_HTTP' : protocol === 'TCP' ? 'DATABASE_QUERY' : protocol) as IntegrationKind[];
 }
 export function defaultIntegration(kind: IntegrationKind): IntegrationV1 {
   switch (kind) {

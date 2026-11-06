@@ -34,6 +34,58 @@ public class V2RequestMapper {
                     components.add(new ApiV2(text(c,"id"),text(c,"displayName"),
                             canonical ? numberOrZero(c,"preProcessingMs") : number(c,"preProcessingMs"),
                             canonical ? numberOrZero(c,"postProcessingMs") : number(c,"postProcessingMs"))); }
+                case "SERVICE", "API_GATEWAY", "BFF", "WORKER", "SCHEDULER",
+                        "AUTHENTICATION_SERVICE", "WEBHOOK_RECEIVER", "ORCHESTRATOR_SERVICE",
+                        "INTEGRATION_BUS", "CACHE", "OBJECT_STORAGE", "NOTIFICATION_SERVICE",
+                        "SEARCH_ENGINE", "SERVICE_REGISTRY", "RULES_ENGINE" -> {
+                    if (!canonical) throw invalid("Unsupported component type");
+                    object(c,"id","type","displayName","preProcessingMs","postProcessingMs","behaviors",
+                            "defaultTtlMs","schedules","routes","rules","defaultDecision");
+                    ComponentTypeV2 componentType=ComponentTypeV2.valueOf(type);
+                    if (componentType.isVirtualResource() && (has(c,"behaviors") || has(c,"preProcessingMs")
+                            || has(c,"postProcessingMs")))
+                        throw invalid("Virtual resources cannot declare Behaviors or processing phases");
+                    if (has(c,"defaultTtlMs") && componentType!=ComponentTypeV2.CACHE)
+                        throw invalid("Only CACHE accepts defaultTtlMs");
+                    List<ServiceComponentV5.Schedule> schedules = new ArrayList<>();
+                    for (JsonNode schedule : arrayOrEmpty(c,"schedules")) {
+                        object(schedule,"id","firstAtMs","intervalMs","occurrenceCount","behaviorId");
+                        schedules.add(new ServiceComponentV5.Schedule(text(schedule,"id"),
+                                number(schedule,"firstAtMs"),number(schedule,"intervalMs"),
+                                intNumber(schedule,"occurrenceCount"),optionalText(schedule,"behaviorId")));
+                    }
+                    List<ServiceComponentV5.Route> routes = new ArrayList<>();
+                    for (JsonNode route : arrayOrEmpty(c,"routes")) {
+                        object(route,"operation","connectionId");
+                        routes.add(new ServiceComponentV5.Route(text(route,"operation"),text(route,"connectionId")));
+                    }
+                    List<ServiceComponentV5.Rule> rules = new ArrayList<>();
+                    for (JsonNode rule : arrayOrEmpty(c,"rules")) {
+                        object(rule,"id","field","operator","expectedValue","priority","decision");
+                        JsonNode expected = required(rule,"expectedValue");
+                        if (!expected.isTextual() && !expected.isNumber() && !expected.isBoolean()
+                                && !expected.isArray())
+                            throw invalid("Invalid decision expectedValue");
+                        Object value;
+                        if (expected.isArray()) {
+                            List<Object> items=new ArrayList<>();
+                            for (JsonNode item:expected) {
+                                if (!item.isTextual() && !item.isNumber() && !item.isBoolean())
+                                    throw invalid("Invalid decision expectedValue array");
+                                items.add(item.isTextual()?item.asText():item.isBoolean()?item.asBoolean():item.decimalValue());
+                            }
+                            value=List.copyOf(items);
+                        } else value=expected.isTextual()?expected.asText():
+                                expected.isBoolean()?expected.asBoolean():expected.decimalValue();
+                        rules.add(new ServiceComponentV5.Rule(text(rule,"id"),text(rule,"field"),
+                                text(rule,"operator"),value,has(rule,"priority")?intNumber(rule,"priority"):0,
+                                text(rule,"decision")));
+                    }
+                    components.add(new ServiceComponentV5(text(c,"id"),text(c,"displayName"),
+                            componentType,numberOrZero(c,"preProcessingMs"),
+                            numberOrZero(c,"postProcessingMs"),numberOrZero(c,"defaultTtlMs"),
+                            schedules,routes,rules,optionalText(c,"defaultDecision")));
+                }
                 case "DATABASE" -> { object(c,"id","type","displayName","processingMs");
                     components.add(new DatabaseV2(text(c,"id"),text(c,"displayName"),number(c,"processingMs"))); }
                 case "BROKER" -> {

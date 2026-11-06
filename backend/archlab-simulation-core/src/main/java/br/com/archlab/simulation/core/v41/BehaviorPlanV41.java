@@ -7,17 +7,28 @@ import java.util.Objects;
 public final class BehaviorPlanV41 {
     private BehaviorPlanV41() {}
 
-    public enum TriggerKind { REQUEST_RECEIVED, MESSAGE_CONSUMED, WS_MESSAGE_RECEIVED, SESSION_OPENED }
-    public enum ActionKind { PROCESS, CALL, PUBLISH, RESPOND, OPEN_SESSION, WS_SEND, CLOSE_SESSION, FORK, JOIN }
+    public enum TriggerKind { REQUEST_RECEIVED, MESSAGE_CONSUMED, WS_MESSAGE_RECEIVED, SESSION_OPENED, SCHEDULED_TRIGGER }
+    public enum ActionKind { PROCESS, CALL, PUBLISH, RESPOND, OPEN_SESSION, WS_SEND, CLOSE_SESSION, FORK, JOIN,
+        BRANCH, CACHE_GET, CACHE_PUT, CACHE_INVALIDATE, OBJECT_GET, OBJECT_PUT, OBJECT_DELETE,
+        SEND_NOTIFICATION, INDEX_DOCUMENT, SEARCH_DOCUMENTS, REGISTER_SERVICE, UNREGISTER_SERVICE,
+        DISCOVER_SERVICE, EVALUATE_RULE, SCHEDULE_TRIGGER, TRANSFORM }
 
     public record Action(String id, String kind, List<String> dependsOn, String connectionId,
                          String destinationName, String sessionAlias, String sender, String payload,
-                         long durationMs, long timeoutMs, int statusCode, List<String> actionIds) {
+                         long durationMs, long timeoutMs, int statusCode, List<String> actionIds,
+                         java.util.Map<String,Object> options) {
         public Action {
             Objects.requireNonNull(id);
             ActionKind.valueOf(Objects.requireNonNull(kind));
             dependsOn=List.copyOf(dependsOn);
             actionIds=List.copyOf(actionIds);
+            options=java.util.Map.copyOf(options);
+        }
+        public Action(String id, String kind, List<String> dependsOn, String connectionId,
+                      String destinationName, String sessionAlias, String sender, String payload,
+                      long durationMs, long timeoutMs, int statusCode, List<String> actionIds) {
+            this(id,kind,dependsOn,connectionId,destinationName,sessionAlias,sender,payload,
+                    durationMs,timeoutMs,statusCode,actionIds,java.util.Map.of());
         }
         public ActionKind actionKind() { return ActionKind.valueOf(kind); }
     }

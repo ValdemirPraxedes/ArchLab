@@ -13,6 +13,7 @@ import { defaultIntegration, allowedIntegrationKinds } from './integration';
 import type { IntegrationKind } from './integration';
 import { UnifiedScenarioEditorV41 } from './UnifiedScenarioEditorV41';
 import { BehaviorEditorV41 } from './BehaviorEditorV41';
+import { ServicePropertiesV5 } from './ServicePropertiesV5';
 import { emptyEntryV41, toUnifiedRequestV41 } from './unifiedScenarioV41';
 import type { EntryDraftV41, SessionDraftV41 } from './unifiedScenarioV41';
 import { SimulationPlaybackV2 } from './SimulationPlaybackV2';
@@ -20,10 +21,11 @@ import { inFlightMessages, traceStateAt } from './traceV2';
 import type { TraceCursor } from './traceV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { toArchitectureV1 } from './architectureV1';
+import { prepareArchitectureImportV5 } from './migrationV5';
 import { archlabV1Client, ArchlabV1HttpError } from '../../api/archlabV1Client';
 import type { ValidationIssue } from './validation';
 import {
-  VISUAL_CLIENT_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge,
+  VISUAL_CLIENT_TYPES, V5_SERVICE_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge, isProcessorType,
   isComponentType, isClientType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
 } from './model';
 import type { ArchitectureNode as ArchitectureNodeType, ArchitectureEdge, ComponentType, Protocol } from './model';
@@ -35,8 +37,8 @@ const kindForProtocol = (value: Protocol): IntegrationKind => value === 'REST' ?
 const protocolForKind = (value: string): Protocol => value === 'HTTP_REST' ? 'REST' : value === 'SOAP_HTTP' ? 'SOAP' : value === 'DATABASE_QUERY' ? 'TCP' : value as Protocol;
 const PALETTE_CATEGORIES = [
   { title: 'Clientes', types: VISUAL_CLIENT_TYPES },
-  { title: 'Serviços', types: ['API'] },
-  { title: 'Dados', types: ['DATABASE'] },
+  { title: 'Serviços', types: V5_SERVICE_TYPES.filter(type => !['CACHE','OBJECT_STORAGE','SEARCH_ENGINE','SERVICE_REGISTRY','RULES_ENGINE'].includes(type)) },
+  { title: 'Dados', types: ['DATABASE','CACHE','OBJECT_STORAGE','SEARCH_ENGINE','SERVICE_REGISTRY','RULES_ENGINE'] },
   { title: 'Mensageria', types: ['BROKER'] },
 ] as const satisfies ReadonlyArray<{ title: string; types: readonly ComponentType[] }>;
 
@@ -65,6 +67,7 @@ function EditorCanvas() {
   const [overrideDraft, setOverrideDraft] = useState<{enabled:boolean; pre:string; post:string} | null>(null);
   const canvasRef = useRef<HTMLDivElement>(null);
   const propertiesRef = useRef<HTMLElement>(null);
+  const importRef = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (!selection) return;
     const dismiss = (event: PointerEvent) => {
@@ -121,6 +124,26 @@ function EditorCanvas() {
     setTraceCursor({time:0,sequence:0});
     setExecutionStatus('READY'); setSimulationResultV2(null); setV2PlaybackStatus('PAUSADA');
     setIssues([]); setValidationStatus('idle'); setError(''); setActionFeedback('Execução reiniciada. A arquitetura foi preservada.');
+  };
+  const importArchitecture = async (file:File) => {
+    if (executionLocked) return;
+    try {
+      const prepared=prepareArchitectureImportV5(JSON.parse(await file.text()) as unknown);
+      const validation=await archlabV1Client.validateArchitecture(prepared.architecture);
+      if (!validation.valid) {
+        setIssues(validation.violations.map(v=>({code:v.code,path:v.path,message:v.message})));
+        setValidationStatus('invalid'); setValidationScope('architecture');
+        setActionFeedback('Importação cancelada; o canvas original foi preservado.');
+        return;
+      }
+      setNodes(prepared.nodes);setEdges(prepared.edges);setEntry(emptyEntryV41());setSessions([]);select(null);
+      setIssues([]);setValidationStatus('valid');setValidationScope('architecture');
+      setActionFeedback(prepared.convertedIds.length
+        ? `Importação concluída: ${prepared.convertedIds.length} API convertida(s) para SERVICE. IDs: ${prepared.convertedIds.join(', ')}.`
+        : 'Importação concluída sem conversão de API.');
+    } catch (cause) {
+      setActionFeedback(`Importação cancelada; o canvas original foi preservado. ${cause instanceof Error?cause.message:'Arquivo inválido.'}`);
+    }
   };
   const simulate = async () => {
     if (executionStatus !== 'READY' && executionStatus !== 'ERROR') return;
@@ -202,7 +225,7 @@ function EditorCanvas() {
   const onDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const rawType = event.dataTransfer.getData(DRAG_MIME);
-    if (!isComponentType(rawType)) return;
+    if (!isComponentType(rawType) || rawType === 'API') return;
     const bounds = canvasRef.current?.getBoundingClientRect();
     if (!bounds || event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) return;
     const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
@@ -249,7 +272,7 @@ function EditorCanvas() {
       setError('Protocolo incompatível ou latência inválida.'); return;
     }
     const targetNode = nodes.find(n => n.id === edge.target);
-    if (overrideDraft?.enabled && (targetNode?.data.componentType !== 'API' || source.data.componentType === 'BROKER')) { setError('Personalização permitida apenas para conexões Client/API → API.'); return; }
+    if (overrideDraft?.enabled && (!targetNode || !['API','SERVICE'].includes(targetNode.data.componentType) || source.data.componentType === 'BROKER')) { setError('Personalização permitida apenas para conexões de entrada em API ou SERVICE.'); return; }
     const overridePre = Number(overrideDraft?.pre), overridePost = Number(overrideDraft?.post);
     if (overrideDraft?.enabled && (![overrideDraft.pre, overrideDraft.post].every(value => value.trim() !== '') || ![overridePre, overridePost].every(value => Number.isSafeInteger(value) && value >= 0 && value <= 1_000_000_000))) { setError('Pré e pós-processamento devem ser inteiros entre 0 e 1000000000 ms.'); return; }
     resetValidation();
@@ -301,7 +324,7 @@ function EditorCanvas() {
         </section>)}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><input ref={importRef} type="file" accept=".json,application/json" aria-label="Arquivo de arquitetura" hidden onChange={event=>{const file=event.target.files?.[0];if(file) void importArchitecture(file);event.target.value='';}}/><button type="button" onClick={()=>importRef.current?.click()} disabled={executionLocked}>Importar arquitetura JSON</button><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
         {actionFeedback && <p className="action-feedback" role="status" aria-live="polite">{actionFeedback}</p>}
         <div className="execution-status" role="status">Execução: {simulationResultV2 ? v2PlaybackStatus : executionStatus}{simulationResultV2 && <span> · Tempo virtual total: {simulationResultV2.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
@@ -319,7 +342,7 @@ function EditorCanvas() {
             onPaneClick={() => select(null)}
             deleteKeyCode={null} nodesDraggable={!executionLocked} edgesReconnectable={false} nodesConnectable={false}
             nodeExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} translateExtent={[[0, 0], [CANVAS_WIDTH, CANVAS_HEIGHT]]} fitView>
-            <Background /><Controls /><MiniMap pannable zoomable nodeColor={(n) => isClientType(n.data?.componentType as ComponentType) ? "#1d9eaf" : n.data?.componentType === "API" ? "#6963d4" : "#cc9440"} nodeStrokeColor="#37506a" nodeStrokeWidth={2} maskColor="rgba(95,126,160,0.18)" />
+            <Background /><Controls /><MiniMap pannable zoomable nodeColor={(n) => isClientType(n.data?.componentType as ComponentType) ? "#1d9eaf" : isProcessorType(n.data?.componentType as ComponentType) ? "#6963d4" : "#cc9440"} nodeStrokeColor="#37506a" nodeStrokeWidth={2} maskColor="rgba(95,126,160,0.18)" />
           </ReactFlow>
         </div>
       </section>
@@ -331,7 +354,7 @@ function EditorCanvas() {
           <label>Nome de apresentação<input aria-label="Nome de apresentação" type="text" maxLength={100} value={nameDraft} disabled={executionLocked} onChange={(event) => setNameDraft(event.target.value)} onBlur={commitName} /></label>
           <button type="button" disabled={executionLocked} onClick={commitName}><Save size={16} aria-hidden="true" /> Salvar nome</button>
           <p className="property-help">Os tempos são aplicados imediatamente ao canvas. Não é necessário salvar.</p>
-          {node.data.componentType === 'API' && <>
+          {isProcessorType(node.data.componentType) && <>
             <label>Pré-processamento (ms)<input aria-label="Pré-processamento (ms)" type="number" min="0" step="1" value={node.data.preProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('preProcessingMs', e.target.value)} /></label>
             <label>Pós-processamento (ms)<input aria-label="Pós-processamento (ms)" type="number" min="0" step="1" value={node.data.postProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('postProcessingMs', e.target.value)} /></label>
             <BehaviorEditorV41 node={node} nodes={nodes} edges={edges} behaviors={node.data.behaviors ?? []} disabled={executionLocked}
@@ -340,6 +363,7 @@ function EditorCanvas() {
           {node.data.componentType === 'DATABASE' && <label>Processamento (ms)<input aria-label="Processamento (ms)" type="number" min="0" step="1" value={node.data.processingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('processingMs', e.target.value)} /></label>}
           {node.data.componentType === 'BROKER' && <BrokerEditor node={node} nodes={nodes} edges={edges} disabled={executionLocked}
             onChange={(destinations,subscriptions) => { setNodes(current => current.map(item => item.id === node.id ? {...item,data:{...item.data,destinations,subscriptions}} : item)); resetValidation(); }}/>}
+          <ServicePropertiesV5 node={node} edges={edges} disabled={executionLocked} onChange={patch=>{setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,...patch}}:item));resetValidation();}}/>
           <h3>Conectar</h3>
           <label>Destino
             <select aria-label="Destino" value={targetId} disabled={executionLocked} onChange={(e) => { setTargetId(e.target.value); const target = nodes.find((n) => n.id === e.target.value); const protocols = target ? allowedProtocols(node.data.componentType, target.data.componentType) : []; setProtocol(protocols[0] ?? 'REST'); setError(''); }}>
@@ -361,7 +385,7 @@ function EditorCanvas() {
             </select>
           </label>
           <label>Latência (ms)<input aria-label="Editar latência (ms)" type="number" min="0" step="1" value={edgeDraft?.latencyMs ?? String(edge.data?.latencyMs ?? 0)} disabled={executionLocked} onChange={(e) => setEdgeDraft((draft) => draft ? { ...draft, latencyMs: e.target.value } : null)} /></label>
-          {nodes.find(n => n.id === edge.target)?.data.componentType === 'API' && nodes.find(n => n.id === edge.source)?.data.componentType !== 'BROKER' && <section className="api-override-editor" aria-label="Processamento da API de destino">
+          {['API','SERVICE'].includes(nodes.find(n => n.id === edge.target)?.data.componentType ?? '') && nodes.find(n => n.id === edge.source)?.data.componentType !== 'BROKER' && <section className="api-override-editor" aria-label="Processamento da API de destino">
             <h3>Processamento da API de destino</h3>
             <p>{nodes.find(n => n.id === edge.target)?.data.displayName ?? nodes.find(n => n.id === edge.target)?.data.label} · padrão: pré {nodes.find(n => n.id === edge.target)?.data.preProcessingMs ?? 0} ms / pós {nodes.find(n => n.id === edge.target)?.data.postProcessingMs ?? 0} ms</p>
             <label>Configuração de processamento

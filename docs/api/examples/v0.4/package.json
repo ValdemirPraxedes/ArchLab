@@ -2,7 +2,8 @@
   "private": true,
   "scripts": {
     "validate": "node validate.cjs",
-    "verify:live": "node verify-live.cjs"
+    "verify:live": "node verify-live.cjs",
+    "verify:v5-live": "node verify-v5-live.cjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",
