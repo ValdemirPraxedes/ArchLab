@@ -45,7 +45,8 @@ public final class UnifiedSimulationV41 {
     private final List<Map<String,Object>> resourceOutcomes = new ArrayList<>();
     private final VirtualResourcesV5 virtualResources = new VirtualResourcesV5();
     private long now, scheduleOrder;
-    private int messageNumber, exchangeNumber, resourceNumber, activityNumber, pendingRoots, scheduledCount;
+    private int messageNumber, exchangeNumber, resourceNumber, activityNumber, pendingRoots, scheduledCount,
+            scheduleInvocationNumber;
     private boolean mainFinished, mainTimedOut, derivedFailed;
     private Integer responseStatusCode;
 
@@ -267,13 +268,14 @@ public final class UnifiedSimulationV41 {
                     ServiceComponentV5.Schedule config=scheduler.schedules().stream()
                             .filter(s -> s.id().equals(scheduleId)).findFirst().orElse(null);
                     if (config==null) {finish.finish(false);break;}
+                    int invocation=++scheduleInvocationNumber;
                     for (int i=0;i<config.occurrenceCount();i++) {
                         int occurrence=i+1;
                         long planned=Math.addExact(config.firstAtMs(),
                                 Math.multiplyExact(config.intervalMs(),i));
                         long at=Math.max(now,planned);
                         schedule(at,() -> {
-                            String child="schedule-"+scheduleId+"-"+occurrence;
+                            String child="schedule-"+scheduleId+"-"+invocation+"-"+occurrence;
                             event(fields("type","SCHEDULED_TRIGGER","componentId",scheduler.id(),
                                     "operationId",child,"parentExchangeId",parent,
                                     "rootOperationId","request-1","scheduleId",scheduleId,

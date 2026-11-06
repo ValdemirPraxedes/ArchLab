@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.test.context.SpringBootTest;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ObjectNode;
 import java.net.URI;
 import java.net.http.*;
 import static org.junit.jupiter.api.Assertions.*;
@@ -241,6 +242,10 @@ class ServiceV5IntegrationTest {
         """;
 
     @Test void resourceActionsShareOneEngineAndIsolatedState() throws Exception {
+        var architectureValidation=post("/api/v1/architectures/validate",
+                json.readTree(RESOURCES).get("architecture").toString());
+        assertTrue(json.readTree(architectureValidation.body()).get("valid").asBoolean(),
+                architectureValidation.body());
         var validation=post("/api/v1/scenarios/validate",RESOURCES);
         assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
         var response=post("/api/v1/simulations",RESOURCES);
@@ -324,5 +329,14 @@ class ServiceV5IntegrationTest {
         assertEquals(3,fired);
         assertEquals(202,result.get("execution").get("responseStatusCode").asInt());
         assertEquals(4,result.get("metrics").get("exchanges").size());
+    }
+    @Test void scheduledChildFailureDoesNotRewriteCompletedMainResponse() throws Exception {
+        ObjectNode broken=(ObjectNode)json.readTree(SCHEDULED);
+        ((ObjectNode)broken.get("architecture").get("components").get(2)).remove("behaviors");
+        var response=post("/api/v1/simulations",broken.toString());
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode result=json.readTree(response.body());
+        assertEquals("COMPLETED",result.get("execution").get("mainStatus").asText());
+        assertEquals("COMPLETED_WITH_ERRORS",result.get("execution").get("status").asText());
     }
 }

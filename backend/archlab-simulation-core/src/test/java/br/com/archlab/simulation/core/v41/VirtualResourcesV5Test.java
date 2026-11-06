@@ -68,4 +68,12 @@ class VirtualResourcesV5Test {
         failed.put("simulatedResult","FAILED");
         assertEquals("FAILED",state.execute(notifications,action("SEND_NOTIFICATION",failed),1,Map.of()).resultCode());
     }
+    @Test void cacheCapacityIsFinite() {
+        var state=new VirtualResourcesV5();
+        var cache=resource(ComponentTypeV2.CACHE,100);
+        for (int i=0;i<1000;i++)
+            state.execute(cache,action("CACHE_PUT",Map.of("key","k"+i,"valueMetadata","v")),0,Map.of());
+        assertThrows(IllegalArgumentException.class,() -> state.execute(cache,
+                action("CACHE_PUT",Map.of("key","overflow","valueMetadata","v")),0,Map.of()));
+    }
 }
