@@ -82,7 +82,8 @@ public final class ArchitectureGraphValidatorV2 {
                             || !Set.of("ALLOW","DENY","REVIEW").contains(rule.decision())
                             || ("IN".equals(rule.operator()) != (rule.expectedValue() instanceof List<?>))
                             || Set.of("GT","GTE","LT","LTE").contains(rule.operator())
-                                && !(rule.expectedValue() instanceof Number))
+                                && !(rule.expectedValue() instanceof Number)
+                            || rule.expectedValue() instanceof List<?> values && (values.isEmpty() || values.size()>32))
                         add(errors,"INVALID_DECISION_RULE",path+".rules","Invalid or duplicate decision rule");
                 }
             } else if (component instanceof DatabaseV2 database) {

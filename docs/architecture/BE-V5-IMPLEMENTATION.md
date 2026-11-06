@@ -55,10 +55,10 @@ Resource Actions require a directed request/response connection to the matching 
 
 The runtime appends `resourceOutcomes` to the existing `/api/v1/simulations` response. Each outcome has a virtual timestamp and causal operation ID. BRANCH reads a predecessor `outputRef`, executes one case, and emits `SKIPPED` for discarded Actions and their dependents. No connection is traversed without an Action.
 
-## Known limits pending final review
+## Known limits
 
-- The legacy API migration service is explicit and validates the converted architecture, but it is not yet wired into a product import flow. Historical API scenarios continue through their existing path.
-- Some type specific validation and failure semantics remain to be hardened before BE5-03 through BE5-15 can be called complete.
+- The legacy API migration service is explicit and validates the converted architecture, but it is not wired into the frontend import flow. MIG-04 requires a frontend palette and serializer change, which is excluded from this backend delivery. Historical API scenarios continue through their existing path.
 - Rules currently compare prior Action result codes; the contract does not yet expose scenario attributes as rule inputs.
-- Gateway route fallback and Scheduler policies for main/global status need additional acceptance tests.
+- A Gateway request without a matching explicit route is rejected by validation. There is no implicit fallback route.
+- A failed scheduled child run affects `globalStatus` while the already completed main response retains its `mainStatus`; this is covered by an integration test.
 - `TRANSFORM` records descriptive metadata but does not rewrite payload bytes.

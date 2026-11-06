@@ -25,4 +25,12 @@ class CapabilityGraphV5Test {
         assertFalse(result.valid());
         assertTrue(result.violations().stream().anyMatch(v -> v.code().equals("INVALID_INTEGRATION")));
     }
+    @Test void invalidDecisionRulesProduceStructuredViolations() {
+        var rules=new ServiceComponentV5("rules","Rules",ComponentTypeV2.RULES_ENGINE,
+                0,0,0,List.of(),List.of(),List.of(
+                    new ServiceComponentV5.Rule("bad","amount","GT","not-a-number",1,"ALLOW")),"UNKNOWN");
+        var result=new ArchitectureGraphValidatorV2().validate(new ArchitectureV2(List.of(rules),List.of()));
+        assertFalse(result.valid());
+        assertTrue(result.violations().stream().anyMatch(v -> v.code().equals("INVALID_DECISION_RULE")));
+    }
 }

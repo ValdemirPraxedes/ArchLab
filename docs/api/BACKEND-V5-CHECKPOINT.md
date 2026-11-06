@@ -1,20 +1,20 @@
-# Backend v0.5 implementation checkpoint
+# Backend v0.5 — validation checkpoint
 
 Branch: `feat/v0.5-backend-service-expansion`, based on `origin/develop` at `2979cc1` (approved documentation PR #86).
 
-## Implemented
+## Implementation status
 
-- Added an explicit, copy-based historical `API` to `SERVICE` migration adapter and tests for preservation of IDs, Behaviors, connections, exact type matching, and atomic failure on malformed input.
-- The adapter is currently a library entry point only. It is not wired to an import endpoint or the simulation flow. Do not treat MIG-01 through MIG-07 as complete.
+BE5-03 through BE5-14 are implemented in the existing `ArchitectureV2` / `UnifiedSimulationV41` path. The fifteen component types, capability validation, typed outcomes, BRANCH, virtual resources, scheduling, notification simulation, synchronous and asynchronous flows, traces, and `/api/v1` integration are covered by unit and integration tests. BE5-15 supplies regression and live HTTP evidence below. Architecture diagrams and behavior details are in [BE-V5-IMPLEMENTATION](../architecture/BE-V5-IMPLEMENTATION.md).
 
-## Validation executed
+BE5-01 has a validated OpenAPI 3.1 contract and generated TypeScript types. BE5-02 has a copy-based backend migration service that converts historical `API` nodes to `SERVICE`, reports converted IDs, revalidates the graph, and preserves the original on failure. Tests cover two APIs, the Client → API → Broker → API → Database chain, and before/after virtual result equivalence. It is a Java service entry point; the editor's import flow is outside this backend branch. In particular, MIG-04 requires the frontend palette and serializer to stop offering `API`. The request explicitly prohibits frontend changes, so MIG-04 and the full product import path remain open.
 
-- The previous "327 tests" count came from stale Surefire XML reports. The Java executable resolved from `PATH` was failing before Maven started. The build was rerun with `JAVA_HOME=C:\Program Files\Java\jdk-25.0.4.1` and loopback available. The latest `clean verify` passed: 192 tests, zero failures/errors/skips.
-- `frontend/node_modules/.bin/openapi-typescript.cmd docs/api/openapi.yaml -o backend/target/schema-v5.d.ts`: passed.
-- `npx --yes @redocly/cli lint docs/api/openapi.yaml`: structurally valid, three warnings (missing license, unused `LegacyApiMigrationV5` schema and unused `v5CacheBranchScenario` example).
-- `npm ci` and `npm run validate` in `docs/api/examples/v0.4`: passed all 16 JSON fixtures and three embedded OpenAPI examples, including the v0.5 cache/branch example.
-- With a local Spring Boot server on port 18081, `npm run verify:v5-live` passed the v0.5 Cache/BRANCH example against `SimulationResponse`. `ARCHLAB_API_URL=http://127.0.0.1:18081 npm run verify:live` passed 13 positive and three negative historical cases. The first live v0.5 run found a missing timeline phase in OpenAPI; it was corrected and rerun successfully.
+## Validation executed on 2026-11-05
 
-## Remaining
+- `backend/.\mvnw.cmd clean verify -q` with Java 25.0.4.1: **198 tests, zero failures, zero errors, zero skipped**. The Java executable on `PATH` was broken, so the command used `JAVA_HOME=C:\Program Files\Java\jdk-25.0.4.1` and loopback access for Spring HTTP tests.
+- `npx --yes @redocly/cli lint docs/api/openapi.yaml`: valid OpenAPI, two warnings: missing license metadata and unused `LegacyApiMigrationV5` schema. The schema remains available for a future import wire contract; no new versioned endpoint was introduced.
+- `frontend/node_modules/.bin/openapi-typescript.cmd docs/api/openapi.yaml -o backend/target/schema-v5.d.ts`: passed. The output is an ignored validation artifact; no frontend source was edited.
+- `npm run validate` in `docs/api/examples/v0.4`: 16 JSON fixtures and three embedded OpenAPI examples passed.
+- `npm run verify:v5-live` against a local Spring Boot server: eight v0.5 requests passed HTTP response and full `SimulationResponse` schema validation, including Cache/BRANCH, Gateway/BFF, Broker/Worker/Notification, Auth/Rules, virtual resources, Webhook/Orchestrator/Bus, and Scheduler.
+- `npm run verify:live` against the same server: 13 historical positive scenarios and three negative cases passed.
 
-BE5-01 needs final contract alignment for all new flows. BE5-02 now has an explicit backend import service with structural revalidation and before/after simulation equivalence; it is not connected to a product import flow, so MIG-01 through MIG-07 are not all complete. BE5-03 through BE5-14 have implementation work in progress in the shared engine; see [BE-V5-IMPLEMENTATION](../architecture/BE-V5-IMPLEMENTATION.md) for architecture and current limits. BE5-15 still needs final acceptance evidence. No PR has been opened and the branch has not been published. The frontend has not been changed.
+The full delivery PR remains unopened because the original request permits only one PR after all BE5-01 through BE5-15 criteria are complete, and MIG-04 is a frontend criterion excluded from this delivery. No merge was performed.

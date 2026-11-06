@@ -254,6 +254,15 @@ final class UnifiedPlanV41 {
                                 || !components.get(action.options().get("targetComponentId")).type().isProcessor()))
                         error("INVALID_VIRTUAL_RESOURCE_OPERATION",actionPath+".targetComponentId",
                                 "Registered target must be a processing component in the architecture");
+                    if ("EVALUATE_RULE".equals(action.kind()) && connection!=null
+                            && components.get(connection.targetId()) instanceof ServiceComponentV5 rules) {
+                        Set<String> preceding=ancestors(action,actions);
+                        for (var rule:rules.rules()) if (actions.values().stream().noneMatch(candidate ->
+                                preceding.contains(candidate.id())
+                                && rule.field().equals(candidate.options().get("outputRef"))))
+                            error("INVALID_DECISION_RULE",actionPath,
+                                    "Rule field must reference a preceding Action outputRef");
+                    }
                 }
                 validateBranches(actions,path,behavior.trigger());
                 if (cycle(actions)) error("INVALID_ACTION_DEPENDENCY",path+".actions","Action dependency cycle");
