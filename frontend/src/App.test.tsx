@@ -53,9 +53,36 @@ describe('Editor visual', () => {
       expect(clients).toContainElement(screen.getByRole('button', { name }));
       fireEvent.click(screen.getByRole('button', { name }));
     }
-    expect(screen.getByRole('region', { name: 'Serviços' })).toContainElement(screen.getByRole('button', { name: 'API' }));
+    expect(screen.getByRole('region', { name: 'Serviços' })).toContainElement(screen.getByRole('button', { name: 'Service' }));
+    expect(screen.queryByRole('button',{name:'API'})).not.toBeInTheDocument();
     expect(screen.getByRole('region', { name: 'Dados' })).toContainElement(screen.getByRole('button', { name: 'Database' }));
     expect(screen.getByText(/6 componente\(s\)/)).toBeInTheDocument();
+  });
+  it('importa API histórica como SERVICE após validação e anuncia os IDs convertidos',async()=>{
+    server.use(http.post('/api/v1/architectures/validate',async({request})=>{
+      const body=await request.json() as {components:{id:string;type:string}[]};
+      expect(body.components.find(component=>component.id==='old-api')?.type).toBe('SERVICE');
+      return HttpResponse.json({valid:true,violations:[]});
+    }));
+    render(<App/>);
+    const document={components:[{id:'old-api',type:'API',displayName:'Legacy',preProcessingMs:0,postProcessingMs:0,behaviors:[]}],connections:[]};
+    const file=new File([JSON.stringify(document)],'architecture.json',{type:'application/json'});
+    Object.defineProperty(file,'text',{value:async()=>JSON.stringify(document)});
+    fireEvent.change(screen.getByLabelText('Arquivo de arquitetura'),{target:{files:[file]}});
+    expect(await screen.findByText(/1 API convertida\(s\) para SERVICE/)).toHaveTextContent('old-api');
+    expect(screen.getByRole('button',{name:'Nó: Legacy'})).toHaveAttribute('data-component-type','SERVICE');
+  });
+  it('mantém o canvas quando a arquitetura importada falha na validação',async()=>{
+    server.use(http.post('/api/v1/architectures/validate',()=>HttpResponse.json({valid:false,violations:[{code:'INVALID_CONNECTION',path:'connections[0]',message:'Conexão inválida'}]})));
+    render(<App/>);
+    fireEvent.click(screen.getByRole('button',{name:'Service'}));
+    const document={components:[{id:'old-api',type:'API',displayName:'Legacy',behaviors:[]}],connections:[]};
+    const file=new File([JSON.stringify(document)],'invalid.json',{type:'application/json'});
+    Object.defineProperty(file,'text',{value:async()=>JSON.stringify(document)});
+    fireEvent.change(screen.getByLabelText('Arquivo de arquitetura'),{target:{files:[file]}});
+    expect(await screen.findByText(/Importação cancelada; o canvas original foi preservado/)).toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Nó: Service 1'})).toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Nó: Legacy'})).not.toBeInTheDocument();
   });
   it('adiciona cliente por arrastar e soltar no canvas', () => {
     render(<App />);
@@ -94,10 +121,10 @@ describe('Editor visual', () => {
   it.each(['Web Browser', 'Mobile App', 'Desktop App', 'CLI', 'Bot', 'Embedded System'])('conecta %s a API e edita REST/SOAP', (name) => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name }));
-    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Service' }));
     fireEvent.click(screen.getByRole('button', { name: `Nó: ${name} 1` }));
     const target = screen.getByRole('combobox', { name: 'Destino' });
-    fireEvent.change(target, { target: { value: (screen.getByRole('option', { name: /API 1/ }) as HTMLOptionElement).value } });
+    fireEvent.change(target, { target: { value: (screen.getByRole('option', { name: /Service 1/ }) as HTMLOptionElement).value } });
     expect(screen.getByRole('combobox', { name: 'Protocolo' })).toHaveTextContent('REST');
     expect(screen.getByRole('combobox', { name: 'Protocolo' })).toHaveTextContent('SOAP');
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
@@ -109,8 +136,8 @@ describe('Editor visual', () => {
   });
   it('fecha propriedades ao clicar fora e preserva seleção ao interagir no painel', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'API' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Service' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Service 1' }));
     expect(screen.getByRole('textbox', { name: 'Nome de apresentação' })).toBeInTheDocument();
     fireEvent.pointerDown(screen.getByRole('textbox', { name: 'Nome de apresentação' }));
     expect(screen.getByRole('textbox', { name: 'Nome de apresentação' })).toBeInTheDocument();
@@ -127,9 +154,9 @@ describe('Editor visual', () => {
   });
   it('configura API, conecta ao Database e remove apenas a conexão', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Service' }));
     fireEvent.click(screen.getByRole('button', { name: 'Database' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Service 1' }));
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Pré-processamento (ms)' }), { target: { value: '30' } });
     expect(screen.getByRole('spinbutton', { name: 'Pré-processamento (ms)' })).toHaveValue(30);
     const target = screen.getByRole('combobox', { name: 'Destino' });
@@ -153,9 +180,9 @@ describe('Editor visual', () => {
   });
   it('anuncia alterações aplicadas e descartadas com feedback acessível', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', {name:'API'}));
+    fireEvent.click(screen.getByRole('button', {name:'Service'}));
     fireEvent.click(screen.getByRole('button', {name:'Database'}));
-    fireEvent.click(screen.getByRole('button', {name:'Nó: API 1'}));
+    fireEvent.click(screen.getByRole('button', {name:'Nó: Service 1'}));
     expect(screen.getByText(/Os tempos são aplicados imediatamente/)).toBeInTheDocument();
     fireEvent.change(screen.getByRole('spinbutton', {name:'Pré-processamento (ms)'}), {target:{value:'30'}});
     expect(screen.getByText('Tempo aplicado imediatamente ao componente.')).toBeInTheDocument();
@@ -212,18 +239,18 @@ describe('Editor visual', () => {
   });
   it('permite mudar tema sem alterar o canvas', () => {
     render(<App />);
-    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Service' }));
     fireEvent.change(screen.getByRole('combobox', { name: 'Tema' }), { target: { value: 'dark' } });
     expect(document.documentElement.dataset.theme).toBe('dark');
-    expect(screen.getByTestId('flow')).toHaveTextContent('Nó: API 1');
+    expect(screen.getByTestId('flow')).toHaveTextContent('Nó: Service 1');
   });
 
   it('preserva integração SOAP ao confirmar latência da conexão', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
-    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Service' }));
     fireEvent.click(screen.getByRole('button', { name: 'Nó: Web Browser 1' }));
-    const option = screen.getByRole('option', { name: /API 1/ });
+    const option = screen.getByRole('option', { name: /Service 1/ });
     fireEvent.change(screen.getByRole('combobox', { name: 'Destino' }), { target: { value: (option as HTMLOptionElement).value } });
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
     fireEvent.click(screen.getByRole('button', { name: 'Conexão: REST' }));
@@ -232,7 +259,7 @@ describe('Editor visual', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Salvar integração' }));
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Editar latência (ms)' }), { target: { value: '55' } });
     fireEvent.click(screen.getByRole('button', { name: 'Confirmar alterações' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Nó: API 1' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Nó: Service 1' }));
     fireEvent.click(screen.getByRole('button', { name: 'Conexão: SOAP' }));
     expect(screen.getByRole('combobox', { name: 'Tipo de integração' })).toHaveValue('SOAP_HTTP');
     expect(screen.getByRole('textbox', { name: 'Operação SOAP' })).toHaveValue('ConsultarSeguro');
@@ -245,17 +272,17 @@ describe('Editor visual', () => {
       expect(body.scenario.entry.componentId).toBeTruthy();
       expect(body.scenario.entry.connectionId).toBeTruthy();
       expect(body.scenario.sessionSetup).toEqual([]);
-      expect(body.architecture.components.find(component=>component.type==='API')?.behaviors?.[0].actions[0].kind).toBe('RESPOND');
+      expect(body.architecture.components.find(component=>component.type==='SERVICE')?.behaviors?.[0].actions[0].kind).toBe('RESPOND');
       return HttpResponse.json({valid:true,violations:[]});
     });
     server.use(http.post('/api/v1/scenarios/validate',inspect));
     render(<App/>);
     fireEvent.click(screen.getByRole('button',{name:'Web Browser'}));
-    fireEvent.click(screen.getByRole('button',{name:'API'}));
+    fireEvent.click(screen.getByRole('button',{name:'Service'}));
     fireEvent.click(screen.getByRole('button',{name:'Nó: Web Browser 1'}));
-    fireEvent.change(screen.getByRole('combobox',{name:'Destino'}),{target:{value:(screen.getByRole('option',{name:/API 1/}) as HTMLOptionElement).value}});
+    fireEvent.change(screen.getByRole('combobox',{name:'Destino'}),{target:{value:(screen.getByRole('option',{name:/Service 1/}) as HTMLOptionElement).value}});
     fireEvent.click(screen.getByRole('button',{name:'Conectar'}));
-    fireEvent.click(screen.getByRole('button',{name:'Nó: API 1'}));
+    fireEvent.click(screen.getByRole('button',{name:'Nó: Service 1'}));
     fireEvent.click(screen.getByRole('button',{name:'Adicionar comportamento'}));
     expect(screen.getByRole('combobox',{name:'Tipo da ação 1.1'})).toHaveValue('RESPOND');
     expect(screen.queryByRole('combobox',{name:'Tipo de cenário'})).not.toBeInTheDocument();

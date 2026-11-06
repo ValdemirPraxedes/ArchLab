@@ -43,6 +43,49 @@ public final class ArchitectureGraphValidatorV2 {
             if (component instanceof ApiV2 api) {
                 duration(api.preProcessingMs(), path + ".preProcessingMs", errors);
                 duration(api.postProcessingMs(), path + ".postProcessingMs", errors);
+            } else if (component instanceof ServiceComponentV5 service) {
+                duration(service.preProcessingMs(), path + ".preProcessingMs", errors);
+                duration(service.postProcessingMs(), path + ".postProcessingMs", errors);
+                duration(service.defaultTtlMs(), path + ".defaultTtlMs", errors);
+                if (service.schedules().size()>100 || service.routes().size()>100 || service.rules().size()>100)
+                    add(errors,"INVALID_COMPONENT_CAPABILITY",path,"Component configuration exceeds 100 entries");
+                if (!service.schedules().isEmpty() && service.type()!=ComponentTypeV2.SCHEDULER)
+                    add(errors,"INVALID_COMPONENT_CAPABILITY",path+".schedules","Only Scheduler accepts schedules");
+                if (!service.routes().isEmpty() && service.type()!=ComponentTypeV2.API_GATEWAY)
+                    add(errors,"INVALID_COMPONENT_CAPABILITY",path+".routes","Only API Gateway accepts routes");
+                if (service.type()==ComponentTypeV2.API_GATEWAY && service.routes().isEmpty())
+                    add(errors,"INVALID_ROUTING_RULE",path+".routes","API Gateway needs at least one route");
+                if (service.type()==ComponentTypeV2.SCHEDULER && service.schedules().isEmpty())
+                    add(errors,"INVALID_SCHEDULE",path+".schedules","Scheduler needs at least one finite schedule");
+                if ((!service.rules().isEmpty() || service.defaultDecision()!=null)
+                        && service.type()!=ComponentTypeV2.RULES_ENGINE)
+                    add(errors,"INVALID_COMPONENT_CAPABILITY",path+".rules","Only Rules Engine accepts rules");
+                Set<String> routeOperations=new HashSet<>();
+                for (var route:service.routes()) if (!routeOperations.add(route.operation()))
+                    add(errors,"INVALID_ROUTING_RULE",path+".routes","Duplicate gateway route operation");
+                Set<String> scheduleIds=new HashSet<>();
+                for (var schedule:service.schedules()) {
+                    if (!scheduleIds.add(schedule.id()) || schedule.firstAtMs()<0 || schedule.intervalMs()<0
+                            || schedule.occurrenceCount()<1 || schedule.occurrenceCount()>100
+                            || schedule.firstAtMs()+schedule.intervalMs()*(schedule.occurrenceCount()-1)>3_600_000)
+                        add(errors,"INVALID_SCHEDULE",path+".schedules","Schedule must be unique, finite and within the virtual horizon");
+                }
+                if (service.type()==ComponentTypeV2.RULES_ENGINE && service.defaultDecision()==null)
+                    add(errors,"INVALID_DECISION_RULE",path+".defaultDecision","Rules Engine needs an explicit default");
+                if (service.defaultDecision()!=null && !Set.of("ALLOW","DENY","REVIEW").contains(service.defaultDecision()))
+                    add(errors,"INVALID_DECISION_RULE",path+".defaultDecision","Unknown default decision");
+                Set<String> ruleIds=new HashSet<>();
+                for (var rule:service.rules()) {
+                    if (!identifier(rule.id()) || !identifier(rule.field()) || !ruleIds.add(rule.id())
+                            || rule.priority()<0 || rule.priority()>10_000
+                            || !Set.of("EQ","NE","GT","GTE","LT","LTE","IN").contains(rule.operator())
+                            || !Set.of("ALLOW","DENY","REVIEW").contains(rule.decision())
+                            || ("IN".equals(rule.operator()) != (rule.expectedValue() instanceof List<?>))
+                            || Set.of("GT","GTE","LT","LTE").contains(rule.operator())
+                                && !(rule.expectedValue() instanceof Number)
+                            || rule.expectedValue() instanceof List<?> values && (values.isEmpty() || values.size()>32))
+                        add(errors,"INVALID_DECISION_RULE",path+".rules","Invalid or duplicate decision rule");
+                }
             } else if (component instanceof DatabaseV2 database) {
                 duration(database.processingMs(), path + ".processingMs", errors);
             } else if (component instanceof BrokerV2 broker) {
@@ -97,12 +140,12 @@ public final class ArchitectureGraphValidatorV2 {
             // Include every resolvable edge in the directed graph, even if its type is invalid.
             // This catches cycles outside the selected execution path.
             graph.get(connection.sourceId()).add(connection.targetId());
-            boolean http = (source.type().isClient() && target.type() == ComponentTypeV2.API)
-                    || (source.type() == ComponentTypeV2.API && target.type() == ComponentTypeV2.API);
-            boolean db = source.type() == ComponentTypeV2.API && target.type() == ComponentTypeV2.DATABASE;
-            boolean messaging = ((source.type().isClient() || source.type() == ComponentTypeV2.API)
+            boolean http = source.type().initiatesRequest() && target.type().receivesRequest()
+                    && (!source.type().isClient() || target.type().isProcessor());
+            boolean db = source.type().initiatesRequest() && target.type() == ComponentTypeV2.DATABASE;
+            boolean messaging = (source.type().publishesMessage()
                     && target.type() == ComponentTypeV2.BROKER)
-                    || (source.type() == ComponentTypeV2.BROKER && target.type() == ComponentTypeV2.API);
+                    || (source.type() == ComponentTypeV2.BROKER && target.type().consumesMessage());
             if (override != null && !http) {
                 add(errors, "INVALID_INTEGRATION", path + ".apiProcessingOverride",
                         "Processing override is permitted only for connections entering an API");
@@ -114,7 +157,12 @@ public final class ArchitectureGraphValidatorV2 {
             if (integration == null || (http && integration.kind() == IntegrationKindV2.DATABASE_QUERY)
                     || (http && integration.kind().isMessaging())
                     || (db && integration.kind() != IntegrationKindV2.DATABASE_QUERY)
-                    || (messaging && !integration.kind().isMessaging())) {
+                    || (messaging && !integration.kind().isMessaging())
+                    || (target.type().isVirtualResource() && integration.kind()==IntegrationKindV2.WEBSOCKET)
+                    || (integration.kind()==IntegrationKindV2.WEBSOCKET
+                        && !((source.type().isClient() || source.type()==ComponentTypeV2.API
+                                || source.type()==ComponentTypeV2.SERVICE)
+                            && (target.type()==ComponentTypeV2.API || target.type()==ComponentTypeV2.SERVICE)))) {
                 add(errors, "INVALID_INTEGRATION", path + ".integration",
                         "Integration kind is incompatible with connection endpoints");
             } else if (messaging) {
@@ -147,7 +195,8 @@ public final class ArchitectureGraphValidatorV2 {
                 if (destination == null || connection == null
                         || !broker.id().equals(connection.sourceId())
                         || !subscription.consumerComponentId().equals(connection.targetId())
-                        || !(components.get(subscription.consumerComponentId()) instanceof ApiV2)
+                        || components.get(subscription.consumerComponentId()) == null
+                        || !components.get(subscription.consumerComponentId()).type().isProcessor()
                         || connection.integration() == null
                         || connection.integration().kind() != destination.kind()
                         || !destination.name().equals(destinationName(connection.integration()))) {

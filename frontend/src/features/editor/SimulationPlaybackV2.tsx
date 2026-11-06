@@ -36,6 +36,8 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
   const total = result.execution.totalDurationMs;
   const canonical = result as unknown as Partial<SimulationResponseV1>;
   const unified = canonical.execution?.mode === 'UNIFIED';
+  const visibleOutcomes=(canonical.resourceOutcomes ?? []).filter(outcome => (outcome.timestampMs ?? 0)<=cursor.time);
+  const actionEvents=(canonical.trace ?? []).filter((event):event is Extract<SimulationResponseV1['trace'][number],{type:'ACTION_EVENT'}>=>event.type==='ACTION_EVENT' && (event.timestampMs<cursor.time || event.timestampMs===cursor.time && event.sequence<=cursor.sequence));
   const sorted = orderedTrace(result.trace);
   useEffect(() => {
     if (!playing || step) { frameTime.current = null; return; }
@@ -87,6 +89,16 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
         {resource.kind} {resource.id}: {state.resources[`${resource.kind}:${resource.id}`] ?? 'não iniciado'}
       </li>)}</ul>
     </section>}
+    {(canonical.resourceOutcomes?.length ?? 0)>0 && <section aria-label="Resultados dos recursos v0.5">
+      <h3>Resultados dos recursos</h3>
+      <p>{visibleOutcomes.length} de {canonical.resourceOutcomes?.length} resultados até {Math.round(time)} ms.</p>
+      <ol>{visibleOutcomes.map((outcome,index)=><li key={`${outcome.actionId}-${outcome.operationId ?? index}-${index}`}>
+        {outcome.timestampMs ?? 0} ms · {outcome.componentId ?? 'recurso'} · ação {outcome.actionId} · <strong>{outcome.resultCode}</strong> ({outcome.status})
+        {outcome.resultRef && ` · ${outcome.resultRef}`}
+        {outcome.details && Object.keys(outcome.details).length>0 && <span> · {Object.entries(outcome.details).map(([key,value])=>`${key}: ${String(value)}`).join(', ')}</span>}
+      </li>)}</ol>
+    </section>}
+    {actionEvents.length>0 && <section aria-label="Actions e ramos v0.5"><h3>Actions e ramos</h3><ol>{actionEvents.map(event=><li key={event.sequence}>{event.timestampMs} ms · {event.actionId} · <strong>{event.status}</strong>{event.status==='SKIPPED'?' (ramo descartado)':''}</li>)}</ol></section>}
     <div className="inspector-toggle-row"><button type="button" aria-expanded={inspectorOpen} aria-controls="playback-inspector-content" onClick={() => setInspectorOpen(open => !open)}>{inspectorOpen ? <><ChevronDown size={16} aria-hidden="true" /> Recolher inspeção</> : <><ChevronRight size={16} aria-hidden="true" /> Abrir inspeção</>} ({events.length} eventos)</button></div>
     {inspectorOpen && <div className="playback-inspector-shell" id="playback-inspector-content" style={{ height: inspectorHeight }}>
       <div className="playback-inspector-resize" role="separator" aria-label="Redimensionar inspeção" aria-orientation="horizontal" aria-valuemin={100} aria-valuemax={600} aria-valuenow={inspectorHeight} tabIndex={0} onPointerDown={onResizeStart} onPointerMove={onResizeMove} onPointerUp={onResizeEnd} onPointerCancel={onResizeEnd} onKeyDown={event => { if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setInspectorHeight(height => Math.max(100, Math.min(600, height + (event.key === "ArrowDown" ? 24 : -24)))); } }}><span className="playback-resize-grip" /></div>

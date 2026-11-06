@@ -42,8 +42,11 @@ public final class UnifiedSimulationV41 {
     private final Map<String,long[]> websocketCounts = new LinkedHashMap<>();
     private final Map<String,long[]> messagingMetrics = new LinkedHashMap<>();
     private final List<Map<String,Object>> rootOperations = new ArrayList<>();
+    private final List<Map<String,Object>> resourceOutcomes = new ArrayList<>();
+    private final VirtualResourcesV5 virtualResources = new VirtualResourcesV5();
     private long now, scheduleOrder;
-    private int messageNumber, exchangeNumber, resourceNumber, activityNumber, pendingRoots, scheduledCount;
+    private int messageNumber, exchangeNumber, resourceNumber, activityNumber, pendingRoots, scheduledCount,
+            scheduleInvocationNumber;
     private boolean mainFinished, mainTimedOut, derivedFailed;
     private Integer responseStatusCode;
 
@@ -135,24 +138,25 @@ public final class UnifiedSimulationV41 {
                                 "connectionId",edge.id(),"startMs",started,"endMs",now,"durationMs",now-started));
                         done.finish(successful);
                     });
-            if (target instanceof ApiV2 api) activateApi(api,edge,exchangeId,"REQUEST_RECEIVED",operation(edge),null,null,reply);
+            if (target != null && target.type().isProcessor()) activateApi(target,edge,exchangeId,"REQUEST_RECEIVED",operation(edge),null,null,reply);
             else if (target instanceof DatabaseV2 database)
                 process(database.id(),"DATABASE_PROCESSING",database.processingMs(),() -> reply.finish(true));
             else throw new IllegalArgumentException("Invalid synchronous recipient");
         });
     }
 
-    private void activateApi(ApiV2 api, ConnectionV2 incoming, String parentExchangeId,
+    private void activateApi(ComponentV2 api, ConnectionV2 incoming, String parentExchangeId,
                              String trigger, String operation, String destinationName, String websocketPath,
                              Completion done) {
         long pre = incoming != null && incoming.apiProcessingOverride() != null
-                ? incoming.apiProcessingOverride().preProcessingMs() : api.preProcessingMs();
+                ? incoming.apiProcessingOverride().preProcessingMs() : pre(api);
         long post = incoming != null && incoming.apiProcessingOverride() != null
-                ? incoming.apiProcessingOverride().postProcessingMs() : api.postProcessingMs();
+                ? incoming.apiProcessingOverride().postProcessingMs() : post(api);
         process(api.id(),"API_PRE_PROCESSING",pre,() -> {
             Behavior behavior=plan.match(api.id(),trigger,operation,destinationName,websocketPath);
             if (behavior==null) {
-                process(api.id(),"API_POST_PROCESSING",post,() -> done.finish(true));
+                boolean legacy=api.type()==ComponentTypeV2.API;
+                process(api.id(),"API_POST_PROCESSING",post,() -> done.finish(legacy));
                 return;
             }
             executeBehavior(api,behavior,parentExchangeId,post,done);
@@ -165,21 +169,31 @@ public final class UnifiedSimulationV41 {
         return edge.integration().kind().name();
     }
 
-    private void executeBehavior(ApiV2 api, Behavior behavior, String parent,
+    private static long pre(ComponentV2 component) {
+        return component instanceof ApiV2 api?api.preProcessingMs():
+                component instanceof ServiceComponentV5 service?service.preProcessingMs():0;
+    }
+    private static long post(ComponentV2 component) {
+        return component instanceof ApiV2 api?api.postProcessingMs():
+                component instanceof ServiceComponentV5 service?service.postProcessingMs():0;
+    }
+
+    private void executeBehavior(ComponentV2 api, Behavior behavior, String parent,
                                  long postDuration, Completion done) {
         new BehaviorRun(api,behavior,parent,postDuration,done).pump();
     }
 
     private final class BehaviorRun {
-        private final ApiV2 api;
+        private final ComponentV2 api;
         private final Behavior behavior;
         private final String parent;
         private final long postDuration;
         private final Completion done;
         private final Map<String,String> status=new LinkedHashMap<>();
+        private final Map<String,String> resultCodes=new HashMap<>();
         private boolean responseSent, completionSent;
 
-        BehaviorRun(ApiV2 api, Behavior behavior, String parent,long postDuration,Completion done) {
+        BehaviorRun(ComponentV2 api, Behavior behavior, String parent,long postDuration,Completion done) {
             this.api=api; this.behavior=behavior; this.parent=parent; this.postDuration=postDuration; this.done=done;
             for (Action action:behavior.actions()) status.put(action.id(),"PENDING");
         }
@@ -188,14 +202,19 @@ public final class UnifiedSimulationV41 {
                 if (!"PENDING".equals(status.get(action.id()))) continue;
                 List<String> dependencies=new ArrayList<>(action.dependsOn());
                 if ("JOIN".equals(action.kind())) dependencies.addAll(action.actionIds());
-                if (dependencies.stream().anyMatch(id -> "FAILED".equals(status.get(id)))) {
+                if (dependencies.stream().anyMatch(id -> "SKIPPED".equals(status.get(id)))) {
+                    status.put(action.id(),"SKIPPED"); actionEvent(api.id(),action.id(),"SKIPPED","BRANCH_NOT_SELECTED",parent);
+                } else if (dependencies.stream().anyMatch(id -> "FAILED".equals(status.get(id)))
+                        && !("BRANCH".equals(action.kind())
+                            && resultCodes.containsKey(action.options().get("resultRef")))) {
                     status.put(action.id(),"FAILED"); actionEvent(api.id(),action.id(),"FAILED","DEPENDENCY_FAILED",parent);
-                } else if (dependencies.stream().allMatch(id -> "COMPLETED".equals(status.get(id)))) {
+                } else if (dependencies.stream().allMatch(id -> "COMPLETED".equals(status.get(id))
+                        || "BRANCH".equals(action.kind()) && "FAILED".equals(status.get(id)))) {
                     status.put(action.id(),"SCHEDULED");
                     schedule(now,() -> execute(action));
                 }
             }
-            if (status.values().stream().allMatch(s -> "COMPLETED".equals(s) || "FAILED".equals(s)) && !completionSent) {
+            if (status.values().stream().allMatch(s -> "COMPLETED".equals(s) || "FAILED".equals(s) || "SKIPPED".equals(s)) && !completionSent) {
                 completionSent=true;
                 if (!responseSent) process(api.id(),"API_POST_PROCESSING",postDuration,
                         () -> done.finish(status.values().stream().noneMatch("FAILED"::equals)));
@@ -242,8 +261,118 @@ public final class UnifiedSimulationV41 {
                 case "WS_SEND" -> sendSessionMessage(api.id(),action,parent,finish);
                 case "CLOSE_SESSION" -> closeSession(action.sessionAlias(),"CLOSE_ACTION",finish);
                 case "FORK", "JOIN" -> finish.finish(true);
+                case "SCHEDULE_TRIGGER" -> {
+                    if (!(api instanceof ServiceComponentV5 scheduler)
+                            || scheduler.type()!=ComponentTypeV2.SCHEDULER) {finish.finish(false);break;}
+                    String scheduleId=(String)action.options().get("scheduleId");
+                    ServiceComponentV5.Schedule config=scheduler.schedules().stream()
+                            .filter(s -> s.id().equals(scheduleId)).findFirst().orElse(null);
+                    if (config==null) {finish.finish(false);break;}
+                    int invocation=++scheduleInvocationNumber;
+                    for (int i=0;i<config.occurrenceCount();i++) {
+                        int occurrence=i+1;
+                        long planned=Math.addExact(config.firstAtMs(),
+                                Math.multiplyExact(config.intervalMs(),i));
+                        long at=Math.max(now,planned);
+                        schedule(at,() -> {
+                            String child="schedule-"+scheduleId+"-"+invocation+"-"+occurrence;
+                            event(fields("type","SCHEDULED_TRIGGER","componentId",scheduler.id(),
+                                    "operationId",child,"parentExchangeId",parent,
+                                    "rootOperationId","request-1","scheduleId",scheduleId,
+                                    "occurrenceId",child,"occurrenceIndex",occurrence,
+                                    "scheduledAtMs",planned,"firedAtMs",now));
+                            Behavior selected=config.behaviorId()==null
+                                    ?plan.match(scheduler.id(),"SCHEDULED_TRIGGER",null,null,null)
+                                    :plan.behaviors().getOrDefault(scheduler.id(),List.of()).stream()
+                                        .filter(b -> b.id().equals(config.behaviorId())
+                                                && b.trigger().equals("SCHEDULED_TRIGGER"))
+                                        .findFirst().orElse(null);
+                            if (selected!=null) executeBehavior(scheduler,selected,child,0,
+                                    successful -> {if (!successful) derivedFailed=true;});
+                        });
+                    }
+                    finish.finish(true);
+                }
+                case "BRANCH" -> {
+                    String code=resultCodes.get(action.options().get("resultRef"));
+                    if (code==null) {finish.finish(false);break;}
+                    @SuppressWarnings("unchecked") List<Map<String,Object>> cases=
+                            (List<Map<String,Object>>)action.options().get("cases");
+                    @SuppressWarnings("unchecked") List<String> defaults=
+                            (List<String>)action.options().getOrDefault("defaultActionIds",List.of());
+                    List<String> selected=defaults;
+                    for (Map<String,Object> item:cases) if (code.equals(item.get("equals"))) {
+                        @SuppressWarnings("unchecked") List<String> ids=(List<String>)item.get("actionIds");
+                        selected=ids; break;
+                    }
+                    Set<String> chosen=Set.copyOf(selected);
+                    for (Map<String,Object> item:cases) {
+                        @SuppressWarnings("unchecked") List<String> ids=(List<String>)item.get("actionIds");
+                        for (String id:ids) if (!chosen.contains(id)) skip(id);
+                    }
+                    for (String id:defaults) if (!chosen.contains(id)) skip(id);
+                    finish.finish(true);
+                }
+                case "CACHE_GET", "CACHE_PUT", "CACHE_INVALIDATE", "OBJECT_GET", "OBJECT_PUT",
+                     "OBJECT_DELETE", "SEND_NOTIFICATION", "INDEX_DOCUMENT", "SEARCH_DOCUMENTS",
+                     "REGISTER_SERVICE", "UNREGISTER_SERVICE", "DISCOVER_SERVICE", "EVALUATE_RULE"
+                     -> resourceAction(action,finish);
+                case "TRANSFORM" -> {
+                    Object ref=action.options().get("outputRef");
+                    if (ref instanceof String name) resultCodes.put(name,"TRANSFORMED");
+                    Map<String,Object> result=new ResourceOutcomeV5(action.id(),
+                            ResourceOutcomeV5.Status.SUCCEEDED,ResourceOutcomeV5.Code.TRANSFORMED,
+                            ref instanceof String name?name:null,now,
+                            parent==null?"request-1":parent,api.id(),action.connectionId(),Map.of()).toMap();
+                    resourceOutcomes.add(result);
+                    event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",api.id(),
+                            "operationId",parent==null?"request-1":parent,"status","COMPLETED",
+                            "cause","VIRTUAL_TRANSFORM","outcome",result));
+                    finish.finish(true);
+                }
                 default -> finish.finish(false);
             }
+        }
+        void skip(String id) {
+            if ("PENDING".equals(status.get(id))) {
+                status.put(id,"SKIPPED");
+                actionEvent(api.id(),id,"SKIPPED","BRANCH_NOT_SELECTED",parent);
+            }
+        }
+        void resourceAction(Action action,Completion finish) {
+            ConnectionV2 edge=connections.get(action.connectionId());
+            ServiceComponentV5 resource=(ServiceComponentV5)components.get(edge.targetId());
+            String operationId="exchange-"+(++exchangeNumber);
+            send(edge,edge.sourceId(),edge.targetId(),"REQUEST",action.kind(),operationId,parent,() -> {
+                long delay=action.durationMs();
+                boolean timedOut=action.timeoutMs()>0 && delay>action.timeoutMs();
+                if (timedOut) delay=action.timeoutMs();
+                final boolean deadline=timedOut;
+                process(resource.id(),"VIRTUAL_RESOURCE_PROCESSING",delay,() -> {
+                VirtualResourcesV5.Outcome outcome=deadline
+                        ?new VirtualResourcesV5.Outcome("TIMED_OUT",Map.of())
+                        :virtualResources.execute(resource,action,now,resultCodes);
+                boolean successful=!Set.of("FAILED","TIMED_OUT").contains(outcome.resultCode());
+                ResourceOutcomeV5.Status outcomeStatus=successful?ResourceOutcomeV5.Status.SUCCEEDED:
+                        ResourceOutcomeV5.Status.valueOf(outcome.resultCode());
+                Object ref=action.options().get("outputRef");
+                if (ref instanceof String name) {
+                    resultCodes.put(name,outcome.resultCode());
+                }
+                Map<String,Object> result=new ResourceOutcomeV5(action.id(),outcomeStatus,
+                        ResourceOutcomeV5.Code.valueOf(outcome.resultCode()),
+                        ref instanceof String name?name:null,now,operationId,
+                        resource.id(),edge.id(),outcome.details()).toMap();
+                resourceOutcomes.add(result);
+                event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",resource.id(),
+                        "operationId",operationId,"parentExchangeId",parent,
+                        "status","COMPLETED","cause","RESOURCE_OPERATION",
+                        "outcome",result));
+                if (deadline) finish.finish(false);
+                else send(edge,edge.targetId(),edge.sourceId(),"RESPONSE",action.kind(),operationId,parent,
+                        () -> finish.finish(successful));
+                });
+            });
         }
     }
 
@@ -283,7 +412,8 @@ public final class UnifiedSimulationV41 {
                     finishResource(id,"TIMED_OUT"); derivedFailed=true;
                 }
             }));
-            if (components.get(edge.targetId()) instanceof ApiV2 target &&
+            ComponentV2 target=components.get(edge.targetId());
+            if (target!=null && target.type().isProcessor() &&
                     plan.match(target.id(),"SESSION_OPENED",null,null,ws.path())!=null)
                 activateApi(target,edge,id,"SESSION_OPENED",null,null,ws.path(),ok -> {if (!ok) derivedFailed=true;});
             done.finish(true);
@@ -305,9 +435,10 @@ public final class UnifiedSimulationV41 {
         if (action.sender()!=null && !action.sender().equals(sender)) {done.finish(false);return;}
         send(edge,source,target,"MESSAGE","WEBSOCKET_MESSAGE",session.id(),parent,() -> {
             websocketCounts.computeIfAbsent(session.id(), ignored -> new long[2])[source.equals(edge.sourceId()) ? 0 : 1]++;
-            if (components.get(target) instanceof ApiV2 api && edge.integration() instanceof WebSocketIntegrationV2 ws
-                    && plan.match(api.id(),"WS_MESSAGE_RECEIVED",null,null,ws.path())!=null)
-                activateApi(api,edge,session.id(),"WS_MESSAGE_RECEIVED",null,null,ws.path(),ok -> {if (!ok) derivedFailed=true;});
+            ComponentV2 peer=components.get(target);
+            if (peer!=null && peer.type().isProcessor() && edge.integration() instanceof WebSocketIntegrationV2 ws
+                    && plan.match(peer.id(),"WS_MESSAGE_RECEIVED",null,null,ws.path())!=null)
+                activateApi(peer,edge,session.id(),"WS_MESSAGE_RECEIVED",null,null,ws.path(),ok -> {if (!ok) derivedFailed=true;});
             done.finish(true);
         });
     }
@@ -365,7 +496,7 @@ public final class UnifiedSimulationV41 {
             for (BrokerSubscriptionV2 subscription : recipients) {
                 if (metric[1] >= 1000) throw new IllegalArgumentException("Delivery limit exceeded");
                 ConnectionV2 delivery = connections.get(subscription.connectionId());
-                ApiV2 consumer = (ApiV2)components.get(subscription.consumerComponentId());
+                ComponentV2 consumer = components.get(subscription.consumerComponentId());
                 String deliveryId = "delivery-"+nextResource();
                 resources.put(deliveryId,new Resource(deliveryId,"DELIVERY","ACTIVE"));
                 lifecycle.open(deliveryId,br.com.archlab.simulation.core.v4.ExecutionLifecycleV4.ResourceKind.DELIVERY);
@@ -413,7 +544,8 @@ public final class UnifiedSimulationV41 {
             schedule(sent,() -> message(now,"SENT",id,sessionId,parentExchangeId,edge,source,target,"MESSAGE","WEBSOCKET_MESSAGE"));
             schedule(arrived,() -> {
                 message(now,"ARRIVED",id,sessionId,parentExchangeId,edge,source,target,"MESSAGE","WEBSOCKET_MESSAGE");
-                if (components.get(target) instanceof ApiV2 api &&
+                ComponentV2 api=components.get(target);
+                if (api!=null && api.type().isProcessor() &&
                         plan.match(api.id(),"WS_MESSAGE_RECEIVED",null,null,integration.path())!=null) {
                     activeSessionBehaviors.merge(sessionId,1,Integer::sum);
                     activateApi(api,edge,sessionId,"WS_MESSAGE_RECEIVED",null,null,integration.path(),
@@ -584,7 +716,8 @@ public final class UnifiedSimulationV41 {
                 "trace",trace,"timeline",timeline,"metrics",fields("totalDurationMs",now,
                         "processingByComponent",processingMetrics,"communicationByConnection",communicationMetrics,
                         "waitingByComponent",waits,"exchanges",exchanges,"websocket",websocketMetrics,"messaging",messaging),
-                "messageRepresentations",representations,"resourceStates",resourceStates,"rootOperations",rootOperations);
+                "messageRepresentations",representations,"resourceStates",resourceStates,
+                "resourceOutcomes",resourceOutcomes,"rootOperations",rootOperations);
     }
 
     private static String destination(IntegrationV2 integration) {
