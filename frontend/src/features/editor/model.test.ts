@@ -6,7 +6,7 @@ describe('modelo do editor', () => {
     expect(isComponentType('CLIENT')).toBe(true);
     expect(isComponentType('API')).toBe(true);
     expect(isComponentType('DATABASE')).toBe(true);
-    expect(isComponentType('CACHE')).toBe(false);
+    expect(isComponentType('CACHE')).toBe(true);
   });
   it.each(VISUAL_CLIENT_TYPES)('cria instâncias independentes de %s com nome, tipo e posição', (type) => {
     expect(isComponentType(type)).toBe(true);

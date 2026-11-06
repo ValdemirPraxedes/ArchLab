@@ -57,7 +57,7 @@ The runtime appends `resourceOutcomes` to the existing `/api/v1/simulations` res
 
 ## Known limits
 
-- The legacy API migration service is explicit and validates the converted architecture, but it is not wired into the frontend import flow. MIG-04 requires a frontend palette and serializer change, which is excluded from this backend delivery. Historical API scenarios continue through their existing path.
+- The legacy API migration service is explicit and validates the converted architecture. A later frontend authorization added an editor JSON import flow with the same copy-based conversion and `SERVICE` serialization. Historical API scenarios continue through their existing path.
 - Rules currently compare prior Action result codes; the contract does not yet expose scenario attributes as rule inputs.
 - A Gateway request without a matching explicit route is rejected by validation. There is no implicit fallback route.
 - A failed scheduled child run affects `globalStatus` while the already completed main response retains its `mainStatus`; this is covered by an integration test.

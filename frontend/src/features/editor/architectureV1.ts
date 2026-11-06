@@ -1,16 +1,30 @@
 import type { ArchitectureV1, SimulationRequestV1 } from '../../api/archlabV1Client';
 import type { ArchitectureNode, ArchitectureEdge } from './model';
+import { isProcessorType, isV5ServiceType } from './model';
 import type { ScenarioDraft } from './scenario';
 import { allowedIntegrationKinds, defaultIntegration, integrationError } from './integration';
 
 export function toArchitectureV1(nodes: ArchitectureNode[], edges: ArchitectureEdge[]): ArchitectureV1 {
   const components = nodes.map(node => {
-    const base = {id:node.id, displayName:node.data.displayName ?? node.data.label};
+    const base = {...node.data.importedComponent,id:node.id, displayName:node.data.displayName ?? node.data.label};
     switch (node.data.componentType) {
       case 'API': return {...base,type:'API' as const,preProcessingMs:node.data.preProcessingMs ?? 0,postProcessingMs:node.data.postProcessingMs ?? 0,behaviors:node.data.behaviors ?? []};
       case 'DATABASE': return {...base,type:'DATABASE' as const,processingMs:node.data.processingMs ?? 0};
       case 'BROKER': return {...base,type:'BROKER' as const,destinations:node.data.destinations ?? [],subscriptions:node.data.subscriptions ?? []};
-      default: return {...base,type:node.data.componentType};
+      default:
+        if (isV5ServiceType(node.data.componentType)) return {
+          ...base,type:node.data.componentType,
+          ...(isProcessorType(node.data.componentType) ? {behaviors:node.data.behaviors ?? [],
+            ...(node.data.preProcessingMs!==undefined?{preProcessingMs:node.data.preProcessingMs}:{}),
+            ...(node.data.postProcessingMs!==undefined?{postProcessingMs:node.data.postProcessingMs}:{})} : {}),
+          ...(node.data.componentType==='API_GATEWAY' && node.data.routes!==undefined ? {routes:node.data.routes} : {}),
+          ...(node.data.componentType==='SCHEDULER' && node.data.schedules!==undefined ? {schedules:node.data.schedules} : {}),
+          ...(node.data.componentType==='RULES_ENGINE' ? {
+            ...(node.data.rules!==undefined?{rules:node.data.rules}:{}),
+            ...(node.data.defaultDecision!==undefined?{defaultDecision:node.data.defaultDecision}:{})} : {}),
+          ...(node.data.componentType==='CACHE' && node.data.defaultTtlMs!==undefined ? {defaultTtlMs:node.data.defaultTtlMs} : {}),
+        };
+        return {...base,type:node.data.componentType};
     }
   }) as ArchitectureV1['components'];
   const connections = edges.map(edge => {
@@ -23,7 +37,7 @@ export function toArchitectureV1(nodes: ArchitectureNode[], edges: ArchitectureE
     const error = integrationError(integration,source.data.componentType,target.data.componentType);
     if (error) throw new Error(error);
     const override = edge.data?.apiProcessingOverride;
-    if (override && target.data.componentType !== 'API') throw new Error('Override permitido somente para API de destino.');
+    if (override && !['API','SERVICE'].includes(target.data.componentType)) throw new Error('Override permitido somente para API ou SERVICE de destino.');
     return {id:edge.id,sourceId:edge.source,targetId:edge.target,latencyMs:edge.data?.latencyMs ?? 0,
       integration,...(override ? {apiProcessingOverride:override} : {})};
   });
