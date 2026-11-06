@@ -17,4 +17,4 @@ BE5-01 has a validated OpenAPI 3.1 contract and generated TypeScript types. BE5-
 - `npm run verify:v5-live` against a local Spring Boot server: eight v0.5 requests passed HTTP response and full `SimulationResponse` schema validation, including Cache/BRANCH, Gateway/BFF, Broker/Worker/Notification, Auth/Rules, virtual resources, Webhook/Orchestrator/Bus, and Scheduler.
 - `npm run verify:live` against the same server: 13 historical positive scenarios and three negative cases passed.
 
-The user moved BE5-15 to validation in Trello and authorized FE5-01 through FE5-05. The full delivery PR remains unopened pending final frontend validation and review. No merge was performed.
+The user moved BE5-15 to validation in Trello and authorized FE5-01 through FE5-05. The full delivery is published as [PR #87](https://github.com/ValdemirPraxedes/ArchLab/pull/87) against `develop` for review. No merge was performed.
