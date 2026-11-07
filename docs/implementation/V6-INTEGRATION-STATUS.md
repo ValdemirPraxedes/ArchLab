@@ -20,6 +20,7 @@ No V6 task is marked complete solely from a passing build or a basic scenario te
 | Scenario | Evidence | Status |
 | --- | --- | --- |
 | CT-6-01 Relational insert → select | `DataActionsV6IntegrationTest.relationalInsertIsVisibleToLaterSelectAndRunIsIsolated` | Basic path passes |
+| Relational update → delete and duplicate-key result | `relationalUpdateDeleteAndDuplicateKeyHaveObservableResults` | Passes |
 | CT-6-02 Document put → find | `keyValueMissPutHitAndDocumentFindAreObservable` | Basic path passes |
 | CT-6-03 Key-value miss → put → hit | Same Java integration test | Passes |
 | CT-6-04 Pool size 1 and FIFO wait | `poolOneQueuesConcurrentWritesWithoutLosingEither` | Basic path passes |
@@ -34,6 +35,7 @@ No V6 task is marked complete solely from a passing build or a basic scenario te
 
 - `FILTER_VALID` and `NORMALIZE_METADATA` are in the OpenAPI enum but are rejected by the Java semantic validator until their record semantics are specified and implemented. `IDENTITY` is executable.
 - Initial datasets and bulk inserts are represented by logical counts; detailed key/field lookup is available only for explicitly written records. This must be documented and checked against the intended CT-6 semantics.
+- `DB_BULK_INSERT` rejects a single `key` for a multi-record logical batch, because the runtime cannot assign that key unambiguously to every record.
 - Queue timeout, processing timeout and pool occupancy have focused tests, but broader load and memory profiling remain pending.
 - Legacy `DATABASE_QUERY` with text or `CALL` is ambiguous and intentionally blocks automatic conversion. An explicit user choice flow is still needed for those documents.
 - The `/api/v1` OpenAPI allows unversioned historical input. Versioned `0.6` documents reject `API` and `DATABASE`. This boundary requires final contract review.

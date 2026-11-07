@@ -59,6 +59,38 @@ class DataActionsV6IntegrationTest {
         assertEquals(200,response.statusCode());
         assertTrue(response.body().contains("DATA_ACTION_INCOMPATIBLE"),response.body());
     }
+    @Test void relationalUpdateDeleteAndDuplicateKeyHaveObservableResults() throws Exception {
+        String body=scenario("RELATIONAL_DATABASE","""
+            [{"id":"insert","kind":"DB_INSERT","connectionId":"data","key":"one"},
+             {"id":"update","kind":"DB_UPDATE","connectionId":"data","key":"one","dependsOn":["insert"]},
+             {"id":"delete","kind":"DB_DELETE","connectionId":"data","key":"one","dependsOn":["update"]},
+             {"id":"read","kind":"DB_SELECT","connectionId":"data","collection":"default","key":"one","dependsOn":["delete"]}]
+            """);
+        var response=post("/api/v1/simulations",body);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode outcomes=json.readTree(response.body()).get("dataOutcomes");
+        assertEquals("INSERTED",outcomes.get(0).get("resultCode").asText());
+        assertEquals("UPDATED",outcomes.get(1).get("resultCode").asText());
+        assertEquals("DELETED",outcomes.get(2).get("resultCode").asText());
+        assertEquals("NOT_FOUND",outcomes.get(3).get("resultCode").asText());
+        String duplicate=scenario("RELATIONAL_DATABASE","""
+            [{"id":"insert","kind":"DB_INSERT","connectionId":"data","key":"one"},
+             {"id":"duplicate","kind":"DB_INSERT","connectionId":"data","key":"one","dependsOn":["insert"]}]
+            """);
+        var duplicateResponse=post("/api/v1/simulations",duplicate);
+        assertEquals(200,duplicateResponse.statusCode(),duplicateResponse.body());
+        JsonNode duplicateOutcomes=json.readTree(duplicateResponse.body()).get("dataOutcomes");
+        assertEquals("FAILED",duplicateOutcomes.get(1).get("resultCode").asText());
+        assertEquals("DUPLICATE_KEY",duplicateOutcomes.get(1).get("errorCode").asText());
+    }
+    @Test void bulkInsertRejectsAmbiguousSingleKey() throws Exception {
+        String body=scenario("RELATIONAL_DATABASE","""
+            [{"id":"bulk","kind":"DB_BULK_INSERT","connectionId":"data","recordCount":3,"key":"one"}]
+            """);
+        var response=post("/api/v1/scenarios/validate",body);
+        assertEquals(200,response.statusCode(),response.body());
+        assertTrue(response.body().contains("INVALID_VIRTUAL_RESOURCE_OPERATION"),response.body());
+    }
     @Test void keyValueMissPutHitAndDocumentFindAreObservable() throws Exception {
         String kv=scenario("KEY_VALUE_STORE","""
             [{"id":"miss","kind":"DB_GET","connectionId":"data","key":"k"},

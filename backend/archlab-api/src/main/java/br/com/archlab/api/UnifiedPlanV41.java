@@ -524,6 +524,9 @@ final class UnifiedPlanV41 {
                 && !"IDENTITY".equals(values.get("transform")))
             error("DATA_COMPONENT_UNSUPPORTED",path+".transform",
                     "Only IDENTITY has defined P0 record semantics");
+        if ("DB_BULK_INSERT".equals(action.kind()) && values.containsKey("key"))
+            error("INVALID_VIRTUAL_RESOURCE_OPERATION",path+".key",
+                    "A logical bulk insert cannot assign one key to multiple records");
     }
     private static boolean capability(ComponentV2 component,String trigger,String kind) {
         if (component==null) return false;
