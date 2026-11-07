@@ -2,8 +2,20 @@
 
 > Registro de handoff entre agentes. Complementa (não substitui) `V6-INTEGRATION-STATUS.md`,
 > `V6-CONTRACT-GATE-AUDIT.md`, `V6-LIMIT-EVIDENCE.md` e `V6-REGRESSION-EVIDENCE.md`.
-> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 5 (V6-03 e V6-14; decisão 2 tomada pelo responsável).
+> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 6 (V6-04; decisão 1 tomada pelo responsável).
 > A sessão 1 (2026-11-06) fez apenas a auditoria; seu texto está preservado nas seções 1–6. A seção 0 abaixo prevalece onde houver diferença.
+
+## 00000. Sessão 6 — 2026-11-07 (Claude): V6-04 e decisão 1
+
+- PR #108 mesclado (`develop` @ `3307754`). Trello: V6-03 e V6-14 em **✅ Concluído**.
+- **Decisão 1 do responsável:** manter a fronteira pelo marcador `schemaVersion`, sem mudança de comportamento para clientes v0.1–v0.5.
+- **V6-04:**
+  - novo schema `CanonicalComponentV6`, usado pelo `if/then` de `Architecture` 0.6; `Api` e `Database` com `deprecated: true`; os comentários soltos viraram `description`;
+  - `ETL_TRANSFORM`: `invalidRecordCount` proibido fora de `FILTER_VALID`, como o backend já fazia;
+  - **Redocly lint executado pela primeira vez**: válido, com 2 avisos aceitos; o lint entrou no CI com versão fixa;
+  - `contract-cases.json` (14 casos válidos e inválidos), verificado pelo schema (`validate.cjs`) e pelo backend (`ContractCasesV6Test`), com paridade total;
+  - `validate.cjs` verifica a resolução de todos os 154 `$ref`, a compilação dos schemas e a coerência `discriminator` × `oneOf`.
+- Pendentes: decisão 4; V6-22, V6-23 e V6-24.
 
 ## 0000. Sessão 5 — 2026-11-07 (Claude): V6-03, V6-14 e decisão 2
 
@@ -211,7 +223,7 @@ Legenda: **Concluída** = aceite do TASKS-V6-001 atendido com teste; **Parcial**
 
 ## 3. Decisões pendentes do responsável (bloqueiam o fechamento de gates)
 
-1. Fronteira de schema canônico × legado: `/api/v1/architectures/validate` deve aceitar `DATABASE` histórico diretamente ou somente após migração explícita?
+1. ~~Fronteira de schema canônico × legado.~~ **Decidido em 2026-11-07: manter a fronteira pelo marcador `schemaVersion`**, agora formalizada em `CanonicalComponentV6`. Ver API-V6-001 §2.1.
 2. ~~Tratamento de `queryText`/`responseText` e `CALL` histórico.~~ **Decidido em 2026-11-07: converter com equivalência temporal** (`CALL` → `DB_SELECT`, texto mantido na conexão, concorrência 1000). Ver MIGRATION-V6-001.
 3. ~~Atomicidade de `DB_BULK_INSERT` ao atingir limite.~~ **Decidido em 2026-11-07: rejeição total (lote atômico).** Ver DATA-BUDGETS-V6-001.
 5. ~~`DB_BULK_INSERT` em `KEY_VALUE_STORE`.~~ **Decidido em 2026-11-07: não em P0.** Ver DM-V6-001 §2.1.
@@ -219,7 +231,7 @@ Legenda: **Concluída** = aceite do TASKS-V6-001 atendido com teste; **Parcial**
 
 ## 4. Problemas conhecidos
 
-- `Component.oneOf` no OpenAPI ainda aceita `DATABASE` para qualquer requisição (comentário não é regra de schema).
+- ~~`Component.oneOf` no OpenAPI ainda aceita `DATABASE` para qualquer requisição.~~ Resolvido na sessão 6: `CanonicalComponentV6` + `Api`/`Database` deprecated.
 - ~~`batchSize`/`maxBatches` de `ETL_PIPELINE` são validados mas não particionam a execução.~~ Resolvido na sessão 2.
 - Initial dataset e bulk são contagens lógicas; `DB_GET`/`DB_FIND` só encontram registros gravados com chave/campo explícitos.
 - ~~`etlAction` usa `IllegalArgumentException` para orçamento > 1M registros.~~ Resolvido na sessão 2 (`ETL_RECORD_BUDGET_EXCEEDED`).
