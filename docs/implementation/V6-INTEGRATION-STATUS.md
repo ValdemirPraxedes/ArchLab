@@ -1,6 +1,6 @@
 # v0.6 P0 integration status
 
-This is an implementation checkpoint, not product acceptance. The stacked draft PRs are A (contracts), B (backend), C (frontend), and D (integration). No branch has been merged into `develop`.
+This is an implementation checkpoint, not product acceptance. PRs #93–#98 were merged into `develop` by the repository owner. Further work remains before v0.6 product acceptance.
 
 ## Backlog status
 
@@ -10,7 +10,7 @@ This is an implementation checkpoint, not product acceptance. The stacked draft 
 | V6-06–V6-13 | In progress | Full CRUD/ETL semantics, limits, error states and outcome correlation coverage |
 | V6-14 | In progress | Explicit backend migration preview is implemented; historical operation equivalence and ambiguous-case choice remain pending |
 | V6-15–V6-20 | In progress | Contextual validation, all migration choices and integrated round-trip |
-| V6-21–V6-22 | In progress | Complete CT fixtures and v0.1–v0.5 comparison evidence |
+| V6-21–V6-22 | In progress | Complete CT fixtures and v0.1–v0.3 comparison evidence; live v0.4/v0.5 replay passed |
 | V6-23–V6-24 | Pending | Memory/performance profile and product acceptance |
 
 No V6 task is marked complete solely from a passing build or a basic scenario test.
@@ -40,7 +40,7 @@ No V6 task is marked complete solely from a passing build or a basic scenario te
 - Legacy `DATABASE_QUERY` with text or `CALL` is ambiguous and intentionally blocks automatic conversion. An explicit user choice flow is still needed for those documents.
 - `POST /api/v1/architectures/migrate-v6` returns a copy-based migration preview and report for unambiguous `API`/`DATABASE` documents. Backend tests verify preserved IDs/connections, source immutability, and rejection of ambiguous text/CALL; historical simulation equivalence remains to be established.
 - The `/api/v1` OpenAPI allows unversioned historical input. Versioned `0.6` documents reject `API` and `DATABASE`. This boundary requires final contract review.
-- Full API/frontend end-to-end replay, memory profiling, and product homologation remain pending. Redocly lint passed with two warnings; historical v0.4 fixture validation passed.
+- Full API/frontend end-to-end replay, memory profiling, and product homologation remain pending. Redocly lint passed with two warnings at the earlier contract checkpoint. Live v0.4/v0.5 regression evidence is in `V6-REGRESSION-EVIDENCE.md`.
 
 ## Local verification commands
 
