@@ -5,8 +5,8 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: { '/api': { target: 'http://localhost:8080', changeOrigin: true } },
-    // Shared contract fixtures (golden export) are read by tests; nothing else outside the app is served.
-    fs: { allow: ['.', '../docs/api/examples'] },
+    // Tests read the shared contract (openapi.yaml) and fixtures; nothing else outside the app is served.
+    fs: { allow: ['.', '../docs/api'] },
   },
   test: { environment: 'jsdom', setupFiles: ['./src/test/setup.ts'], clearMocks: true },
 });

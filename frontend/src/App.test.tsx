@@ -93,6 +93,21 @@ describe('Editor visual', () => {
     fireEvent.click(screen.getByRole('button',{name:'Confirmar migração'}));
     expect(screen.getByRole('button',{name:'Nó: Legacy DB'})).toHaveAttribute('data-component-type','RELATIONAL_DATABASE');
   });
+  it('valida no formulário os limites de dados do contrato e mostra a concorrência efetiva',()=>{
+    render(<App/>);
+    fireEvent.click(screen.getByRole('button',{name:'Relational Database'}));
+    fireEvent.click(screen.getByRole('button',{name:'Nó: Relational Database 1'}));
+    const section=screen.getByRole('region',{name:'Propriedades de dados'});
+    const pool=screen.getByRole('spinbutton',{name:'connectionPoolSize'});
+    expect(pool).toHaveAttribute('max','1000');
+    fireEvent.change(pool,{target:{value:'0'}});
+    expect(section).toHaveTextContent('connectionPoolSize deve estar entre 1 e 1000.');
+    expect(screen.getByRole('spinbutton',{name:'connectionPoolSize'})).toHaveAttribute('aria-invalid','true');
+    fireEvent.change(screen.getByRole('spinbutton',{name:'connectionPoolSize'}),{target:{value:'4'}});
+    fireEvent.change(screen.getByRole('spinbutton',{name:'maxConcurrentOperations'}),{target:{value:'2'}});
+    expect(section).not.toHaveTextContent('deve estar entre');
+    expect(section).toHaveTextContent('Concorrência efetiva: 2');
+  });
   it('lista diagnósticos acionáveis de migração ambígua e preserva o canvas',async()=>{
     render(<App/>);
     fireEvent.click(screen.getByRole('button',{name:'Service'}));
