@@ -277,10 +277,16 @@ class DataActionsV6IntegrationTest {
     }
 
     // ---- v0.6 continuation (Claude): V6-01, V6-09, V6-10, V6-11, V6-12 ----
-    private static final java.util.Map<String,java.util.Set<String>> MATRIX=java.util.Map.of(
-            "RELATIONAL_DATABASE",java.util.Set.of("DB_SELECT","DB_INSERT","DB_UPDATE","DB_DELETE","DB_BULK_INSERT"),
-            "DOCUMENT_DATABASE",java.util.Set.of("DB_GET","DB_PUT","DB_FIND","DB_UPDATE","DB_DELETE","DB_BULK_INSERT"),
-            "KEY_VALUE_STORE",java.util.Set.of("DB_GET","DB_PUT","DB_DELETE"));
+    /** Normative matrix shared with the editor (docs/api/examples/v0.6/capability-matrix-v6.json), by target type. */
+    private java.util.Map<String,java.util.Set<String>> matrix() throws Exception {
+        JsonNode actions=json.readTree(java.nio.file.Files.readString(java.nio.file.Path.of(
+                "..","..","docs","api","examples","v0.6","capability-matrix-v6.json"))).get("actions");
+        java.util.Map<String,java.util.Set<String>> byType=new java.util.TreeMap<>();
+        for (var entry:actions.properties())
+            for (JsonNode type:entry.getValue())
+                byType.computeIfAbsent(type.asText(),k -> new java.util.TreeSet<>()).add(entry.getKey());
+        return byType;
+    }
     private static String minimalAction(String kind) {
         String required=switch(kind) {
             case "DB_SELECT" -> "\"collection\":\"c\"";
@@ -293,13 +299,35 @@ class DataActionsV6IntegrationTest {
     @Test void fullTypeByActionMatrixIsEnforcedBeforeExecution() throws Exception {
         java.util.List<String> kinds=java.util.List.of("DB_SELECT","DB_INSERT","DB_UPDATE","DB_DELETE",
                 "DB_GET","DB_PUT","DB_FIND","DB_BULK_INSERT");
-        for (var entry:MATRIX.entrySet()) for (String kind:kinds) {
+        var matrix=matrix();
+        assertEquals(java.util.Set.of("RELATIONAL_DATABASE","DOCUMENT_DATABASE","KEY_VALUE_STORE","DATA_TRANSFORMER"),
+                matrix.keySet());
+        for (var entry:matrix.entrySet()) for (String kind:kinds) {
+            if ("DATA_TRANSFORMER".equals(entry.getKey())) continue;
             var response=post("/api/v1/scenarios/validate",scenario(entry.getKey(),minimalAction(kind)));
             assertEquals(200,response.statusCode(),response.body());
             boolean rejected=response.body().contains("DATA_ACTION_INCOMPATIBLE");
             assertEquals(!entry.getValue().contains(kind),rejected,entry.getKey()+" x "+kind+": "+response.body());
             if (!rejected) assertTrue(json.readTree(response.body()).get("valid").asBoolean(),
                     entry.getKey()+" x "+kind+": "+response.body());
+        }
+    }
+    @Test void etlExtractAndLoadAcceptEveryDataResourceTypeOfTheMatrix() throws Exception {
+        var matrix=matrix();
+        for (String type:java.util.List.of("RELATIONAL_DATABASE","DOCUMENT_DATABASE","KEY_VALUE_STORE")) {
+            assertTrue(matrix.get(type).containsAll(java.util.Set.of("ETL_EXTRACT","ETL_LOAD")),type);
+            String asSource=etl(3,10,1,"").replace("\"id\":\"source\",\"type\":\"DOCUMENT_DATABASE\"",
+                    "\"id\":\"source\",\"type\":\""+type+"\"");
+            String asTarget=etl(3,10,1,"").replace("\"id\":\"target\",\"type\":\"RELATIONAL_DATABASE\"",
+                    "\"id\":\"target\",\"type\":\""+type+"\"");
+            for (String body:java.util.List.of(asSource,asTarget)) {
+                assertTrue(body.contains("\"type\":\""+type+"\""),type);
+                var validation=post("/api/v1/scenarios/validate",body);
+                assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),type+": "+validation.body());
+                JsonNode outcomes=json.readTree(post("/api/v1/simulations",body).body()).get("dataOutcomes");
+                assertEquals("LOADED",outcomes.get(outcomes.size()-1).get("resultCode").asText(),type);
+                assertEquals(3,outcomes.get(outcomes.size()-1).get("writtenCount").asInt(),type);
+            }
         }
     }
     @Test void documentGetUpdateDeleteAndFindReflectVirtualState() throws Exception {
