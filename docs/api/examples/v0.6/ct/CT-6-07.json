@@ -1,0 +1,64 @@
+{
+  "id": "CT-6-07",
+  "title": "Importar arquitetura legada com DATABASE, obter prévia e converter para RELATIONAL_DATABASE preservando IDs e conexões.",
+  "cases": [
+    {
+      "name": "legacy-preview",
+      "endpoint": "/api/v1/architectures/migrate-v6",
+      "replay": true,
+      "request": {
+        "components": [
+          {
+            "id": "client",
+            "type": "CLIENT",
+            "displayName": "Client"
+          },
+          {
+            "id": "service",
+            "type": "SERVICE",
+            "displayName": "Service"
+          },
+          {
+            "id": "db",
+            "type": "DATABASE",
+            "displayName": "Orders DB",
+            "processingMs": 3
+          }
+        ],
+        "connections": [
+          {
+            "id": "entry",
+            "sourceId": "client",
+            "targetId": "service",
+            "integration": {
+              "kind": "HTTP_REST"
+            }
+          },
+          {
+            "id": "data",
+            "sourceId": "service",
+            "targetId": "db",
+            "integration": {
+              "kind": "DATABASE_QUERY"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": 200,
+        "fields": {
+          "/document/schemaVersion": "0.6",
+          "/document/components/2/id": "db",
+          "/document/components/2/type": "RELATIONAL_DATABASE",
+          "/document/components/2/displayName": "Orders DB",
+          "/document/connections/0/id": "entry",
+          "/document/connections/1/id": "data",
+          "/document/connections/1/targetId": "db"
+        },
+        "documentNotContains": [
+          "\"DATABASE\""
+        ]
+      }
+    }
+  ]
+}

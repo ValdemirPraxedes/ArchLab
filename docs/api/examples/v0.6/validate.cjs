@@ -47,5 +47,19 @@ assert('Versioned canonical architecture rejects DATABASE', !validate('Architect
 }));
 assert('Unversioned historical architecture remains decodable', validate('Architecture', migration.legacy));
 assert('dataOutcomes is additive', Boolean(schemas.SimulationResponse.properties.dataOutcomes && schemas.SimulationResponse.properties.resourceOutcomes));
+// V6-21: CT-6-01..10 acceptance fixtures (replayed against the backend by Ct6FixtureReplayTest).
+const ctDir = path.join(__dirname, 'ct');
+const ctFiles = fs.readdirSync(ctDir).filter((f) => /^CT-6-\d\d\.json$/.test(f)).sort();
+assert('CT-6-01..10 fixtures present', ctFiles.length === 10, ctFiles.join(','));
+for (const file of ctFiles) {
+  const fixture = JSON.parse(fs.readFileSync(path.join(ctDir, file), 'utf8'));
+  for (const c of fixture.cases) {
+    const schema = c.endpoint.endsWith('/migrate-v6') ? 'Architecture' : 'SimulationRequest';
+    const expected = c.schemaValid !== false;
+    const ok = validate(schema, c.request) === expected;
+    assert(fixture.id + ' ' + c.name + ' request ' + (expected ? 'matches' : 'is rejected by') + ' ' + schema, ok,
+      JSON.stringify(ajv.getSchema('#/components/schemas/' + schema).errors));
+  }
+}
 console.log('NOTE: semantic validation, OpenAPI lint, TS generation, Java DTOs and backend execution are separate gates.');
 process.exitCode = failed ? 1 : 0;

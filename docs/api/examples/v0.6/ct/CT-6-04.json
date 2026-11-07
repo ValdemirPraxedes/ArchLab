@@ -1,0 +1,105 @@
+{
+  "id": "CT-6-04",
+  "title": "Banco com duas operações simultâneas e pool 1: uma operação espera na fila.",
+  "cases": [
+    {
+      "name": "pool-one-fifo",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "first",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "1"
+                    },
+                    {
+                      "id": "second",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "2"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "first",
+            "resultCode": "INSERTED",
+            "queueWaitMs": 0
+          },
+          {
+            "actionId": "second",
+            "resultCode": "INSERTED",
+            "queueWaitMs": {
+              "$gt": 0
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

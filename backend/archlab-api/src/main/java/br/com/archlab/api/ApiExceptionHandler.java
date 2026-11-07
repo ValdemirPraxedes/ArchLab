@@ -21,6 +21,27 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(422).contentType(MediaType.valueOf("application/problem+json")).body(problem);
     }
 
+    @ExceptionHandler(br.com.archlab.api.architecture.LegacyDatabaseMigrationV6.AmbiguousMigrationException.class)
+    public ResponseEntity<Map<String, Object>> ambiguousMigration(
+            br.com.archlab.api.architecture.LegacyDatabaseMigrationV6.AmbiguousMigrationException exception,
+            HttpServletRequest request) {
+        Map<String, Object> problem = problem(400, "/problems/data-migration-ambiguous",
+                "Migração ambígua", exception.getMessage(), "DATA_MIGRATION_AMBIGUOUS", request);
+        problem.put("violations", List.of(Map.of("code", "DATA_MIGRATION_AMBIGUOUS", "path", exception.path(),
+                "message", exception.getMessage(),
+                "details", Map.of("componentId", exception.componentId(), "reason", exception.reason()))));
+        return ResponseEntity.status(400).contentType(MediaType.valueOf("application/problem+json")).body(problem);
+    }
+
+    @ExceptionHandler(ArchitectureMigrationServiceV6.MigrationException.class)
+    public ResponseEntity<Map<String, Object>> invalidMigration(ArchitectureMigrationServiceV6.MigrationException exception,
+                                                                 HttpServletRequest request) {
+        Map<String, Object> problem = problem(400, "/problems/invalid-request", "Requisição inválida",
+                "A arquitetura migrada não passou na validação.", "INVALID_REQUEST", request);
+        problem.put("violations", exception.violations());
+        return ResponseEntity.status(400).contentType(MediaType.valueOf("application/problem+json")).body(problem);
+    }
+
     @ExceptionHandler({IllegalArgumentException.class, HttpMessageNotReadableException.class})
     public ResponseEntity<Map<String, Object>> invalidRequest(Exception exception, HttpServletRequest request) {
         String detail = request.getRequestURI().startsWith("/api/v1/")

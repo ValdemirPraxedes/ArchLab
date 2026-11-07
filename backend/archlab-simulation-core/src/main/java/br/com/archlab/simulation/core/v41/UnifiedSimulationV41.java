@@ -46,6 +46,7 @@ public final class UnifiedSimulationV41 {
     private final List<Map<String,Object>> dataOutcomes = new ArrayList<>();
     private final VirtualResourcesV5 virtualResources = new VirtualResourcesV5();
     private final VirtualDataResourcesV6 virtualData = new VirtualDataResourcesV6();
+    private static final long MAX_ETL_RECORDS = 1_000_000L, MAX_ETL_BATCH_SIZE = 100_000L, MAX_ETL_BATCHES = 1_000L;
     private final Map<String,Integer> activeData = new HashMap<>();
     private final Map<String,Deque<Runnable>> waitingData = new HashMap<>();
     private long now, scheduleOrder;
@@ -195,7 +196,7 @@ public final class UnifiedSimulationV41 {
         private final Completion done;
         private final Map<String,String> status=new LinkedHashMap<>();
         private final Map<String,String> resultCodes=new HashMap<>();
-        private record Batch(long count,boolean normalized) {}
+        private record Batch(long count,boolean normalized,long batchCount) {}
         private final Map<String,Batch> batchRefs=new HashMap<>();
         private boolean responseSent, completionSent;
 
@@ -477,6 +478,16 @@ public final class UnifiedSimulationV41 {
                 }
             });
         }
+        /** Effective logical batch size: Action override, then ETL_PIPELINE property. */
+        private long etlBatchSize(Action action) {
+            if (action.options().get("batchSize") instanceof Number n && n.longValue()>0) return n.longValue();
+            if (api instanceof DataProcessorV6 pipeline && pipeline.batchSize()>0) return pipeline.batchSize();
+            return MAX_ETL_BATCH_SIZE;
+        }
+        private long etlMaxBatches() {
+            return api instanceof DataProcessorV6 pipeline && pipeline.maxBatches()>0
+                    ?pipeline.maxBatches():MAX_ETL_BATCHES;
+        }
         void etlAction(Action action,Completion finish) {
             String kind=action.kind();
             String ref=(String)action.options().get("outputRef");
@@ -499,14 +510,15 @@ public final class UnifiedSimulationV41 {
                 Runnable execute=() -> {
                 long started=now;
                 process(transformTarget.id(),"ETL_TRANSFORM",duration,() -> {
-                    if (!failed && ref!=null) batchRefs.put(ref,new Batch(outputCount,normalized));
+                    if (!failed && ref!=null) batchRefs.put(ref,new Batch(outputCount,normalized,batch.batchCount()));
                     Map<String,Object> result=fields("operationId",operationId,
                             "actionId",action.id(),"componentId",api.id(),"resourceComponentId",transformTarget.id(),
                             "connectionId",transformEdge==null?"local":transformEdge.id(),"timestampMs",now,"startedAtMs",started,
                             "completedAtMs",now,"queueWaitMs",0,"processingMs",duration,
                             "status",failed?"FAILED":"SUCCEEDED","resultCode",failed?"FAILED":"TRANSFORMED","readCount",count,
                             "writtenCount",outputCount,"rejectedCount",failed?count:invalid,"logicalBytes",0,
-                            "transform",transform,"normalizedCount",failed?0:normalized?outputCount:0);
+                            "transform",transform,"normalizedCount",failed?0:normalized?outputCount:0,
+                            "batchCount",batch.batchCount());
                     if (failed) result.put("errorCode",invalid>count?"ETL_INVALID_REJECTION_COUNT":"ETL_TRANSFORM_FAILED");
                     if (ref!=null) result.put("outputRef",ref);
                     dataOutcomes.add(result);
@@ -533,18 +545,25 @@ public final class UnifiedSimulationV41 {
                 long started=now;
                 Batch sourceBatch="ETL_LOAD".equals(kind)?batchRefs.get(input):null;
                 long count="ETL_EXTRACT".equals(kind)?Math.min(virtualData.count(resource),
-                        action.options().get("maxRecords") instanceof Number n?n.longValue():1_000_000):sourceBatch.count();
-                if (count>1_000_000) throw new IllegalArgumentException("ETL record budget exceeded");
-                long duration=Math.multiplyExact("ETL_EXTRACT".equals(kind)
+                        action.options().get("maxRecords") instanceof Number n?n.longValue():MAX_ETL_RECORDS):sourceBatch.count();
+                long batchSize=etlBatchSize(action);
+                long batchCount="ETL_EXTRACT".equals(kind)?(count+batchSize-1)/batchSize:sourceBatch.batchCount();
+                // Budgets are enforced as controlled outcomes, never as runtime exceptions.
+                String budgetError=count>MAX_ETL_RECORDS?"ETL_RECORD_BUDGET_EXCEEDED"
+                        :batchCount>etlMaxBatches()?"ETL_BATCH_LIMIT_EXCEEDED":null;
+                long duration=budgetError!=null?0:Math.multiplyExact("ETL_EXTRACT".equals(kind)
                         ?resource.readLatencyMs():resource.writeLatencyMs(),count);
                 process(resource.id(),kind,duration,() -> {
-                    VirtualDataResourcesV6.Outcome outcome="ETL_LOAD".equals(kind)
+                    VirtualDataResourcesV6.Outcome outcome=budgetError!=null
+                            ?new VirtualDataResourcesV6.Outcome("LIMIT_EXCEEDED",0,0,Math.min(count,MAX_ETL_RECORDS),0,
+                                    Map.of("errorCode",budgetError))
+                            :"ETL_LOAD".equals(kind)
                             ?virtualData.load(resource,count)
                             :new VirtualDataResourcesV6.Outcome("EXTRACTED",count,0,0,
                                     count*resource.averageRecordBytes(),Map.of());
                     boolean successful=!"LIMIT_EXCEEDED".equals(outcome.code());
                     if (successful && ref!=null) batchRefs.put(ref,new Batch(count,
-                            sourceBatch!=null && sourceBatch.normalized()));
+                            sourceBatch!=null && sourceBatch.normalized(),batchCount));
                     Map<String,Object> result=fields("operationId",operationId,"actionId",action.id(),
                             "componentId",api.id(),"resourceComponentId",resource.id(),
                             "connectionId",edge.id(),"timestampMs",now,"startedAtMs",started,
@@ -553,6 +572,9 @@ public final class UnifiedSimulationV41 {
                             "readCount",outcome.readCount(),"writtenCount",outcome.writtenCount(),
                             "rejectedCount",outcome.rejectedCount(),"logicalBytes",outcome.logicalBytes());
                     if (sourceBatch!=null && sourceBatch.normalized()) result.put("normalizedCount",count);
+                    result.put("batchCount",successful?batchCount:0);
+                    result.put("batchSize",batchSize);
+                    result.putAll(outcome.details());
                     if (ref!=null) result.put("outputRef",ref);
                     dataOutcomes.add(result);
                     event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",resource.id(),

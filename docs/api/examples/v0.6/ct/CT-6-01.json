@@ -1,0 +1,124 @@
+{
+  "id": "CT-6-01",
+  "title": "Client -> Service -> Relational DB: INSERT seguido de SELECT encontra o registro, com custo e rastreabilidade.",
+  "cases": [
+    {
+      "name": "insert-select",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "insert",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "collection": "orders",
+                      "key": "o-1",
+                      "outputRef": "w"
+                    },
+                    {
+                      "id": "select",
+                      "kind": "DB_SELECT",
+                      "connectionId": "data",
+                      "collection": "orders",
+                      "key": "o-1",
+                      "outputRef": "r",
+                      "dependsOn": [
+                        "insert"
+                      ]
+                    },
+                    {
+                      "id": "respond",
+                      "kind": "RESPOND",
+                      "dependsOn": [
+                        "select"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "insert",
+            "status": "SUCCEEDED",
+            "resultCode": "INSERTED",
+            "writtenCount": 1,
+            "processingMs": 3
+          },
+          {
+            "actionId": "select",
+            "status": "SUCCEEDED",
+            "resultCode": "FOUND",
+            "readCount": 1,
+            "processingMs": 2
+          }
+        ],
+        "bodyContains": [
+          "DATA_OPERATION"
+        ]
+      }
+    }
+  ]
+}

@@ -13,6 +13,21 @@ public final class LegacyDatabaseMigrationV6 {
     }
     public record Result(JsonNode document,Report report) {}
 
+    /**
+     * A historical DATABASE whose semantics cannot be converted without a human decision.
+     * Carries a stable diagnostic (DATA_MIGRATION_AMBIGUOUS) instead of a generic parse error.
+     */
+    public static final class AmbiguousMigrationException extends IllegalArgumentException {
+        private final String componentId, path, reason;
+        public AmbiguousMigrationException(String componentId,String path,String reason,String message) {
+            super(message);
+            this.componentId=componentId; this.path=path; this.reason=reason;
+        }
+        public String componentId() {return componentId;}
+        public String path() {return path;}
+        public String reason() {return reason;}
+    }
+
     public static Result migrate(JsonNode input) {
         if (input==null || !input.isObject()) throw new IllegalArgumentException("Expected document object");
         JsonNode original=input.has("architecture")?input.get("architecture"):input;
@@ -24,25 +39,46 @@ public final class LegacyDatabaseMigrationV6 {
         JsonNode components=architecture.get("components");
         JsonNode connections=architecture.get("connections");
         List<String> ids=new ArrayList<>(), notes=new ArrayList<>();
+        int componentIndex=-1;
         for (JsonNode component:components) {
+            componentIndex++;
             if (!"DATABASE".equals(component.path("type").asText())) continue;
             if (!(component instanceof ObjectNode database))
                 throw new IllegalArgumentException("Invalid DATABASE component");
             String id=database.path("id").asText();
             if (id.isBlank()) throw new IllegalArgumentException("DATABASE requires id");
+            int edgeIndex=-1;
             for (JsonNode edge:connections) {
+                edgeIndex++;
                 if (!id.equals(edge.path("targetId").asText())) continue;
                 JsonNode integration=edge.path("integration");
                 if (!"DATABASE_QUERY".equals(integration.path("kind").asText())
                         || !integration.path("queryText").asText().isBlank()
                         || !integration.path("responseText").asText().isBlank())
-                    throw new IllegalArgumentException("DATABASE "+id+": connection requires semantic review");
+                    throw new AmbiguousMigrationException(id,"connections["+edgeIndex+"].integration",
+                            !"DATABASE_QUERY".equals(integration.path("kind").asText())?"NON_QUERY_CONNECTION"
+                                    :"HISTORICAL_QUERY_TEXT",
+                            "DATABASE "+id+": connection "+edge.path("id").asText()
+                                    +" carries historical query semantics that require an explicit choice");
                 String edgeId=edge.path("id").asText();
-                for (JsonNode actor:components) for (JsonNode behavior:actor.path("behaviors"))
-                    for (JsonNode action:behavior.path("actions"))
-                        if ("CALL".equals(action.path("kind").asText())
-                                && edgeId.equals(action.path("connectionId").asText()))
-                            throw new IllegalArgumentException("DATABASE "+id+": historical CALL requires semantic review");
+                int actorIndex=-1;
+                for (JsonNode actor:components) {
+                    actorIndex++;
+                    int behaviorIndex=-1;
+                    for (JsonNode behavior:actor.path("behaviors")) {
+                        behaviorIndex++;
+                        int actionIndex=-1;
+                        for (JsonNode action:behavior.path("actions")) {
+                            actionIndex++;
+                            if ("CALL".equals(action.path("kind").asText())
+                                    && edgeId.equals(action.path("connectionId").asText()))
+                                throw new AmbiguousMigrationException(id,"components["+actorIndex+"].behaviors["
+                                        +behaviorIndex+"].actions["+actionIndex+"]","HISTORICAL_CALL",
+                                        "DATABASE "+id+": historical CALL "+action.path("id").asText()
+                                                +" has no unambiguous data Action equivalent");
+                        }
+                    }
+                }
             }
             long processing=database.path("processingMs").asLong(-1);
             if (processing<0 || processing>1_000_000_000L)

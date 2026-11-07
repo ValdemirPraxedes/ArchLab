@@ -1,0 +1,168 @@
+{
+  "id": "CT-6-06",
+  "title": "Falha em TRANSFORM impede o LOAD; erro e SKIPPED ficam na timeline.",
+  "cases": [
+    {
+      "name": "transform-failure-skips-load",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "etl",
+              "type": "ETL_PIPELINE",
+              "displayName": "ETL",
+              "batchSize": 5,
+              "maxBatches": 4,
+              "behaviors": [
+                {
+                  "id": "run",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "extract",
+                      "kind": "ETL_EXTRACT",
+                      "connectionId": "source-edge",
+                      "outputRef": "raw"
+                    },
+                    {
+                      "id": "transform",
+                      "kind": "ETL_TRANSFORM",
+                      "connectionId": "transform-edge",
+                      "inputRef": "raw",
+                      "dependsOn": [
+                        "extract"
+                      ],
+                      "outputRef": "clean",
+                      "simulateFailure": true,
+                      "transform": "IDENTITY"
+                    },
+                    {
+                      "id": "load",
+                      "kind": "ETL_LOAD",
+                      "connectionId": "target-edge",
+                      "inputRef": "clean",
+                      "dependsOn": [
+                        "transform"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "source",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "source",
+              "dataProperties": {
+                "initialRecordCount": 4,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            },
+            {
+              "id": "transformer",
+              "type": "DATA_TRANSFORMER",
+              "displayName": "Transformer",
+              "transformCostPerRecordMs": 1
+            },
+            {
+              "id": "target",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "target",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "etl",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "source-edge",
+              "sourceId": "etl",
+              "targetId": "source",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            },
+            {
+              "id": "transform-edge",
+              "sourceId": "etl",
+              "targetId": "transformer",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "target-edge",
+              "sourceId": "etl",
+              "targetId": "target",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "extract",
+            "resultCode": "EXTRACTED",
+            "readCount": 4
+          },
+          {
+            "actionId": "transform",
+            "status": "FAILED",
+            "errorCode": "ETL_TRANSFORM_FAILED",
+            "writtenCount": 0
+          },
+          {
+            "actionId": "load",
+            "status": "SKIPPED",
+            "errorCode": "ETL_UPSTREAM_FAILED",
+            "writtenCount": 0
+          }
+        ],
+        "bodyContains": [
+          "ETL_UPSTREAM_FAILED"
+        ]
+      }
+    }
+  ]
+}
