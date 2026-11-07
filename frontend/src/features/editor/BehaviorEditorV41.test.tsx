@@ -50,7 +50,7 @@ describe('painel contextual de comportamentos',()=>{
     const etl=createArchitectureNode('ETL_PIPELINE',{x:0,y:0});
     const behavior={id:'run',trigger:'REQUEST_RECEIVED' as const,actions:[
       {id:'transform',kind:'ETL_TRANSFORM' as const,inputRef:'raw',transform:'FILTER_VALID' as const,
-        invalidRecordCount:1,outputRef:'clean'}]};
+        invalidRecordCount:1,simulateFailure:false,outputRef:'clean'}]};
     const onChange=vi.fn();
     render(<BehaviorEditorV41 node={etl} nodes={[etl]} edges={[]} behaviors={[behavior]} onChange={onChange} disabled={false}/>);
     expect(screen.getByRole('spinbutton',{name:'invalidRecordCount 1.1'})).toHaveValue(1);
