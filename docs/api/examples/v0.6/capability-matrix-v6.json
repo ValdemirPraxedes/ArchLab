@@ -19,7 +19,7 @@
   "documentedRejections": [
     {"action": "DB_SELECT", "type": "KEY_VALUE_STORE", "reason": "Key-value access is by exact key only (DB_GET)."},
     {"action": "DB_FIND", "type": "RELATIONAL_DATABASE", "reason": "Relational reads use DB_SELECT."},
-    {"action": "DB_BULK_INSERT", "type": "KEY_VALUE_STORE", "reason": "A logical batch has no single exact key; pending product decision (DM-V6-001 lists Batch: Sim for KV)."},
+    {"action": "DB_BULK_INSERT", "type": "KEY_VALUE_STORE", "reason": "A logical batch has no single exact key. Product decision 5 (2026-11-07): no bulk insert on KEY_VALUE_STORE in P0; use ETL_LOAD for batch loads."},
     {"action": "DB_UPDATE", "type": "KEY_VALUE_STORE", "reason": "Key-value writes replace the value with DB_PUT."}
   ]
 }

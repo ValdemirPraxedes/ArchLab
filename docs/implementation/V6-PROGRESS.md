@@ -2,8 +2,17 @@
 
 > Registro de handoff entre agentes. Complementa (não substitui) `V6-INTEGRATION-STATUS.md`,
 > `V6-CONTRACT-GATE-AUDIT.md`, `V6-LIMIT-EVIDENCE.md` e `V6-REGRESSION-EVIDENCE.md`.
-> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 3 (PRs #104/#105 aprovados e mesclados; Trello atualizado).
+> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 4 (V6-02; decisões 3 e 5 tomadas pelo responsável).
 > A sessão 1 (2026-11-06) fez apenas a auditoria; seu texto está preservado nas seções 1–6. A seção 0 abaixo prevalece onde houver diferença.
+
+## 000. Sessão 4 — 2026-11-07 (Claude): V6-02 e decisões 3/5
+
+- PR #106 mesclado (`develop` @ `fdc46cb`). Trello: V6-05, V6-13, V6-15, V6-16, V6-17, V6-18, V6-19 e V6-20 em **✅ Concluído**.
+- **Decisões do responsável:** (3) `DB_BULK_INSERT` atômico, com rejeição total no limite; (5) sem bulk em `KEY_VALUE_STORE` em P0.
+- **V6-02:** documento normativo [`docs/architecture/DATA-BUDGETS-V6-001.md`](../architecture/DATA-BUDGETS-V6-001.md), com três camadas de limite, fórmulas de custo, atomicidade, tabela de estados e defaults. Exemplos executáveis em `docs/api/examples/v0.6/normative/N6-01..08.json` (16 casos), executados e repetidos por `Ct6FixtureReplayTest`, com requisição e resposta validadas por `validate.cjs`. Nenhuma mudança de runtime foi necessária: o motor já cumpria as regras, e os exemplos agora as congelam.
+- **V6-01:** DM-V6-001 e `capability-matrix-v6.json` registram a decisão 5; o aceite ("matriz fechada, com rejeições documentadas") está atendido.
+- Gates desta sessão: `mvnw test` (core 121 / API 133), `npm test`, lint e build, `npm run validate` (todos PASS).
+- Pendentes: decisões 1, 2 e 4; V6-03, V6-04, V6-14, V6-22, V6-23 e V6-24.
 
 ## 00. Sessão 3 — 2026-11-07 (Claude): estado atual (prevalece sobre a seção 0)
 
@@ -195,7 +204,8 @@ Legenda: **Concluída** = aceite do TASKS-V6-001 atendido com teste; **Parcial**
 
 1. Fronteira de schema canônico × legado: `/api/v1/architectures/validate` deve aceitar `DATABASE` histórico diretamente ou somente após migração explícita?
 2. Tratamento de `DATABASE_QUERY` com `queryText`/`responseText` e `CALL` histórico: bloquear (atual), oferecer escolha manual ou mapear para uma Action padrão?
-3. Atomicidade de `DB_BULK_INSERT` ao atingir limite: rejeição total (atual) ou escrita parcial?
+3. ~~Atomicidade de `DB_BULK_INSERT` ao atingir limite.~~ **Decidido em 2026-11-07: rejeição total (lote atômico).** Ver DATA-BUDGETS-V6-001.
+5. ~~`DB_BULK_INSERT` em `KEY_VALUE_STORE`.~~ **Decidido em 2026-11-07: não em P0.** Ver DM-V6-001 §2.1.
 4. Limiares de aceite de performance (V6-23).
 
 ## 4. Problemas conhecidos
