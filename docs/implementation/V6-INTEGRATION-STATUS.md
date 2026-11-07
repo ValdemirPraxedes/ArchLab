@@ -8,7 +8,7 @@ This is an implementation checkpoint, not product acceptance. The stacked draft 
 | --- | --- | --- |
 | V6-01–V6-05 | In progress | Final capability matrix, contract reconciliation and approved legacy policy |
 | V6-06–V6-13 | In progress | Full CRUD/ETL semantics, limits, error states and outcome correlation coverage |
-| V6-14 | Pending | Backend legacy adapter and historical equivalence proof |
+| V6-14 | In progress | Explicit backend migration preview is implemented; historical operation equivalence and ambiguous-case choice remain pending |
 | V6-15–V6-20 | In progress | Contextual validation, all migration choices and integrated round-trip |
 | V6-21–V6-22 | In progress | Complete CT fixtures and v0.1–v0.5 comparison evidence |
 | V6-23–V6-24 | Pending | Memory/performance profile and product acceptance |
@@ -38,6 +38,7 @@ No V6 task is marked complete solely from a passing build or a basic scenario te
 - `DB_BULK_INSERT` rejects a single `key` for a multi-record logical batch, because the runtime cannot assign that key unambiguously to every record.
 - Queue timeout, processing timeout and pool occupancy have focused tests, but broader load and memory profiling remain pending.
 - Legacy `DATABASE_QUERY` with text or `CALL` is ambiguous and intentionally blocks automatic conversion. An explicit user choice flow is still needed for those documents.
+- `POST /api/v1/architectures/migrate-v6` returns a copy-based migration preview and report for unambiguous `API`/`DATABASE` documents. Backend tests verify preserved IDs/connections, source immutability, and rejection of ambiguous text/CALL; historical simulation equivalence remains to be established.
 - The `/api/v1` OpenAPI allows unversioned historical input. Versioned `0.6` documents reject `API` and `DATABASE`. This boundary requires final contract review.
 - Full API/frontend end-to-end replay, memory profiling, and product homologation remain pending. Redocly lint passed with two warnings; historical v0.4 fixture validation passed.
 
