@@ -37,6 +37,10 @@ assert('Invalid example is structurally valid (semantic rejection belongs to bac
 assert('Invalid action is rejected by capability matrix', invalid.component.type === 'KEY_VALUE_STORE' && invalid.actions[0].kind === 'DB_SELECT' && invalid.expectedError === 'DATA_ACTION_INCOMPATIBLE');
 const migration = load('migration-legacy.json');
 assert('Legacy input retained for migration', validate('Component', migration.legacy.components[0]) && migration.migration.requiresConfirmation === true);
+assert('Versioned canonical architecture rejects DATABASE', !validate('Architecture', {
+  schemaVersion: '0.6', components: migration.legacy.components, connections: []
+}));
+assert('Unversioned historical architecture remains decodable', validate('Architecture', migration.legacy));
 assert('dataOutcomes is additive', Boolean(schemas.SimulationResponse.properties.dataOutcomes && schemas.SimulationResponse.properties.resourceOutcomes));
 console.log('NOTE: semantic validation, OpenAPI lint, TS generation, Java DTOs and backend execution are separate gates.');
 process.exitCode = failed ? 1 : 0;

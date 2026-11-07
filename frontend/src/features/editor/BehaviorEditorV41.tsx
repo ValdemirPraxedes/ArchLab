@@ -11,6 +11,7 @@ const dataTargets:Partial<Record<Kind,readonly string[]>>={
   DB_GET:['DOCUMENT_DATABASE','KEY_VALUE_STORE'], DB_PUT:['DOCUMENT_DATABASE','KEY_VALUE_STORE'],
   DB_FIND:['DOCUMENT_DATABASE'], DB_BULK_INSERT:['RELATIONAL_DATABASE','DOCUMENT_DATABASE'],
   ETL_EXTRACT:['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE'],
+  ETL_TRANSFORM:['DATA_TRANSFORMER'],
   ETL_LOAD:['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE'],
 };
 const resourceTargets:Partial<Record<Kind,string>>={CACHE_GET:'CACHE',CACHE_PUT:'CACHE',CACHE_INVALIDATE:'CACHE',OBJECT_GET:'OBJECT_STORAGE',OBJECT_PUT:'OBJECT_STORAGE',OBJECT_DELETE:'OBJECT_STORAGE',SEND_NOTIFICATION:'NOTIFICATION_SERVICE',INDEX_DOCUMENT:'SEARCH_ENGINE',SEARCH_DOCUMENTS:'SEARCH_ENGINE',REGISTER_SERVICE:'SERVICE_REGISTRY',UNREGISTER_SERVICE:'SERVICE_REGISTRY',DISCOVER_SERVICE:'SERVICE_REGISTRY',EVALUATE_RULE:'RULES_ENGINE'};
@@ -19,7 +20,7 @@ const actionFields:Partial<Record<Kind,readonly string[]>>={CACHE_GET:['key','ou
   DB_UPDATE:['collection','key','field','equals','outputRef'],DB_DELETE:['collection','key','outputRef'],
   DB_GET:['collection','key','outputRef'],DB_PUT:['collection','key','field','equals','outputRef'],
   DB_FIND:['collection','field','equals','limit','outputRef'],DB_BULK_INSERT:['collection','recordCount','averageRecordBytes','outputRef'],
-  ETL_EXTRACT:['maxRecords','batchSize','outputRef'],ETL_TRANSFORM:['inputRef','transform','outputRef'],
+  ETL_EXTRACT:['maxRecords','batchSize','outputRef'],ETL_TRANSFORM:['inputRef','transform','simulateFailure','outputRef'],
   ETL_LOAD:['inputRef','batchSize','outputRef']};
 const numberFields=new Set(['ttlMs','sizeBytes','durationMs','timeoutMs','limit','recordCount','averageRecordBytes','maxRecords','batchSize']);
 const objectFields=new Set(['metadata','tags']);
@@ -96,7 +97,7 @@ function defaults(kind: Kind, edges: ArchitectureEdge[]): BehaviorActionV41 {
     case 'DB_FIND': return {id:actionId,kind,connectionId:connection,field:'',equals:''};
     case 'DB_BULK_INSERT': return {id:actionId,kind,connectionId:connection,recordCount:1};
     case 'ETL_EXTRACT': return {id:actionId,kind,connectionId:connection,outputRef:id('batch')};
-    case 'ETL_TRANSFORM': return {id:actionId,kind,inputRef:'',transform:'IDENTITY'};
+    case 'ETL_TRANSFORM': return {id:actionId,kind,inputRef:'',transform:'IDENTITY',connectionId:connection,simulateFailure:false};
     case 'ETL_LOAD': return {id:actionId,kind,connectionId:connection,inputRef:''};
     default: throw new Error(`Action ${kind} ainda não suportada pelo editor de comportamentos v0.5`);
   }
@@ -106,6 +107,7 @@ function compatible(kind: Kind, edge: ArchitectureEdge): boolean {
   if (kind==='CALL') return !!protocol && !['QUEUE','TOPIC','MQTT','WEBSOCKET'].includes(protocol);
   if (kind==='PUBLISH') return !!protocol && ['QUEUE','TOPIC','MQTT'].includes(protocol);
   if (kind==='OPEN_SESSION') return protocol==='WEBSOCKET';
+  if (kind==='ETL_TRANSFORM') return !!protocol && !['QUEUE','TOPIC','MQTT','WEBSOCKET','DATABASE_QUERY'].includes(protocol);
   if (dataTargets[kind]) return protocol==='DATABASE_QUERY';
   return !!resourceTargets[kind] || kind==='TRANSFORM';
 }
@@ -144,6 +146,7 @@ export function BehaviorEditorV41({node,nodes,edges,behaviors,onChange,disabled}
           </select></label>}
           {action.kind==='PROCESS' && <label>Duração (ms)<input type="number" min="0" aria-label={`Duração ${bi+1}.${ai+1}`} value={action.durationMs ?? 0} onChange={e=>set({durationMs:Number(e.target.value)})}/></label>}
           {action.kind==='CALL' && <label>Timeout (ms)<input type="number" min="0" aria-label={`Timeout ${bi+1}.${ai+1}`} value={action.timeoutMs ?? 5000} onChange={e=>set({timeoutMs:Number(e.target.value)})}/></label>}
+          {action.kind.startsWith('DB_') && <label>Timeout de dados (ms)<input type="number" min="0" aria-label={`Timeout de dados ${bi+1}.${ai+1}`} value={(action as {timeoutMs?:number}).timeoutMs ?? 0} onChange={e=>set({timeoutMs:Number(e.target.value)})}/></label>}
           {action.kind==='PUBLISH' && <label>Destino<select aria-label={`Destino da ação ${bi+1}.${ai+1}`} value={action.destinationName} onChange={e=>set({destinationName:e.target.value})}>
             <option value="">Selecione...</option>{nodes.find(item=>item.id===edges.find(edge=>edge.id===action.connectionId)?.target)?.data.destinations?.map(destination=><option key={destination.name} value={destination.name}>{destination.name}</option>)}
           </select></label>}
@@ -168,6 +171,7 @@ export function BehaviorEditorV41({node,nodes,edges,behaviors,onChange,disabled}
           {action.kind==='SCHEDULE_TRIGGER' && <label>Agendamento<select aria-label={`Agendamento ${bi+1}.${ai+1}`} value={action.scheduleId} onChange={e=>set({scheduleId:e.target.value})}><option value="">Selecione...</option>{(node.data.schedules ?? []).map(schedule=><option key={schedule.id} value={schedule.id}>{schedule.id}</option>)}</select></label>}
           {(actionFields[action.kind] ?? []).map(field=>{
             const value=(action as unknown as Record<string,unknown>)[field];
+            if(field==='simulateFailure') return <label key={field}><input type="checkbox" aria-label={`Simular falha ${bi+1}.${ai+1}`} checked={Boolean(value)} onChange={e=>set({simulateFailure:e.target.checked})}/> Simular falha na transformação</label>;
             if (field==='channel' || field==='simulatedResult' || field==='instanceStatus') {
               const options=field==='channel'?['EMAIL','SMS','PUSH']:field==='simulatedResult'?['SENT','FAILED','TIMED_OUT']:['ACTIVE','INACTIVE'];
               return <label key={field}>{field}<select aria-label={`${field} ${bi+1}.${ai+1}`} value={String(value ?? options[0])} onChange={e=>set({[field]:e.target.value})}>{options.map(option=><option key={option}>{option}</option>)}</select></label>;

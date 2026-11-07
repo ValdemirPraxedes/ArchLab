@@ -1313,7 +1313,7 @@ components:
         queueWaitMs: {$ref: '#/components/schemas/DurationMs'}
         processingMs: {$ref: '#/components/schemas/DurationMs'}
         status: {type: string, enum: [SUCCEEDED, FAILED, TIMED_OUT, REJECTED, SKIPPED]}
-        resultCode: {type: string, enum: [FOUND, NOT_FOUND, INSERTED, UPDATED, DELETED, STORED, EXTRACTED, TRANSFORMED, LOADED, PARTIAL, FAILED, LIMIT_EXCEEDED]}
+        resultCode: {type: string, enum: [FOUND, NOT_FOUND, INSERTED, UPDATED, DELETED, STORED, EXTRACTED, TRANSFORMED, LOADED, PARTIAL, FAILED, TIMED_OUT, LIMIT_EXCEEDED]}
         readCount: {type: integer, minimum: 0, maximum: 1000000}
         writtenCount: {type: integer, minimum: 0, maximum: 1000000}
         rejectedCount: {type: integer, minimum: 0, maximum: 1000000}
@@ -1378,6 +1378,7 @@ components:
         outputRef: {$ref: '#/components/schemas/Identifier'}
         inputRef: {$ref: '#/components/schemas/Identifier'}
         connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
         collection: {type: string, minLength: 1, maxLength: 128}
         key: {type: string, minLength: 1, maxLength: 256}
         recordCount: {type: integer, minimum: 1, maximum: 100000}
@@ -1396,6 +1397,7 @@ components:
         outputRef: {$ref: '#/components/schemas/Identifier'}
         inputRef: {$ref: '#/components/schemas/Identifier'}
         connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
         collection: {type: string, minLength: 1, maxLength: 128}
         key: {type: string, minLength: 1, maxLength: 256}
         recordCount: {type: integer, minimum: 1, maximum: 100000}
@@ -1414,6 +1416,7 @@ components:
         outputRef: {$ref: '#/components/schemas/Identifier'}
         inputRef: {$ref: '#/components/schemas/Identifier'}
         connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
         collection: {type: string, minLength: 1, maxLength: 128}
         key: {type: string, minLength: 1, maxLength: 256}
         recordCount: {type: integer, minimum: 1, maximum: 100000}
@@ -1432,6 +1435,7 @@ components:
         outputRef: {$ref: '#/components/schemas/Identifier'}
         inputRef: {$ref: '#/components/schemas/Identifier'}
         connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
         collection: {type: string, minLength: 1, maxLength: 128}
         key: {type: string, minLength: 1, maxLength: 256}
         recordCount: {type: integer, minimum: 1, maximum: 100000}
@@ -1450,6 +1454,7 @@ components:
         outputRef: {$ref: '#/components/schemas/Identifier'}
         inputRef: {$ref: '#/components/schemas/Identifier'}
         connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
         collection: {type: string, minLength: 1, maxLength: 128}
         key: {type: string, minLength: 1, maxLength: 256}
         recordCount: {type: integer, minimum: 1, maximum: 100000}
@@ -1468,6 +1473,7 @@ components:
         outputRef: {$ref: '#/components/schemas/Identifier'}
         inputRef: {$ref: '#/components/schemas/Identifier'}
         connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
         collection: {type: string, minLength: 1, maxLength: 128}
         key: {type: string, minLength: 1, maxLength: 256}
         recordCount: {type: integer, minimum: 1, maximum: 100000}
@@ -1486,6 +1492,7 @@ components:
         outputRef: {$ref: '#/components/schemas/Identifier'}
         inputRef: {$ref: '#/components/schemas/Identifier'}
         connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
         collection: {type: string, minLength: 1, maxLength: 128}
         key: {type: string, minLength: 1, maxLength: 256}
         recordCount: {type: integer, minimum: 1, maximum: 100000}
@@ -1504,6 +1511,7 @@ components:
         outputRef: {$ref: '#/components/schemas/Identifier'}
         inputRef: {$ref: '#/components/schemas/Identifier'}
         connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
         collection: {type: string, minLength: 1, maxLength: 128}
         key: {type: string, minLength: 1, maxLength: 256}
         recordCount: {type: integer, minimum: 1, maximum: 100000}
@@ -1535,6 +1543,8 @@ components:
         dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
         outputRef: {$ref: '#/components/schemas/Identifier'}
         inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        simulateFailure: {type: boolean, default: false}
         batchSize: {type: integer, minimum: 1, maximum: 100000}
         maxRecords: {type: integer, minimum: 1, maximum: 1000000}
         transform: {type: string, enum: [IDENTITY, FILTER_VALID, NORMALIZE_METADATA]}
@@ -1659,7 +1669,23 @@ components:
     Architecture:
       type: object
       additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            schemaVersion: {const: '0.6'}
+          required: [schemaVersion]
+        then:
+          properties:
+            components:
+              items:
+                allOf:
+                - $ref: '#/components/schemas/Component'
+                - not:
+                    properties:
+                      type: {enum: [API, DATABASE]}
+                    required: [type]
       properties:
+        schemaVersion: {type: string, const: '0.6'}
         components:
           type: array
           maxItems: 1000
