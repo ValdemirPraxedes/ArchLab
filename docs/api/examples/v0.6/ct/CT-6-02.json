@@ -1,0 +1,143 @@
+{
+  "id": "CT-6-02",
+  "title": "Client -> Service -> Document DB: PUT e FIND por atributo permitido retornam o conjunto esperado.",
+  "cases": [
+    {
+      "name": "put-find",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "p1",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "collection": "products",
+                      "key": "p-1",
+                      "field": "category",
+                      "equals": "books"
+                    },
+                    {
+                      "id": "p2",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "collection": "products",
+                      "key": "p-2",
+                      "field": "category",
+                      "equals": "books",
+                      "dependsOn": [
+                        "p1"
+                      ]
+                    },
+                    {
+                      "id": "p3",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "collection": "products",
+                      "key": "p-3",
+                      "field": "category",
+                      "equals": "games",
+                      "dependsOn": [
+                        "p2"
+                      ]
+                    },
+                    {
+                      "id": "find",
+                      "kind": "DB_FIND",
+                      "connectionId": "data",
+                      "collection": "products",
+                      "field": "category",
+                      "equals": "books",
+                      "dependsOn": [
+                        "p3"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "p1",
+            "resultCode": "STORED"
+          },
+          {
+            "actionId": "p2",
+            "resultCode": "STORED"
+          },
+          {
+            "actionId": "p3",
+            "resultCode": "STORED"
+          },
+          {
+            "actionId": "find",
+            "resultCode": "FOUND",
+            "readCount": 2,
+            "logicalBytes": 256
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -1,0 +1,120 @@
+{
+  "id": "CT-6-03",
+  "title": "Service -> Key-Value Store: GET inexistente, PUT e novo GET exibem miss e hit lógico.",
+  "cases": [
+    {
+      "name": "miss-put-hit",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "miss",
+                      "kind": "DB_GET",
+                      "connectionId": "data",
+                      "key": "session:42"
+                    },
+                    {
+                      "id": "put",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "key": "session:42",
+                      "dependsOn": [
+                        "miss"
+                      ]
+                    },
+                    {
+                      "id": "hit",
+                      "kind": "DB_GET",
+                      "connectionId": "data",
+                      "key": "session:42",
+                      "dependsOn": [
+                        "put"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "KEY_VALUE_STORE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "miss",
+            "resultCode": "NOT_FOUND",
+            "readCount": 0
+          },
+          {
+            "actionId": "put",
+            "resultCode": "STORED",
+            "writtenCount": 1
+          },
+          {
+            "actionId": "hit",
+            "resultCode": "FOUND",
+            "readCount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

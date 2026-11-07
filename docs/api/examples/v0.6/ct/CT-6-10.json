@@ -1,0 +1,334 @@
+{
+  "id": "CT-6-10",
+  "title": "Cenários acima dos limites terminam com erro controlado, sem travar a execução.",
+  "cases": [
+    {
+      "name": "etl-above-max-batches",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "etl",
+              "type": "ETL_PIPELINE",
+              "displayName": "ETL",
+              "batchSize": 5,
+              "maxBatches": 2,
+              "behaviors": [
+                {
+                  "id": "run",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "extract",
+                      "kind": "ETL_EXTRACT",
+                      "connectionId": "source-edge",
+                      "outputRef": "raw"
+                    },
+                    {
+                      "id": "transform",
+                      "kind": "ETL_TRANSFORM",
+                      "connectionId": "transform-edge",
+                      "inputRef": "raw",
+                      "dependsOn": [
+                        "extract"
+                      ],
+                      "outputRef": "clean",
+                      "simulateFailure": false,
+                      "transform": "IDENTITY"
+                    },
+                    {
+                      "id": "load",
+                      "kind": "ETL_LOAD",
+                      "connectionId": "target-edge",
+                      "inputRef": "clean",
+                      "dependsOn": [
+                        "transform"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "source",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "source",
+              "dataProperties": {
+                "initialRecordCount": 30,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            },
+            {
+              "id": "transformer",
+              "type": "DATA_TRANSFORMER",
+              "displayName": "Transformer",
+              "transformCostPerRecordMs": 1
+            },
+            {
+              "id": "target",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "target",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "etl",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "source-edge",
+              "sourceId": "etl",
+              "targetId": "source",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            },
+            {
+              "id": "transform-edge",
+              "sourceId": "etl",
+              "targetId": "transformer",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "target-edge",
+              "sourceId": "etl",
+              "targetId": "target",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "extract",
+            "status": "FAILED",
+            "resultCode": "LIMIT_EXCEEDED",
+            "errorCode": "ETL_BATCH_LIMIT_EXCEEDED",
+            "batchCount": 0
+          },
+          {
+            "actionId": "load",
+            "status": "SKIPPED",
+            "writtenCount": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "bulk-above-action-budget",
+      "endpoint": "/api/v1/scenarios/validate",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "bulk",
+                      "kind": "DB_BULK_INSERT",
+                      "connectionId": "data",
+                      "recordCount": 100001
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "fields": {
+          "/valid": false
+        },
+        "bodyContains": [
+          "DATA_LIMIT_EXCEEDED"
+        ]
+      },
+      "schemaValid": false,
+      "note": "Above the OpenAPI maximum: rejected structurally by the contract and semantically (DATA_LIMIT_EXCEEDED) by the backend."
+    },
+    {
+      "name": "initial-dataset-above-resource-limit",
+      "endpoint": "/api/v1/scenarios/validate",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "select",
+                      "kind": "DB_SELECT",
+                      "connectionId": "data",
+                      "collection": "default"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 1000001,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "fields": {
+          "/valid": false
+        },
+        "bodyContains": [
+          "DATA_LIMIT_EXCEEDED"
+        ]
+      },
+      "schemaValid": false,
+      "note": "Above the OpenAPI maximum: rejected structurally by the contract and semantically (DATA_LIMIT_EXCEEDED) by the backend."
+    }
+  ]
+}

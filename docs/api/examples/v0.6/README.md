@@ -11,6 +11,8 @@
 - `invalid-action.invalid.json`: Action de DB_SELECT apontando para Key-Value; **erro semântico**, embora o JSON seja estruturalmente válido.
 - `migration-legacy.json`: entrada histórica `DATABASE` e plano ilustrativo de migração explícita.
 
+- `ct/CT-6-01.json` … `ct/CT-6-10.json`: fixtures de aceite da v0.6 (V6-21). Cada arquivo tem `cases[]` com `endpoint`, `request`, `expect` (status, `dataOutcomes` por `actionId` em ordem, `fields` por JSON Pointer, `bodyContains`) e `replay` (repete a requisição e exige resposta idêntica). São executadas contra o backend por `Ct6FixtureReplayTest` (`cd backend && ./mvnw test`) e validadas estruturalmente contra o OpenAPI por `npm run validate`; `schemaValid: false` marca casos que o próprio contrato rejeita.
+
 ## Validação local
 
 ```bash
