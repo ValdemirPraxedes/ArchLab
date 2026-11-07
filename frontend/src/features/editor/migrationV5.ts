@@ -41,6 +41,10 @@ export function prepareArchitectureImportV5(input:unknown):MigrationResultV5 {
       ...('rules' in component ? {rules:component.rules} : {}),
       ...('defaultDecision' in component ? {defaultDecision:component.defaultDecision} : {}),
       ...('defaultTtlMs' in component ? {defaultTtlMs:component.defaultTtlMs} : {}),
+      ...('dataProperties' in component ? {dataProperties:component.dataProperties} : {}),
+      ...('batchSize' in component ? {batchSize:component.batchSize} : {}),
+      ...('maxBatches' in component ? {maxBatches:component.maxBatches} : {}),
+      ...('transformCostPerRecordMs' in component ? {transformCostPerRecordMs:component.transformCostPerRecordMs} : {}),
     }};
   });
   const edges:ArchitectureEdge[]=architecture.connections.map((connection,index) => {

@@ -3,11 +3,25 @@ import { useState } from 'react';
 import type { ArchitectureEdge, ArchitectureNode } from './model';
 
 const triggers = ['REQUEST_RECEIVED','MESSAGE_CONSUMED','WS_MESSAGE_RECEIVED','SESSION_OPENED','SCHEDULED_TRIGGER'] as const;
-const kinds = ['PROCESS','CALL','PUBLISH','RESPOND','OPEN_SESSION','WS_SEND','CLOSE_SESSION','FORK','JOIN','BRANCH','CACHE_GET','CACHE_PUT','CACHE_INVALIDATE','OBJECT_GET','OBJECT_PUT','OBJECT_DELETE','SEND_NOTIFICATION','INDEX_DOCUMENT','SEARCH_DOCUMENTS','REGISTER_SERVICE','UNREGISTER_SERVICE','DISCOVER_SERVICE','EVALUATE_RULE','SCHEDULE_TRIGGER','TRANSFORM'] as const;
+const kinds = ['PROCESS','CALL','PUBLISH','RESPOND','OPEN_SESSION','WS_SEND','CLOSE_SESSION','FORK','JOIN','BRANCH','CACHE_GET','CACHE_PUT','CACHE_INVALIDATE','OBJECT_GET','OBJECT_PUT','OBJECT_DELETE','SEND_NOTIFICATION','INDEX_DOCUMENT','SEARCH_DOCUMENTS','REGISTER_SERVICE','UNREGISTER_SERVICE','DISCOVER_SERVICE','EVALUATE_RULE','SCHEDULE_TRIGGER','TRANSFORM','DB_SELECT','DB_INSERT','DB_UPDATE','DB_DELETE','DB_GET','DB_PUT','DB_FIND','DB_BULK_INSERT','ETL_EXTRACT','ETL_TRANSFORM','ETL_LOAD'] as const;
 type Kind = BehaviorActionV41['kind'];
+const dataTargets:Partial<Record<Kind,readonly string[]>>={
+  DB_SELECT:['RELATIONAL_DATABASE'], DB_INSERT:['RELATIONAL_DATABASE'],
+  DB_UPDATE:['RELATIONAL_DATABASE','DOCUMENT_DATABASE'], DB_DELETE:['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE'],
+  DB_GET:['DOCUMENT_DATABASE','KEY_VALUE_STORE'], DB_PUT:['DOCUMENT_DATABASE','KEY_VALUE_STORE'],
+  DB_FIND:['DOCUMENT_DATABASE'], DB_BULK_INSERT:['RELATIONAL_DATABASE','DOCUMENT_DATABASE'],
+  ETL_EXTRACT:['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE'],
+  ETL_LOAD:['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE'],
+};
 const resourceTargets:Partial<Record<Kind,string>>={CACHE_GET:'CACHE',CACHE_PUT:'CACHE',CACHE_INVALIDATE:'CACHE',OBJECT_GET:'OBJECT_STORAGE',OBJECT_PUT:'OBJECT_STORAGE',OBJECT_DELETE:'OBJECT_STORAGE',SEND_NOTIFICATION:'NOTIFICATION_SERVICE',INDEX_DOCUMENT:'SEARCH_ENGINE',SEARCH_DOCUMENTS:'SEARCH_ENGINE',REGISTER_SERVICE:'SERVICE_REGISTRY',UNREGISTER_SERVICE:'SERVICE_REGISTRY',DISCOVER_SERVICE:'SERVICE_REGISTRY',EVALUATE_RULE:'RULES_ENGINE'};
-const actionFields:Partial<Record<Kind,readonly string[]>>={CACHE_GET:['key','outputRef'],CACHE_PUT:['key','valueMetadata','ttlMs','outputRef'],CACHE_INVALIDATE:['key','outputRef'],OBJECT_GET:['objectKey','outputRef'],OBJECT_PUT:['objectKey','sizeBytes','metadata','outputRef'],OBJECT_DELETE:['objectKey','outputRef'],SEND_NOTIFICATION:['channel','recipientAlias','durationMs','timeoutMs','simulatedResult','outputRef'],INDEX_DOCUMENT:['indexName','documentId','tags','metadata','outputRef'],SEARCH_DOCUMENTS:['indexName','tags','outputRef'],REGISTER_SERVICE:['serviceName','instanceId','targetComponentId','instanceStatus','outputRef'],UNREGISTER_SERVICE:['serviceName','instanceId','outputRef'],DISCOVER_SERVICE:['serviceName','outputRef'],EVALUATE_RULE:['outputRef'],TRANSFORM:['metadata','outputRef']};
-const numberFields=new Set(['ttlMs','sizeBytes','durationMs','timeoutMs']);
+const actionFields:Partial<Record<Kind,readonly string[]>>={CACHE_GET:['key','outputRef'],CACHE_PUT:['key','valueMetadata','ttlMs','outputRef'],CACHE_INVALIDATE:['key','outputRef'],OBJECT_GET:['objectKey','outputRef'],OBJECT_PUT:['objectKey','sizeBytes','metadata','outputRef'],OBJECT_DELETE:['objectKey','outputRef'],SEND_NOTIFICATION:['channel','recipientAlias','durationMs','timeoutMs','simulatedResult','outputRef'],INDEX_DOCUMENT:['indexName','documentId','tags','metadata','outputRef'],SEARCH_DOCUMENTS:['indexName','tags','outputRef'],REGISTER_SERVICE:['serviceName','instanceId','targetComponentId','instanceStatus','outputRef'],UNREGISTER_SERVICE:['serviceName','instanceId','outputRef'],DISCOVER_SERVICE:['serviceName','outputRef'],EVALUATE_RULE:['outputRef'],TRANSFORM:['metadata','outputRef'],
+  DB_SELECT:['collection','key','limit','outputRef'],DB_INSERT:['collection','key','field','equals','averageRecordBytes','outputRef'],
+  DB_UPDATE:['collection','key','field','equals','outputRef'],DB_DELETE:['collection','key','outputRef'],
+  DB_GET:['collection','key','outputRef'],DB_PUT:['collection','key','field','equals','outputRef'],
+  DB_FIND:['collection','field','equals','limit','outputRef'],DB_BULK_INSERT:['collection','recordCount','averageRecordBytes','outputRef'],
+  ETL_EXTRACT:['maxRecords','batchSize','outputRef'],ETL_TRANSFORM:['inputRef','transform','outputRef'],
+  ETL_LOAD:['inputRef','batchSize','outputRef']};
+const numberFields=new Set(['ttlMs','sizeBytes','durationMs','timeoutMs','limit','recordCount','averageRecordBytes','maxRecords','batchSize']);
 const objectFields=new Set(['metadata','tags']);
 function JsonMapField({label,value,onChange}:{label:string;value:unknown;onChange:(value:Record<string,string>)=>void}) {
   const [draft,setDraft]=useState(JSON.stringify(value ?? {}));
@@ -30,6 +44,8 @@ function allowedTrigger(type:ArchitectureNode['data']['componentType'],trigger:s
 function allowedKind(type:ArchitectureNode['data']['componentType'],trigger:string,kind:Kind):boolean {
   if(!allowedTrigger(type,trigger)) return false;
   if(type==='API') return ['PROCESS','CALL','PUBLISH','RESPOND','OPEN_SESSION','WS_SEND','CLOSE_SESSION','FORK','JOIN'].includes(kind);
+  if(kind.startsWith('DB_')) return ['SERVICE','ORCHESTRATOR_SERVICE','WORKER','BFF','ETL_PIPELINE'].includes(type);
+  if(kind.startsWith('ETL_')) return type==='ETL_PIPELINE' || kind==='ETL_TRANSFORM' && type==='DATA_TRANSFORMER';
   if(kind==='RESPOND' && trigger!=='REQUEST_RECEIVED') return false;
   if(kind==='SCHEDULE_TRIGGER') return type==='SCHEDULER';
   if(kind==='TRANSFORM') return type==='INTEGRATION_BUS';
@@ -74,6 +90,14 @@ function defaults(kind: Kind, edges: ArchitectureEdge[]): BehaviorActionV41 {
     case 'UNREGISTER_SERVICE': return {id:actionId,kind,connectionId:connection,serviceName:'service',instanceId:'instance'};
     case 'DISCOVER_SERVICE': return {id:actionId,kind,connectionId:connection,serviceName:'service'};
     case 'EVALUATE_RULE': return {id:actionId,kind,connectionId:connection};
+    case 'DB_SELECT': return {id:actionId,kind,connectionId:connection,collection:'default'};
+    case 'DB_INSERT': case 'DB_UPDATE': case 'DB_DELETE': case 'DB_GET': case 'DB_PUT':
+      return {id:actionId,kind,connectionId:connection,key:''};
+    case 'DB_FIND': return {id:actionId,kind,connectionId:connection,field:'',equals:''};
+    case 'DB_BULK_INSERT': return {id:actionId,kind,connectionId:connection,recordCount:1};
+    case 'ETL_EXTRACT': return {id:actionId,kind,connectionId:connection,outputRef:id('batch')};
+    case 'ETL_TRANSFORM': return {id:actionId,kind,inputRef:'',transform:'IDENTITY'};
+    case 'ETL_LOAD': return {id:actionId,kind,connectionId:connection,inputRef:''};
     default: throw new Error(`Action ${kind} ainda não suportada pelo editor de comportamentos v0.5`);
   }
 }
@@ -82,6 +106,7 @@ function compatible(kind: Kind, edge: ArchitectureEdge): boolean {
   if (kind==='CALL') return !!protocol && !['QUEUE','TOPIC','MQTT','WEBSOCKET'].includes(protocol);
   if (kind==='PUBLISH') return !!protocol && ['QUEUE','TOPIC','MQTT'].includes(protocol);
   if (kind==='OPEN_SESSION') return protocol==='WEBSOCKET';
+  if (dataTargets[kind]) return protocol==='DATABASE_QUERY';
   return !!resourceTargets[kind] || kind==='TRANSFORM';
 }
 export function BehaviorEditorV41({node,nodes,edges,behaviors,onChange,disabled}: Props) {
@@ -104,10 +129,10 @@ export function BehaviorEditorV41({node,nodes,edges,behaviors,onChange,disabled}
         onChange={e=>changeBehavior(bi,{...behavior,match:e.target.value?{websocketPath:e.target.value}:undefined})}/></label>}
       {behavior.actions.map((action,ai) => {
         const set=(patch:Record<string,unknown>)=>changeAction(bi,ai,{...action,...patch} as BehaviorActionV41);
-        const choices=outgoing.filter(edge=>compatible(action.kind,edge) && (!resourceTargets[action.kind] || nodes.find(item=>item.id===edge.target)?.data.componentType===resourceTargets[action.kind]));
+        const choices=outgoing.filter(edge=>compatible(action.kind,edge) && (!resourceTargets[action.kind] || nodes.find(item=>item.id===edge.target)?.data.componentType===resourceTargets[action.kind]) && (!dataTargets[action.kind] || dataTargets[action.kind]?.includes(nodes.find(item=>item.id===edge.target)?.data.componentType ?? '')));
         return <fieldset key={action.id}><legend>Ação {ai+1}</legend>
           <label>ID da ação<input aria-label={`ID ação ${bi+1}.${ai+1}`} value={action.id} onChange={e=>set({id:e.target.value})}/></label>
-          <label>Tipo<select aria-label={`Tipo da ação ${bi+1}.${ai+1}`} value={action.kind} onChange={e=>changeAction(bi,ai,defaults(e.target.value as Kind,outgoing.filter(edge=>compatible(e.target.value as Kind,edge) && (!resourceTargets[e.target.value as Kind] || nodes.find(item=>item.id===edge.target)?.data.componentType===resourceTargets[e.target.value as Kind]))))}>
+          <label>Tipo<select aria-label={`Tipo da ação ${bi+1}.${ai+1}`} value={action.kind} onChange={e=>changeAction(bi,ai,defaults(e.target.value as Kind,outgoing.filter(edge=>compatible(e.target.value as Kind,edge) && (!resourceTargets[e.target.value as Kind] || nodes.find(item=>item.id===edge.target)?.data.componentType===resourceTargets[e.target.value as Kind]) && (!dataTargets[e.target.value as Kind] || dataTargets[e.target.value as Kind]?.includes(nodes.find(item=>item.id===edge.target)?.data.componentType ?? '')))))}>
             {kinds.filter(kind=>allowedKind(node.data.componentType,behavior.trigger,kind)).map(kind=><option key={kind} value={kind}>{kind}</option>)}
           </select></label>
           <label>Após ações<select aria-label={`Dependências ${bi+1}.${ai+1}`} multiple value={action.dependsOn ?? []}
@@ -154,9 +179,9 @@ export function BehaviorEditorV41({node,nodes,edges,behaviors,onChange,disabled}
           <button type="button" onClick={()=>changeBehavior(bi,{...behavior,actions:behavior.actions.filter((_,i)=>i!==ai)})} disabled={behavior.actions.length===1}>Remover ação</button>
         </fieldset>;
       })}
-      <button type="button" onClick={()=>changeBehavior(bi,{...behavior,actions:[...behavior.actions,defaults('PROCESS',outgoing)]})}>Adicionar ação</button>
+      <button type="button" onClick={()=>changeBehavior(bi,{...behavior,actions:[...behavior.actions,defaults(node.data.componentType==='ETL_PIPELINE'?'ETL_EXTRACT':node.data.componentType==='DATA_TRANSFORMER'?'ETL_TRANSFORM':'PROCESS',outgoing)]})}>Adicionar ação</button>
       <button type="button" onClick={()=>onChange(behaviors.filter((_,i)=>i!==bi))}>Remover comportamento</button>
     </fieldset>)}
-    <button type="button" disabled={disabled} onClick={()=>onChange([...behaviors,{id:id('behavior'),trigger:'REQUEST_RECEIVED',actions:[defaults('RESPOND',outgoing)]}])}>Adicionar comportamento</button>
+    <button type="button" disabled={disabled} onClick={()=>onChange([...behaviors,{id:id('behavior'),trigger:'REQUEST_RECEIVED',actions:[defaults(node.data.componentType==='ETL_PIPELINE'?'ETL_EXTRACT':node.data.componentType==='DATA_TRANSFORMER'?'ETL_TRANSFORM':'RESPOND',outgoing)]}])}>Adicionar comportamento</button>
   </section>;
 }

@@ -20,6 +20,8 @@ describe('Lucide nos componentes', () => {
     ['ORCHESTRATOR_SERVICE','workflow'], ['INTEGRATION_BUS','cable'], ['CACHE','database-zap'],
     ['OBJECT_STORAGE','hard-drive'], ['NOTIFICATION_SERVICE','bell-ring'], ['SEARCH_ENGINE','search'],
     ['SERVICE_REGISTRY','waypoints'], ['RULES_ENGINE','list-checks'],
+    ['RELATIONAL_DATABASE','table2'], ['DOCUMENT_DATABASE','file-json2'],
+    ['KEY_VALUE_STORE','key-round'], ['ETL_PIPELINE','list-filter'], ['DATA_TRANSFORMER','replace'],
   ] as const)('associa %s ao ícone %s', (type, icon) => {
     const { container } = render(<ComponentIcon type={type} />);
     expect(container.querySelector(`svg.lucide-${icon}`)).not.toBeNull();
