@@ -439,4 +439,53 @@ class DataActionsV6IntegrationTest {
         assertEquals(0,last.get("writtenCount").asInt());
         assertEquals(response.body(),post("/api/v1/simulations",body).body());
     }
+
+    // ---- V6-13: dataOutcomes correlate with trace and timeline ----
+    private void assertOutcomesCorrelate(JsonNode root,String body) {
+        JsonNode trace=root.get("trace");
+        java.util.Set<String> exchanges=new java.util.HashSet<>();
+        for (JsonNode entry:trace) if ("MESSAGE_EVENT".equals(entry.get("type").asText()))
+            exchanges.add(entry.path("exchangeId").asText());
+        for (JsonNode outcome:root.get("dataOutcomes")) {
+            boolean matched=false;
+            for (JsonNode entry:trace)
+                if ("ACTION_EVENT".equals(entry.get("type").asText())
+                        && outcome.get("actionId").asText().equals(entry.get("actionId").asText())
+                        && outcome.equals(entry.get("outcome"))) {
+                    matched=true;
+                    assertEquals(outcome.get("operationId").asText(),entry.get("operationId").asText(),body);
+                    assertEquals(outcome.get("timestampMs").asLong(),entry.get("timestampMs").asLong(),body);
+                }
+            assertTrue(matched,"outcome without ACTION_EVENT: "+outcome);
+            String op=outcome.get("operationId").asText();
+            if (op.startsWith("exchange-") && !"SKIPPED".equals(outcome.get("status").asText()))
+                assertTrue(exchanges.contains(op),"outcome operation "+op+" has no message exchange: "+body);
+        }
+    }
+    @Test void everyDataOutcomeIsTraceableIncludingQueueRejectionsAndTimeouts() throws Exception {
+        String crud=scenario("RELATIONAL_DATABASE","""
+            [{"id":"w1","kind":"DB_INSERT","connectionId":"data","key":"1"},
+             {"id":"w2","kind":"DB_INSERT","connectionId":"data","key":"2"},
+             {"id":"w3","kind":"DB_INSERT","connectionId":"data","key":"3","timeoutMs":2},
+             {"id":"w4","kind":"DB_INSERT","connectionId":"data","key":"4"},
+             {"id":"read","kind":"DB_SELECT","connectionId":"data","collection":"default","key":"1","dependsOn":["w1"]}]
+            """);
+        var response=post("/api/v1/simulations",crud);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode root=json.readTree(response.body());
+        java.util.Set<String> errors=new java.util.HashSet<>();
+        for (JsonNode o:root.get("dataOutcomes")) errors.add(o.path("errorCode").asText());
+        assertTrue(errors.contains("DATA_QUEUE_FULL"),response.body());
+        assertTrue(errors.contains("DATA_TIMEOUT"),response.body());
+        assertOutcomesCorrelate(root,response.body());
+        boolean dataActivity=false;
+        for (JsonNode a:root.get("timeline")) dataActivity|="DATA_OPERATION".equals(a.path("phase").asText());
+        assertTrue(dataActivity,"timeline must show DATA_OPERATION processing");
+        JsonNode etl=json.readTree(post("/api/v1/simulations",etl(4,10,1,"")).body());
+        assertOutcomesCorrelate(etl,etl.toString());
+        String failing=etl(4,10,1,"").replace("\"transform\":\"IDENTITY\"","\"transform\":\"IDENTITY\",\"simulateFailure\":true");
+        JsonNode failed=json.readTree(post("/api/v1/simulations",failing).body());
+        assertEquals("SKIPPED",failed.get("dataOutcomes").get(failed.get("dataOutcomes").size()-1).get("status").asText());
+        assertOutcomesCorrelate(failed,failed.toString());
+    }
 }

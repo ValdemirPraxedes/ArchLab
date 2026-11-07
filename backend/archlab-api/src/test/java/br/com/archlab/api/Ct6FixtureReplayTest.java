@@ -47,6 +47,12 @@ class Ct6FixtureReplayTest {
         assertTrue(endpoint.startsWith("/api/v1/"),id+" must use /api/v1");
         String request=testCase.get("request").toString();
         HttpResponse<String> response=post(endpoint,request);
+        if (endpoint.equals("/api/v1/simulations") && response.statusCode()==200) {
+            // Kept for contract checks: docs/api/examples/v0.6/validate.cjs validates these against SimulationResponse.
+            Path out=Path.of("target","ct6-responses");
+            Files.createDirectories(out);
+            Files.writeString(out.resolve(id+"-"+testCase.get("name").asText()+".json"),response.body());
+        }
         JsonNode expect=testCase.get("expect");
         String context=id+"/"+testCase.get("name").asText()+": "+response.body();
         assertEquals(expect.get("status").asInt(),response.statusCode(),context);
