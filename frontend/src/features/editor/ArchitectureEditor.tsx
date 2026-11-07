@@ -21,7 +21,9 @@ import { inFlightMessages, traceStateAt } from './traceV2';
 import type { TraceCursor } from './traceV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { toArchitectureV1 } from './architectureV1';
-import { prepareArchitectureImportV6 } from './migrationV6';
+import { MigrationAmbiguityErrorV6, prepareArchitectureImportV6 } from './migrationV6';
+import { DataNumberFieldV6 } from './DataNumberFieldV6';
+import { DATA_RESOURCE_LIMITS_V6, DATA_TRANSFORMER_LIMITS_V6, ETL_PIPELINE_LIMITS_V6, dataResourceHintV6 } from './dataLimitsV6';
 import type { PreparedImportV6 } from './migrationV6';
 import { exportArchitectureV6 } from './exportV6';
 import { archlabV1Client, ArchlabV1HttpError } from '../../api/archlabV1Client';
@@ -145,6 +147,10 @@ function EditorCanvas() {
         setActionFeedback('Prévia de migração pronta. Confirme para aplicar ao canvas.');
       } else applyImport(prepared);
     } catch (cause) {
+      if (cause instanceof MigrationAmbiguityErrorV6) {
+        setIssues(cause.diagnostics.map(d=>({code:d.code,path:d.path,message:`${d.message} (${d.reason})`})));
+        setValidationStatus('invalid'); setValidationScope('architecture');
+      }
       setActionFeedback(`Importação cancelada; o canvas original foi preservado. ${cause instanceof Error?cause.message:'Arquivo inválido.'}`);
     }
   };
@@ -391,12 +397,13 @@ function EditorCanvas() {
           </>}
           {node.data.componentType === 'DATABASE' && <label>Processamento (ms)<input aria-label="Processamento (ms)" type="number" min="0" step="1" value={node.data.processingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('processingMs', e.target.value)} /></label>}
           {isV6DataType(node.data.componentType) && node.data.dataProperties && <section aria-label="Propriedades de dados"><h3>Dados virtuais</h3>
-            {(['initialRecordCount','averageRecordBytes','readLatencyMs','writeLatencyMs','maxConcurrentOperations','connectionPoolSize','queueCapacity'] as const).map(field=><label key={field}>{field}<input aria-label={field} type="number" min="0" step="1" disabled={executionLocked} value={node.data.dataProperties?.[field] ?? 0} onChange={event=>{const value=Number(event.target.value);setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,dataProperties:{...item.data.dataProperties!,[field]:value}}}:item));resetValidation();}}/></label>)}
+            {(Object.keys(DATA_RESOURCE_LIMITS_V6) as (keyof typeof DATA_RESOURCE_LIMITS_V6)[]).map(field=><DataNumberFieldV6 key={field} field={field} limit={DATA_RESOURCE_LIMITS_V6[field]} disabled={executionLocked} value={node.data.dataProperties?.[field]} onChange={value=>{setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,dataProperties:{...item.data.dataProperties!,[field]:value}}}:item));resetValidation();}}/>)}
+            {dataResourceHintV6(node.data.dataProperties.connectionPoolSize,node.data.dataProperties.maxConcurrentOperations) && <p className="field-hint">{dataResourceHintV6(node.data.dataProperties.connectionPoolSize,node.data.dataProperties.maxConcurrentOperations)}</p>}
           </section>}
           {node.data.componentType === 'ETL_PIPELINE' && <section aria-label="Configuração ETL"><h3>Pipeline ETL</h3>
-            {(['batchSize','maxBatches'] as const).map(field=><label key={field}>{field}<input aria-label={field} type="number" min="1" step="1" disabled={executionLocked} value={node.data[field] ?? 1} onChange={event=>{const value=Number(event.target.value);setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,[field]:value}}:item));resetValidation();}}/></label>)}
+            {(Object.keys(ETL_PIPELINE_LIMITS_V6) as (keyof typeof ETL_PIPELINE_LIMITS_V6)[]).map(field=><DataNumberFieldV6 key={field} field={field} limit={ETL_PIPELINE_LIMITS_V6[field]} disabled={executionLocked} value={node.data[field]} onChange={value=>{setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,[field]:value}}:item));resetValidation();}}/>)}
           </section>}
-          {node.data.componentType === 'DATA_TRANSFORMER' && <label>transformCostPerRecordMs<input aria-label="transformCostPerRecordMs" type="number" min="0" step="1" disabled={executionLocked} value={node.data.transformCostPerRecordMs ?? 0} onChange={event=>{const value=Number(event.target.value);setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,transformCostPerRecordMs:value}}:item));resetValidation();}}/></label>}
+          {node.data.componentType === 'DATA_TRANSFORMER' && <DataNumberFieldV6 field="transformCostPerRecordMs" limit={DATA_TRANSFORMER_LIMITS_V6.transformCostPerRecordMs} disabled={executionLocked} value={node.data.transformCostPerRecordMs} onChange={value=>{setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,transformCostPerRecordMs:value}}:item));resetValidation();}}/>}
           {node.data.componentType === 'BROKER' && <BrokerEditor node={node} nodes={nodes} edges={edges} disabled={executionLocked}
             onChange={(destinations,subscriptions) => { setNodes(current => current.map(item => item.id === node.id ? {...item,data:{...item.data,destinations,subscriptions}} : item)); resetValidation(); }}/>}
           <ServicePropertiesV5 node={node} edges={edges} disabled={executionLocked} onChange={patch=>{setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,...patch}}:item));resetValidation();}}/>

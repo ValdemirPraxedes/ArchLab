@@ -2155,6 +2155,18 @@ components:
           - UNREGISTER_SERVICE
           - DISCOVER_SERVICE
           - EVALUATE_RULE
+          # v0.6: DB_* / ETL_* request and response messages carry the Action kind as intent.
+          - DB_SELECT
+          - DB_INSERT
+          - DB_UPDATE
+          - DB_DELETE
+          - DB_GET
+          - DB_PUT
+          - DB_FIND
+          - DB_BULK_INSERT
+          - ETL_EXTRACT
+          - ETL_TRANSFORM
+          - ETL_LOAD
         correlation: {$ref: '#/components/schemas/Correlation'}
       required:
       - sequence
@@ -2196,6 +2208,11 @@ components:
           - DATABASE_PROCESSING
           - API_MESSAGE_PROCESSING
           - VIRTUAL_RESOURCE_PROCESSING
+          # v0.6 logical data processing on the unified virtual clock
+          - DATA_OPERATION
+          - ETL_EXTRACT
+          - ETL_TRANSFORM
+          - ETL_LOAD
         correlation: {$ref: '#/components/schemas/Correlation'}
       required:
       - sequence
@@ -2258,7 +2275,11 @@ components:
           - {type: 'null'}
         status: {type: string, enum: [STARTED, COMPLETED, FAILED, TIMED_OUT, SKIPPED]}
         cause: {type: string, minLength: 1, maxLength: 128}
-        outcome: {$ref: '#/components/schemas/ResourceOutcomeV5'}
+        outcome:
+          description: v0.5 virtual-resource outcome, or (v0.6) the same DataOperationOutcomeV6 published in dataOutcomes for DB_* and ETL_* Actions.
+          oneOf:
+          - {$ref: '#/components/schemas/ResourceOutcomeV5'}
+          - {$ref: '#/components/schemas/DataOperationOutcomeV6'}
         correlation: {$ref: '#/components/schemas/Correlation'}
     CommunicationActivity:
       type: object
@@ -2317,6 +2338,11 @@ components:
           - DATABASE_PROCESSING
           - API_MESSAGE_PROCESSING
           - VIRTUAL_RESOURCE_PROCESSING
+          # v0.6 logical data processing
+          - DATA_OPERATION
+          - ETL_EXTRACT
+          - ETL_TRANSFORM
+          - ETL_LOAD
         startMs: *id005
         endMs: *id006
         durationMs: *id007

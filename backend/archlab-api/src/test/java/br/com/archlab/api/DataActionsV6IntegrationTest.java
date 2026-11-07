@@ -277,10 +277,16 @@ class DataActionsV6IntegrationTest {
     }
 
     // ---- v0.6 continuation (Claude): V6-01, V6-09, V6-10, V6-11, V6-12 ----
-    private static final java.util.Map<String,java.util.Set<String>> MATRIX=java.util.Map.of(
-            "RELATIONAL_DATABASE",java.util.Set.of("DB_SELECT","DB_INSERT","DB_UPDATE","DB_DELETE","DB_BULK_INSERT"),
-            "DOCUMENT_DATABASE",java.util.Set.of("DB_GET","DB_PUT","DB_FIND","DB_UPDATE","DB_DELETE","DB_BULK_INSERT"),
-            "KEY_VALUE_STORE",java.util.Set.of("DB_GET","DB_PUT","DB_DELETE"));
+    /** Normative matrix shared with the editor (docs/api/examples/v0.6/capability-matrix-v6.json), by target type. */
+    private java.util.Map<String,java.util.Set<String>> matrix() throws Exception {
+        JsonNode actions=json.readTree(java.nio.file.Files.readString(java.nio.file.Path.of(
+                "..","..","docs","api","examples","v0.6","capability-matrix-v6.json"))).get("actions");
+        java.util.Map<String,java.util.Set<String>> byType=new java.util.TreeMap<>();
+        for (var entry:actions.properties())
+            for (JsonNode type:entry.getValue())
+                byType.computeIfAbsent(type.asText(),k -> new java.util.TreeSet<>()).add(entry.getKey());
+        return byType;
+    }
     private static String minimalAction(String kind) {
         String required=switch(kind) {
             case "DB_SELECT" -> "\"collection\":\"c\"";
@@ -293,13 +299,35 @@ class DataActionsV6IntegrationTest {
     @Test void fullTypeByActionMatrixIsEnforcedBeforeExecution() throws Exception {
         java.util.List<String> kinds=java.util.List.of("DB_SELECT","DB_INSERT","DB_UPDATE","DB_DELETE",
                 "DB_GET","DB_PUT","DB_FIND","DB_BULK_INSERT");
-        for (var entry:MATRIX.entrySet()) for (String kind:kinds) {
+        var matrix=matrix();
+        assertEquals(java.util.Set.of("RELATIONAL_DATABASE","DOCUMENT_DATABASE","KEY_VALUE_STORE","DATA_TRANSFORMER"),
+                matrix.keySet());
+        for (var entry:matrix.entrySet()) for (String kind:kinds) {
+            if ("DATA_TRANSFORMER".equals(entry.getKey())) continue;
             var response=post("/api/v1/scenarios/validate",scenario(entry.getKey(),minimalAction(kind)));
             assertEquals(200,response.statusCode(),response.body());
             boolean rejected=response.body().contains("DATA_ACTION_INCOMPATIBLE");
             assertEquals(!entry.getValue().contains(kind),rejected,entry.getKey()+" x "+kind+": "+response.body());
             if (!rejected) assertTrue(json.readTree(response.body()).get("valid").asBoolean(),
                     entry.getKey()+" x "+kind+": "+response.body());
+        }
+    }
+    @Test void etlExtractAndLoadAcceptEveryDataResourceTypeOfTheMatrix() throws Exception {
+        var matrix=matrix();
+        for (String type:java.util.List.of("RELATIONAL_DATABASE","DOCUMENT_DATABASE","KEY_VALUE_STORE")) {
+            assertTrue(matrix.get(type).containsAll(java.util.Set.of("ETL_EXTRACT","ETL_LOAD")),type);
+            String asSource=etl(3,10,1,"").replace("\"id\":\"source\",\"type\":\"DOCUMENT_DATABASE\"",
+                    "\"id\":\"source\",\"type\":\""+type+"\"");
+            String asTarget=etl(3,10,1,"").replace("\"id\":\"target\",\"type\":\"RELATIONAL_DATABASE\"",
+                    "\"id\":\"target\",\"type\":\""+type+"\"");
+            for (String body:java.util.List.of(asSource,asTarget)) {
+                assertTrue(body.contains("\"type\":\""+type+"\""),type);
+                var validation=post("/api/v1/scenarios/validate",body);
+                assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),type+": "+validation.body());
+                JsonNode outcomes=json.readTree(post("/api/v1/simulations",body).body()).get("dataOutcomes");
+                assertEquals("LOADED",outcomes.get(outcomes.size()-1).get("resultCode").asText(),type);
+                assertEquals(3,outcomes.get(outcomes.size()-1).get("writtenCount").asInt(),type);
+            }
         }
     }
     @Test void documentGetUpdateDeleteAndFindReflectVirtualState() throws Exception {
@@ -438,5 +466,54 @@ class DataActionsV6IntegrationTest {
         assertEquals("SKIPPED",last.get("status").asText());
         assertEquals(0,last.get("writtenCount").asInt());
         assertEquals(response.body(),post("/api/v1/simulations",body).body());
+    }
+
+    // ---- V6-13: dataOutcomes correlate with trace and timeline ----
+    private void assertOutcomesCorrelate(JsonNode root,String body) {
+        JsonNode trace=root.get("trace");
+        java.util.Set<String> exchanges=new java.util.HashSet<>();
+        for (JsonNode entry:trace) if ("MESSAGE_EVENT".equals(entry.get("type").asText()))
+            exchanges.add(entry.path("exchangeId").asText());
+        for (JsonNode outcome:root.get("dataOutcomes")) {
+            boolean matched=false;
+            for (JsonNode entry:trace)
+                if ("ACTION_EVENT".equals(entry.get("type").asText())
+                        && outcome.get("actionId").asText().equals(entry.get("actionId").asText())
+                        && outcome.equals(entry.get("outcome"))) {
+                    matched=true;
+                    assertEquals(outcome.get("operationId").asText(),entry.get("operationId").asText(),body);
+                    assertEquals(outcome.get("timestampMs").asLong(),entry.get("timestampMs").asLong(),body);
+                }
+            assertTrue(matched,"outcome without ACTION_EVENT: "+outcome);
+            String op=outcome.get("operationId").asText();
+            if (op.startsWith("exchange-") && !"SKIPPED".equals(outcome.get("status").asText()))
+                assertTrue(exchanges.contains(op),"outcome operation "+op+" has no message exchange: "+body);
+        }
+    }
+    @Test void everyDataOutcomeIsTraceableIncludingQueueRejectionsAndTimeouts() throws Exception {
+        String crud=scenario("RELATIONAL_DATABASE","""
+            [{"id":"w1","kind":"DB_INSERT","connectionId":"data","key":"1"},
+             {"id":"w2","kind":"DB_INSERT","connectionId":"data","key":"2"},
+             {"id":"w3","kind":"DB_INSERT","connectionId":"data","key":"3","timeoutMs":2},
+             {"id":"w4","kind":"DB_INSERT","connectionId":"data","key":"4"},
+             {"id":"read","kind":"DB_SELECT","connectionId":"data","collection":"default","key":"1","dependsOn":["w1"]}]
+            """);
+        var response=post("/api/v1/simulations",crud);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode root=json.readTree(response.body());
+        java.util.Set<String> errors=new java.util.HashSet<>();
+        for (JsonNode o:root.get("dataOutcomes")) errors.add(o.path("errorCode").asText());
+        assertTrue(errors.contains("DATA_QUEUE_FULL"),response.body());
+        assertTrue(errors.contains("DATA_TIMEOUT"),response.body());
+        assertOutcomesCorrelate(root,response.body());
+        boolean dataActivity=false;
+        for (JsonNode a:root.get("timeline")) dataActivity|="DATA_OPERATION".equals(a.path("phase").asText());
+        assertTrue(dataActivity,"timeline must show DATA_OPERATION processing");
+        JsonNode etl=json.readTree(post("/api/v1/simulations",etl(4,10,1,"")).body());
+        assertOutcomesCorrelate(etl,etl.toString());
+        String failing=etl(4,10,1,"").replace("\"transform\":\"IDENTITY\"","\"transform\":\"IDENTITY\",\"simulateFailure\":true");
+        JsonNode failed=json.readTree(post("/api/v1/simulations",failing).body());
+        assertEquals("SKIPPED",failed.get("dataOutcomes").get(failed.get("dataOutcomes").size()-1).get("status").asText());
+        assertOutcomesCorrelate(failed,failed.toString());
     }
 }

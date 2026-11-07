@@ -447,11 +447,17 @@ public final class UnifiedSimulationV41 {
                 else {
                     Deque<Runnable> waiting=waitingData.computeIfAbsent(resource.id(),k -> new ArrayDeque<>());
                     if (waiting.size()>=resource.queueCapacity()) {
-                        dataOutcomes.add(fields("operationId",operationId,"actionId",action.id(),
+                        Map<String,Object> rejected=fields("operationId",operationId,"actionId",action.id(),
                                 "componentId",api.id(),"resourceComponentId",resource.id(),
                                 "connectionId",edge.id(),"timestampMs",now,"status","REJECTED",
                                 "resultCode","LIMIT_EXCEEDED","readCount",0,"writtenCount",0,
-                                "rejectedCount",1,"logicalBytes",0,"errorCode","DATA_QUEUE_FULL"));
+                                "rejectedCount",1,"logicalBytes",0,"errorCode","DATA_QUEUE_FULL");
+                        if (parent!=null) rejected.put("parentOperationId",parent);
+                        dataOutcomes.add(rejected);
+                        // Rejections must stay visible in trace/timeline with their cause.
+                        event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",resource.id(),
+                                "operationId",operationId,"parentExchangeId",parent,"status","FAILED",
+                                "cause","DATA_QUEUE_FULL","outcome",rejected));
                         finish.finish(false);
                     } else {
                         boolean[] terminal={false};
@@ -466,12 +472,17 @@ public final class UnifiedSimulationV41 {
                         if (action.timeoutMs()>0) timeout[0]=schedule(add(arrived,action.timeoutMs()),() -> {
                             if (terminal[0]) return;
                             terminal[0]=true; waiting.remove(queued);
-                            dataOutcomes.add(fields("operationId",operationId,"actionId",action.id(),
+                            Map<String,Object> timedOut=fields("operationId",operationId,"actionId",action.id(),
                                     "componentId",api.id(),"resourceComponentId",resource.id(),
                                     "connectionId",edge.id(),"timestampMs",now,"queueWaitMs",now-arrived,
                                     "status","TIMED_OUT","resultCode","TIMED_OUT","readCount",0,
                                     "writtenCount",0,"rejectedCount",0,"logicalBytes",0,
-                                    "errorCode","DATA_TIMEOUT"));
+                                    "errorCode","DATA_TIMEOUT");
+                            if (parent!=null) timedOut.put("parentOperationId",parent);
+                            dataOutcomes.add(timedOut);
+                            event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",resource.id(),
+                                    "operationId",operationId,"parentExchangeId",parent,"status","TIMED_OUT",
+                                    "cause","DATA_TIMEOUT","outcome",timedOut));
                             finish.finish(false);
                         });
                     }

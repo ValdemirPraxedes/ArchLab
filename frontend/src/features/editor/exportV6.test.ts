@@ -2,6 +2,7 @@ import {describe,expect,it} from 'vitest';
 import {createArchitectureEdge,createArchitectureNode} from './model';
 import {exportArchitectureV6} from './exportV6';
 import {prepareArchitectureImportV6} from './migrationV6';
+import golden from '../../../../docs/api/examples/v0.6/canonical-export-p0.json?raw';
 
 describe('exportação canônica v0.6',()=>{
   it('faz round-trip de IDs, tipos P0, propriedades e conexões',()=>{
@@ -19,5 +20,13 @@ describe('exportação canônica v0.6',()=>{
   });
   it('recusa exportação de DATABASE sem migração',()=>{
     expect(()=>exportArchitectureV6([createArchitectureNode('DATABASE',{x:0,y:0})],[])).toThrow(/Migre/);
+  });
+  it('é idempotente sobre a fixture canônica com os 5 tipos P0 (golden compartilhado com backend e OpenAPI)',()=>{
+    const imported=prepareArchitectureImportV6(JSON.parse(golden) as unknown);
+    expect(imported.databaseIds).toEqual([]);
+    const types=new Set(imported.nodes.map(node=>node.data.componentType));
+    for (const type of ['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE','ETL_PIPELINE','DATA_TRANSFORMER'])
+      expect(types).toContain(type);
+    expect(exportArchitectureV6(imported.nodes,imported.edges)).toBe(golden);
   });
 });

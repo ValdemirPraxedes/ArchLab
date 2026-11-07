@@ -1,19 +1,12 @@
 import type { BehaviorActionV41, BehaviorV41 } from '../../api/archlabV1Client';
 import { useState } from 'react';
 import type { ArchitectureEdge, ArchitectureNode } from './model';
+import { DATA_ACTION_TARGETS_V6 as dataTargets } from './dataCapabilitiesV6';
 
 const triggers = ['REQUEST_RECEIVED','MESSAGE_CONSUMED','WS_MESSAGE_RECEIVED','SESSION_OPENED','SCHEDULED_TRIGGER'] as const;
 const kinds = ['PROCESS','CALL','PUBLISH','RESPOND','OPEN_SESSION','WS_SEND','CLOSE_SESSION','FORK','JOIN','BRANCH','CACHE_GET','CACHE_PUT','CACHE_INVALIDATE','OBJECT_GET','OBJECT_PUT','OBJECT_DELETE','SEND_NOTIFICATION','INDEX_DOCUMENT','SEARCH_DOCUMENTS','REGISTER_SERVICE','UNREGISTER_SERVICE','DISCOVER_SERVICE','EVALUATE_RULE','SCHEDULE_TRIGGER','TRANSFORM','DB_SELECT','DB_INSERT','DB_UPDATE','DB_DELETE','DB_GET','DB_PUT','DB_FIND','DB_BULK_INSERT','ETL_EXTRACT','ETL_TRANSFORM','ETL_LOAD'] as const;
 type Kind = BehaviorActionV41['kind'];
-const dataTargets:Partial<Record<Kind,readonly string[]>>={
-  DB_SELECT:['RELATIONAL_DATABASE'], DB_INSERT:['RELATIONAL_DATABASE'],
-  DB_UPDATE:['RELATIONAL_DATABASE','DOCUMENT_DATABASE'], DB_DELETE:['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE'],
-  DB_GET:['DOCUMENT_DATABASE','KEY_VALUE_STORE'], DB_PUT:['DOCUMENT_DATABASE','KEY_VALUE_STORE'],
-  DB_FIND:['DOCUMENT_DATABASE'], DB_BULK_INSERT:['RELATIONAL_DATABASE','DOCUMENT_DATABASE'],
-  ETL_EXTRACT:['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE'],
-  ETL_TRANSFORM:['DATA_TRANSFORMER'],
-  ETL_LOAD:['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE'],
-};
+
 const resourceTargets:Partial<Record<Kind,string>>={CACHE_GET:'CACHE',CACHE_PUT:'CACHE',CACHE_INVALIDATE:'CACHE',OBJECT_GET:'OBJECT_STORAGE',OBJECT_PUT:'OBJECT_STORAGE',OBJECT_DELETE:'OBJECT_STORAGE',SEND_NOTIFICATION:'NOTIFICATION_SERVICE',INDEX_DOCUMENT:'SEARCH_ENGINE',SEARCH_DOCUMENTS:'SEARCH_ENGINE',REGISTER_SERVICE:'SERVICE_REGISTRY',UNREGISTER_SERVICE:'SERVICE_REGISTRY',DISCOVER_SERVICE:'SERVICE_REGISTRY',EVALUATE_RULE:'RULES_ENGINE'};
 const actionFields:Partial<Record<Kind,readonly string[]>>={CACHE_GET:['key','outputRef'],CACHE_PUT:['key','valueMetadata','ttlMs','outputRef'],CACHE_INVALIDATE:['key','outputRef'],OBJECT_GET:['objectKey','outputRef'],OBJECT_PUT:['objectKey','sizeBytes','metadata','outputRef'],OBJECT_DELETE:['objectKey','outputRef'],SEND_NOTIFICATION:['channel','recipientAlias','durationMs','timeoutMs','simulatedResult','outputRef'],INDEX_DOCUMENT:['indexName','documentId','tags','metadata','outputRef'],SEARCH_DOCUMENTS:['indexName','tags','outputRef'],REGISTER_SERVICE:['serviceName','instanceId','targetComponentId','instanceStatus','outputRef'],UNREGISTER_SERVICE:['serviceName','instanceId','outputRef'],DISCOVER_SERVICE:['serviceName','outputRef'],EVALUATE_RULE:['outputRef'],TRANSFORM:['metadata','outputRef'],
   DB_SELECT:['collection','key','limit','outputRef'],DB_INSERT:['collection','key','field','equals','averageRecordBytes','outputRef'],

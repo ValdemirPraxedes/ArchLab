@@ -47,6 +47,12 @@ class Ct6FixtureReplayTest {
         assertTrue(endpoint.startsWith("/api/v1/"),id+" must use /api/v1");
         String request=testCase.get("request").toString();
         HttpResponse<String> response=post(endpoint,request);
+        if (endpoint.equals("/api/v1/simulations") && response.statusCode()==200) {
+            // Kept for contract checks: docs/api/examples/v0.6/validate.cjs validates these against SimulationResponse.
+            Path out=Path.of("target","ct6-responses");
+            Files.createDirectories(out);
+            Files.writeString(out.resolve(id+"-"+testCase.get("name").asText()+".json"),response.body());
+        }
         JsonNode expect=testCase.get("expect");
         String context=id+"/"+testCase.get("name").asText()+": "+response.body();
         assertEquals(expect.get("status").asInt(),response.statusCode(),context);
@@ -90,5 +96,22 @@ class Ct6FixtureReplayTest {
         return client.send(HttpRequest.newBuilder(URI.create("http://localhost:"+port+path))
                 .header("Content-Type","application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
+    }
+
+    /** V6-20: the canonical frontend export (golden, also checked by exportV6.test.ts) is accepted and executable. */
+    @org.junit.jupiter.api.Test void canonicalFrontendExportIsValidAndSimulates() throws Exception {
+        String golden=Files.readString(FIXTURES.getParent().resolve("canonical-export-p0.json"));
+        JsonNode architecture=json.readTree(golden);
+        assertEquals("0.6",architecture.get("schemaVersion").asText());
+        assertFalse(golden.contains("\"DATABASE\""),"canonical export must not contain DATABASE");
+        var validation=post("/api/v1/architectures/validate",golden);
+        assertEquals(200,validation.statusCode(),validation.body());
+        assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
+        String request="{\"architecture\":"+golden+",\"scenario\":{\"entry\":{\"componentId\":\"client\",\"connectionId\":\"entry\"}}}";
+        var simulation=post("/api/v1/simulations",request);
+        assertEquals(200,simulation.statusCode(),simulation.body());
+        JsonNode outcomes=json.readTree(simulation.body()).get("dataOutcomes");
+        assertEquals("LOADED",outcomes.get(outcomes.size()-1).get("resultCode").asText(),simulation.body());
+        assertEquals(simulation.body(),post("/api/v1/simulations",request).body());
     }
 }

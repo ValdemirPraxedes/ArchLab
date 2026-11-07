@@ -61,5 +61,22 @@ for (const file of ctFiles) {
       JSON.stringify(ajv.getSchema('#/components/schemas/' + schema).errors));
   }
 }
+// V6-20: canonical frontend export (golden shared with exportV6.test.ts and Ct6FixtureReplayTest)
+const golden = load('canonical-export-p0.json');
+assert('Canonical P0 export matches Architecture', validate('Architecture', golden),
+  JSON.stringify(ajv.getSchema('#/components/schemas/Architecture').errors));
+assert('Canonical P0 export has no legacy DATABASE/API', golden.schemaVersion === '0.6'
+  && !golden.components.some((c) => c.type === 'DATABASE' || c.type === 'API'));
+// Real backend responses captured by Ct6FixtureReplayTest (run `cd backend && ./mvnw test` first).
+const responsesDir = path.join(__dirname, '..', '..', '..', '..', 'backend', 'archlab-api', 'target', 'ct6-responses');
+if (fs.existsSync(responsesDir)) {
+  const files = fs.readdirSync(responsesDir).filter((f) => f.endsWith('.json')).sort();
+  assert('Captured CT-6 simulation responses present', files.length > 0);
+  for (const file of files) {
+    const ok = validate('SimulationResponse', JSON.parse(fs.readFileSync(path.join(responsesDir, file), 'utf8')));
+    assert('Backend response ' + file + ' matches SimulationResponse', ok,
+      JSON.stringify((ajv.getSchema('#/components/schemas/SimulationResponse').errors || []).slice(0, 3)));
+  }
+} else console.log('SKIP backend response conformance (no backend/archlab-api/target/ct6-responses)');
 console.log('NOTE: semantic validation, OpenAPI lint, TS generation, Java DTOs and backend execution are separate gates.');
 process.exitCode = failed ? 1 : 0;

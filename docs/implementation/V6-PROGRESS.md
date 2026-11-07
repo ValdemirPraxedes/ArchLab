@@ -2,8 +2,75 @@
 
 > Registro de handoff entre agentes. Complementa (não substitui) `V6-INTEGRATION-STATUS.md`,
 > `V6-CONTRACT-GATE-AUDIT.md`, `V6-LIMIT-EVIDENCE.md` e `V6-REGRESSION-EVIDENCE.md`.
-> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 2 (implementação, com build e testes executados).
+> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 3 (PRs #104/#105 aprovados e mesclados; Trello atualizado).
 > A sessão 1 (2026-11-06) fez apenas a auditoria; seu texto está preservado nas seções 1–6. A seção 0 abaixo prevalece onde houver diferença.
+
+## 00. Sessão 3 — 2026-11-07 (Claude): estado atual (prevalece sobre a seção 0)
+
+### 00.1 Git, PRs e Trello
+
+| Item | Valor |
+| --- | --- |
+| Integração | `origin/develop` @ `6cda053` (PR #105 mesclado; #104 também) |
+| Branch desta sessão | `feat/v0.6-frontend-completion` (a partir de `6cda053`) |
+| Push/PR | Esta sessão tem acesso de escrita ao repositório pela integração GitHub do Claude; o PR é aberto para `develop`, **sem merge** |
+| Trello | V6-06, V6-07, V6-08, V6-09, V6-10, V6-11, V6-12 e V6-21 movidas para **✅ Concluído**, com comentário de evidência (aprovação do responsável + PR #105) |
+
+### 00.2 Commits desta sessão
+
+| Commit | Tarefa | Resumo |
+| --- | --- | --- |
+| `feat(frontend): list every ambiguous DATABASE migration…` | V6-18 | A prévia local reúne **todas** as ambiguidades como `DATA_MIGRATION_AMBIGUOUS`, com o mesmo `path`/`reason` do backend, e as mostra no painel de validação. O canvas e a entrada ficam intactos. |
+| `test(v0.6): integrated canonical export round-trip…` | V6-20 | Golden `docs/api/examples/v0.6/canonical-export-p0.json` (5 tipos P0 + ETL): import→export idêntico byte a byte (frontend), schema `Architecture` (validate.cjs), validação + simulação com replay (backend). |
+| `fix(v0.6): make data outcomes fully traceable…` | V6-13, V6-04 | `DATA_QUEUE_FULL` e o timeout na fila agora emitem `ACTION_EVENT` (antes ficavam sem causa no trace). Contrato alinhado ao motor, de forma aditiva: `ActionTrace.outcome` oneOf v5/v6; `MessageTrace.intent` com as Actions P0; `phase` com `DATA_OPERATION`/`ETL_*`. **As respostas reais dos CT-6 violavam o OpenAPI**; agora são validadas (8/8). |
+| `feat(frontend): validate data properties against the OpenAPI bounds…` | V6-16 | Limites únicos (`dataLimitsV6.ts`), testados contra o `openapi.yaml`; campo com min/max, `aria-invalid` e mensagem; dica de concorrência efetiva. |
+| `feat(v0.6): single normative type x action matrix…` | V6-01, V6-17 | `capability-matrix-v6.json` é a fonte única, lida pelo teste Java (24 combinações DB + ETL EXTRACT/LOAD nos 3 tipos) e pelo editor (equivalência + render de conexões oferecidas). Tabela na DM-V6-001 §2.1. |
+| `test(frontend): every P0 data type is creatable…` | V6-15 | Os 5 tipos P0 são criáveis pela paleta, com o ícone Lucide do UI-V6-001; `DATABASE` continua ausente. |
+
+### 00.3 Testes executados
+
+| Gate | Resultado |
+| --- | --- |
+| `cd backend && ./mvnw test` | **SUCCESS** — core 121, API 117 |
+| `cd frontend && npm test` | **34 arquivos / 219 testes** |
+| `npm run lint` / `npm run build` | sem erros / SUCCESS |
+| `npm run validate` (após `mvnw test`) | **59 PASS / 0 FAIL**, incluindo 8 respostas reais do backend contra `SimulationResponse` |
+
+### 00.4 Novas divergências registradas
+
+- **Importador do editor × contrato:** o editor exige `request`/`response` em `HTTP_REST`; o contrato e o backend aceitam sem eles. Por isso as fixtures CT-6 não podem ser importadas no canvas como estão (o golden declara os campos). Decidir se o editor deve aplicar defaults na importação.
+- **KV × batch:** registrado na DM-V6-001 §2.1 (decisão 5).
+- **`TRANSFORM` v0.5 e outros intents/fases v0.5** não exercitados pelos CT-6 não foram auditados contra os enums; a validação de respostas cobre hoje apenas cenários v0.6.
+
+### 00.5 Status das 24 tarefas após a sessão 3
+
+| Tarefa | Status | Evidência / pendência |
+| --- | --- | --- |
+| V6-01 | Pronta para revisão — aguarda decisão 5 | Matriz normativa + testes nos dois lados |
+| V6-02 | Parcial | Decisão 3 (atomicidade de bulk) |
+| V6-03 | Parcial | Decisão 2 (escolha manual de destino) |
+| V6-04 | Parcial | Respostas validadas; falta a decisão 1 (`Component.oneOf` × `DATABASE`) e o Redocly lint |
+| V6-05 | Pronta para revisão | Tipos TS 100% gerados; respostas validadas contra o schema; backend serializa `Map`/`JsonNode` (sem DTO manual a divergir) |
+| V6-06 a V6-12 | **Concluídas** (Trello) | PR #105 |
+| V6-13 | Pronta para revisão | Teste de correlação outcome ↔ trace/mensagens/timeline |
+| V6-14 | Parcial — bloqueada pela decisão 2 | Sem escolha de destino, uma operação legada (`CALL`/`queryText`) não tem equivalente para comparar antes/depois |
+| V6-15 | Pronta para revisão | Paleta P0 + ícones |
+| V6-16 | Pronta para revisão | Limites do contrato no formulário |
+| V6-17 | Pronta para revisão | Somente combinações compatíveis (testado por Action) |
+| V6-18 | Pronta para revisão | Diagnósticos por componente; fluxo de escolha depende da decisão 2 |
+| V6-19 | Pronta para revisão | Contadores, bytes, lotes e erros no playback; a correlação está coberta no backend (V6-13) |
+| V6-20 | Pronta para revisão | Golden round-trip em 3 camadas |
+| V6-21 | **Concluída** (Trello) | PR #105 |
+| V6-22 | Parcial | Suítes v0.1–v0.5 verdes; falta evidência manual v0.1–v0.3 no frontend |
+| V6-23 | Parcial | Decisão 4 (limiares) |
+| V6-24 | Pendente | Após V6-22/23 e as decisões |
+
+### 00.6 Próximos passos
+
+1. Responsável: revisar e mesclar o PR desta sessão; responder às decisões 1–5 (seção 3).
+2. Após a decisão 2: fluxo de escolha de destino na prévia (V6-18) e equivalência antes/depois da migração (V6-14).
+3. V6-22: roteiro de regressão manual v0.1–v0.3 no frontend.
+4. V6-23: executar `profile-api.cjs` com os limiares aprovados.
 
 ## 0. Sessão 2 — 2026-11-07 (Claude): estado atual
 
