@@ -113,6 +113,13 @@ Resultados: contagem lida/escrita/alterada/rejeitada, bytes lógicos, latência 
 
 **Fora de escopo:** bancos ou SQL reais, query planner real, replicação/consistência distribuída completas, CDC real, processamento infinito, conectores externos, armazenamento persistente de dados simulados, execução de código arbitrário, promessa de benchmark fidedigno de provedores.
 
-## 8. Gate de aprovação
+## 8. Identidade visual e ícones
+
+- O catálogo de ícones Lucide de todos os oito tipos de dados e sete componentes de processamento está definido em [UI-V6-001](../architecture/UI-V6-001.md).
+- O mesmo símbolo deve aparecer na paleta e no canvas, com os padrões de acessibilidade e tamanho da v0.5.
+- `DATABASE` mantém o ícone antigo somente durante prévia de migração; não é uma opção criável.
+- O frontend deve validar exports da versão Lucide instalada e cobrir o mapa de ícones por testes.
+
+## 9. Gate de aprovação
 
 Antes de implementar: aprovar inventário P0, semântica de operações, consistência entre tipos, política de migração `DATABASE`, limites numéricos e contrato de resultados. Nenhum merge automático.
