@@ -4,7 +4,8 @@ public enum ComponentTypeV2 {
     CLIENT, WEB_BROWSER, MOBILE_APP, DESKTOP_APP, CLI, BOT, EMBEDDED_SYSTEM, API, DATABASE, BROKER,
     SERVICE, API_GATEWAY, BFF, WORKER, SCHEDULER, AUTHENTICATION_SERVICE,
     WEBHOOK_RECEIVER, ORCHESTRATOR_SERVICE, INTEGRATION_BUS, CACHE,
-    OBJECT_STORAGE, NOTIFICATION_SERVICE, SEARCH_ENGINE, SERVICE_REGISTRY, RULES_ENGINE;
+    OBJECT_STORAGE, NOTIFICATION_SERVICE, SEARCH_ENGINE, SERVICE_REGISTRY, RULES_ENGINE,
+    RELATIONAL_DATABASE, DOCUMENT_DATABASE, KEY_VALUE_STORE, ETL_PIPELINE, DATA_TRANSFORMER;
 
     public boolean isClient() {
         return switch (this) {
@@ -15,7 +16,7 @@ public enum ComponentTypeV2 {
 
     public boolean isProcessor() {
         return switch (this) {
-            case API, SERVICE, API_GATEWAY, BFF, WORKER, SCHEDULER,
+            case API, SERVICE, API_GATEWAY, BFF, WORKER, SCHEDULER, ETL_PIPELINE, DATA_TRANSFORMER,
                     AUTHENTICATION_SERVICE, WEBHOOK_RECEIVER, ORCHESTRATOR_SERVICE,
                     INTEGRATION_BUS, NOTIFICATION_SERVICE -> true;
             default -> false;
@@ -24,14 +25,15 @@ public enum ComponentTypeV2 {
 
     public boolean isVirtualResource() {
         return switch (this) {
-            case CACHE, OBJECT_STORAGE, SEARCH_ENGINE, SERVICE_REGISTRY, RULES_ENGINE -> true;
+            case CACHE, OBJECT_STORAGE, SEARCH_ENGINE, SERVICE_REGISTRY, RULES_ENGINE,
+                    RELATIONAL_DATABASE, DOCUMENT_DATABASE, KEY_VALUE_STORE -> true;
             default -> false;
         };
     }
 
     public boolean receivesRequest() {
         return isVirtualResource() || switch(this) {
-            case API,SERVICE,API_GATEWAY,BFF,SCHEDULER,AUTHENTICATION_SERVICE,
+            case API,SERVICE,API_GATEWAY,BFF,SCHEDULER,ETL_PIPELINE,DATA_TRANSFORMER,AUTHENTICATION_SERVICE,
                     WEBHOOK_RECEIVER,ORCHESTRATOR_SERVICE,INTEGRATION_BUS,NOTIFICATION_SERVICE -> true;
             default -> false;
         };
@@ -46,7 +48,7 @@ public enum ComponentTypeV2 {
 
     public boolean initiatesRequest() {
         return isClient() || switch(this) {
-            case API,SERVICE,API_GATEWAY,BFF,WORKER,SCHEDULER,ORCHESTRATOR_SERVICE,
+            case API,SERVICE,API_GATEWAY,BFF,WORKER,SCHEDULER,ETL_PIPELINE,ORCHESTRATOR_SERVICE,
                     WEBHOOK_RECEIVER,INTEGRATION_BUS,AUTHENTICATION_SERVICE -> true;
             default -> false;
         };

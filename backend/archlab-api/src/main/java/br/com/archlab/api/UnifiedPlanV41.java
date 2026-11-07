@@ -84,6 +84,14 @@ final class UnifiedPlanV41 {
                         case "EVALUATE_RULE" -> only(action,"id","kind","dependsOn","connectionId","outputRef");
                         case "SCHEDULE_TRIGGER" -> only(action,"id","kind","dependsOn","scheduleId");
                         case "TRANSFORM" -> only(action,"id","kind","dependsOn","connectionId","metadata","outputRef");
+                        case "DB_SELECT", "DB_INSERT", "DB_UPDATE", "DB_DELETE", "DB_GET", "DB_PUT",
+                                "DB_FIND", "DB_BULK_INSERT" -> only(action,"id","kind","dependsOn",
+                                "connectionId","outputRef","inputRef","collection","key","recordCount",
+                                "averageRecordBytes","field","equals","limit");
+                        case "ETL_EXTRACT", "ETL_LOAD" -> only(action,"id","kind","dependsOn",
+                                "connectionId","outputRef","inputRef","batchSize","maxRecords","transform");
+                        case "ETL_TRANSFORM" -> only(action,"id","kind","dependsOn",
+                                "outputRef","inputRef","batchSize","maxRecords","transform");
                         default -> throw new IllegalArgumentException("Unknown action kind");
                     }
                     List<String> dependencies = new ArrayList<>(), actionIds = new ArrayList<>();
@@ -200,6 +208,14 @@ final class UnifiedPlanV41 {
                     if (!capability(components.get(componentId),behavior.trigger(),action.kind()))
                         error("INVALID_COMPONENT_CAPABILITY",actionPath,"Action or trigger is incompatible with component type");
                     validateActionShape(action,actionPath);
+                    if (Set.of("ETL_TRANSFORM","ETL_LOAD").contains(action.kind())) {
+                        Object inputRef=action.options().get("inputRef");
+                        boolean source=actions.values().stream().anyMatch(other ->
+                                other!=action && Objects.equals(inputRef,other.options().get("outputRef"))
+                                        && action.dependsOn().contains(other.id()));
+                        if (!source) error("DATA_OUTPUT_REF_INVALID",actionPath+".inputRef",
+                                "ETL inputRef must name an output of a direct dependency");
+                    }
                     ConnectionV2 connection=connections.get(action.connectionId());
                     if (Set.of("CALL","PUBLISH","OPEN_SESSION").contains(action.kind())) {
                         if (connection==null || !(connection.sourceId().equals(componentId)
@@ -232,6 +248,15 @@ final class UnifiedPlanV41 {
                             .anyMatch(id -> actions.containsKey(id) && !actions.get(id).dependsOn().contains(action.id())))
                         error("INVALID_ACTION_DEPENDENCY",actionPath+".actionIds","Fork children must depend on the FORK action");
                     String expectedTarget=resourceTarget(action.kind());
+                    if (isDataAction(action.kind())) {
+                        ComponentV2 target=connection==null?null:components.get(connection.targetId());
+                        if (connection==null || !componentId.equals(connection.sourceId())
+                                || !(target instanceof DataResourceV6 data)
+                                || connection.integration().kind()!=IntegrationKindV2.DATABASE_QUERY
+                                || !dataActionTarget(action.kind(),data.type()))
+                            error("DATA_ACTION_INCOMPATIBLE",actionPath+".connectionId",
+                                    "Data Action requires a directed DATABASE_QUERY connection to a compatible resource");
+                    }
                     if (expectedTarget!=null) {
                         if (connection==null || !componentId.equals(connection.sourceId())
                                 || components.get(connection.targetId())==null
@@ -406,6 +431,19 @@ final class UnifiedPlanV41 {
             default -> null;
         };
     }
+    private static boolean isDataAction(String kind) {
+        return kind.startsWith("DB_") || "ETL_EXTRACT".equals(kind) || "ETL_LOAD".equals(kind);
+    }
+    private static boolean dataActionTarget(String kind,ComponentTypeV2 type) {
+        return switch(type) {
+            case RELATIONAL_DATABASE -> Set.of("DB_SELECT","DB_INSERT","DB_UPDATE","DB_DELETE",
+                    "DB_BULK_INSERT","ETL_EXTRACT","ETL_LOAD").contains(kind);
+            case DOCUMENT_DATABASE -> Set.of("DB_GET","DB_PUT","DB_FIND","DB_UPDATE",
+                    "DB_DELETE","DB_BULK_INSERT","ETL_EXTRACT","ETL_LOAD").contains(kind);
+            case KEY_VALUE_STORE -> Set.of("DB_GET","DB_PUT","DB_DELETE","ETL_EXTRACT","ETL_LOAD").contains(kind);
+            default -> false;
+        };
+    }
     private static Set<String> resultDomain(String kind) {
         return switch(kind) {
             case "CACHE_GET" -> Set.of("HIT","MISS");
@@ -439,6 +477,12 @@ final class UnifiedPlanV41 {
             case "UNREGISTER_SERVICE" -> new String[]{"serviceName","instanceId"};
             case "DISCOVER_SERVICE" -> new String[]{"serviceName"};
             case "SCHEDULE_TRIGGER" -> new String[]{"scheduleId"};
+            case "DB_SELECT" -> new String[]{"collection"};
+            case "DB_INSERT","DB_UPDATE","DB_DELETE","DB_GET","DB_PUT" -> new String[]{"key"};
+            case "DB_FIND" -> new String[]{"field","equals"};
+            case "DB_BULK_INSERT" -> new String[]{"recordCount"};
+            case "ETL_TRANSFORM" -> new String[]{"inputRef","transform"};
+            case "ETL_LOAD" -> new String[]{"inputRef"};
             default -> new String[]{};
         };
         for (String name:required) if (!values.containsKey(name)
@@ -457,6 +501,19 @@ final class UnifiedPlanV41 {
         if ("REGISTER_SERVICE".equals(action.kind())
                 && !Set.of("ACTIVE","INACTIVE").contains(String.valueOf(values.getOrDefault("instanceStatus","ACTIVE"))))
             error("INVALID_VIRTUAL_RESOURCE_OPERATION",path+".instanceStatus","Unknown logical instance status");
+        if (isDataAction(action.kind()) || "ETL_TRANSFORM".equals(action.kind())) {
+            for (String name:List.of("recordCount","averageRecordBytes","limit","batchSize","maxRecords")) {
+                Object value=values.get(name);
+                if (value!=null && (!(value instanceof Number n) || n.longValue()<1
+                        || n.longValue()>("averageRecordBytes".equals(name)?1_048_576L:
+                                "maxRecords".equals(name)?1_000_000L:100_000L)))
+                    error("DATA_LIMIT_EXCEEDED",path+"."+name,"Data Action exceeds finite budget");
+            }
+        }
+        if ("ETL_TRANSFORM".equals(action.kind())
+                && !"IDENTITY".equals(values.get("transform")))
+            error("DATA_COMPONENT_UNSUPPORTED",path+".transform",
+                    "Only IDENTITY has defined P0 record semantics");
     }
     private static boolean capability(ComponentV2 component,String trigger,String kind) {
         if (component==null) return false;
@@ -474,6 +531,11 @@ final class UnifiedPlanV41 {
         if ("RESPOND".equals(kind) && !"REQUEST_RECEIVED".equals(trigger)) return false;
         if ("SCHEDULE_TRIGGER".equals(kind)) return component.type()==ComponentTypeV2.SCHEDULER;
         if ("TRANSFORM".equals(kind)) return component.type()==ComponentTypeV2.INTEGRATION_BUS;
+        if (kind.startsWith("DB_")) return Set.of(ComponentTypeV2.SERVICE,
+                ComponentTypeV2.ORCHESTRATOR_SERVICE,ComponentTypeV2.WORKER,
+                ComponentTypeV2.BFF,ComponentTypeV2.ETL_PIPELINE).contains(component.type());
+        if (kind.startsWith("ETL_")) return component.type()==ComponentTypeV2.ETL_PIPELINE
+                || "ETL_TRANSFORM".equals(kind) && component.type()==ComponentTypeV2.DATA_TRANSFORMER;
         if (Set.of("OPEN_SESSION","WS_SEND","CLOSE_SESSION").contains(kind))
             return component.type()==ComponentTypeV2.SERVICE;
         Set<String> common=Set.of("PROCESS","CALL","PUBLISH","RESPOND","FORK","JOIN","BRANCH");

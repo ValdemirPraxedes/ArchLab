@@ -88,6 +88,30 @@ public class V2RequestMapper {
                 }
                 case "DATABASE" -> { object(c,"id","type","displayName","processingMs");
                     components.add(new DatabaseV2(text(c,"id"),text(c,"displayName"),number(c,"processingMs"))); }
+                case "RELATIONAL_DATABASE", "DOCUMENT_DATABASE", "KEY_VALUE_STORE" -> {
+                    if (!canonical) throw invalid("Unsupported component type");
+                    object(c,"id","type","displayName","dataProperties");
+                    JsonNode p=required(c,"dataProperties");
+                    object(p,"initialRecordCount","averageRecordBytes","readLatencyMs","writeLatencyMs",
+                            "maxConcurrentOperations","connectionPoolSize","queueCapacity");
+                    components.add(new DataResourceV6(text(c,"id"),text(c,"displayName"),
+                            ComponentTypeV2.valueOf(type),intNumber(p,"initialRecordCount"),
+                            intNumber(p,"averageRecordBytes"),number(p,"readLatencyMs"),
+                            number(p,"writeLatencyMs"),intNumber(p,"maxConcurrentOperations"),
+                            intNumber(p,"connectionPoolSize"),intNumber(p,"queueCapacity")));
+                }
+                case "ETL_PIPELINE", "DATA_TRANSFORMER" -> {
+                    if (!canonical) throw invalid("Unsupported component type");
+                    object(c,"id","type","displayName","batchSize","maxBatches",
+                            "transformCostPerRecordMs","behaviors");
+                    if ("ETL_PIPELINE".equals(type) && has(c,"transformCostPerRecordMs")
+                            || "DATA_TRANSFORMER".equals(type) && (has(c,"batchSize") || has(c,"maxBatches")))
+                        throw invalid("Unsupported data processor property");
+                    components.add(new DataProcessorV6(text(c,"id"),text(c,"displayName"),
+                            ComponentTypeV2.valueOf(type),has(c,"batchSize")?intNumber(c,"batchSize"):100,
+                            has(c,"maxBatches")?intNumber(c,"maxBatches"):1,
+                            numberOrZero(c,"transformCostPerRecordMs")));
+                }
                 case "BROKER" -> {
                     if (!canonical) throw invalid("Unsupported component type");
                     object(c,"id","type","displayName","destinations","subscriptions");
