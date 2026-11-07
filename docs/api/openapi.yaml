@@ -1354,6 +1354,8 @@ components:
         rejectedCount: {type: integer, minimum: 0, maximum: 1000000}
         normalizedCount: {type: integer, minimum: 0, maximum: 1000000}
         transform: {type: string, enum: [IDENTITY, FILTER_VALID, NORMALIZE_METADATA]}
+        batchCount: {type: integer, minimum: 0, maximum: 1000, description: Logical ETL batches processed (ceil(records / batchSize)); additive in v0.6.}
+        batchSize: {type: integer, minimum: 1, maximum: 100000, description: Effective logical ETL batch size (Action override or ETL_PIPELINE property).}
         logicalBytes: {type: integer, format: int64, minimum: 0, maximum: 1073741824}
         errorCode: {type: string, maxLength: 128}
     RelationalDatabaseV6:

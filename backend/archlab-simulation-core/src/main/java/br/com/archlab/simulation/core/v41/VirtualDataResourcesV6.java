@@ -71,7 +71,10 @@ final class VirtualDataResourcesV6 {
                     counts.put(id,current+amount);
                     bytes.put(id,used+amount*size);
                 } else {
-                    entries.put(key,new Record(field,value,size));
+                    // DB_UPDATE modifies an existing record: attributes it does not declare are kept.
+                    // DB_INSERT/DB_PUT write the declared record as a whole.
+                    boolean keep="DB_UPDATE".equals(kind) && field==null;
+                    entries.put(key,new Record(keep?previous.field():field,keep?previous.value():value,size));
                     counts.put(id,current+(previous==null?1:0));
                     bytes.put(id,used+size-(previous==null?0:previous.bytes()));
                 }
