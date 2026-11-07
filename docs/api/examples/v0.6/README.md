@@ -1,6 +1,6 @@
 # Contrato v0.6 — fixtures e verificações
 
-> **Status:** exemplos de contrato e implementação P0 parcial em PRs encadeados. A homologação v0.6 continua pendente.
+> **Status:** exemplos de contrato e implementação P0 parcial. A homologação v0.6 continua pendente.
 
 ## Arquivos
 
@@ -19,6 +19,8 @@ npm run validate
 ```
 
 O script faz parse do YAML, verifica discriminadores e usa JSON Schema/Ajv 2020 para exemplos. Arquiteturas com `schemaVersion: "0.6"` rejeitam `API` e `DATABASE`; documentos históricos sem marcador continuam legíveis para migração explícita. Os testes de integração Java verificam operações P0 e o frontend gera os tipos TypeScript.
+
+Para repetir o perfil local da API, inicie o backend na porta 18081 e execute `npm run profile:api`. Use `ARCHLAB_PROFILE_ITERATIONS` (1..1000) e `ARCHLAB_PROFILE_CONCURRENCY` (1..32) para variar a carga. O script exige `INSERTED` → `FOUND` e respostas idênticas entre execuções; medidas e limites estão em `docs/implementation/V6-LIMIT-EVIDENCE.md`.
 
 ## Gates ainda pendentes
 

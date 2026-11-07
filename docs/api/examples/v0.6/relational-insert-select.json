@@ -70,7 +70,8 @@
         "sourceId": "browser",
         "targetId": "service",
         "integration": {
-          "kind": "HTTP_REST"
+          "kind": "HTTP_REST",
+          "request": {"method": "POST", "path": "/orders"}
         },
         "latencyMs": 1
       },
