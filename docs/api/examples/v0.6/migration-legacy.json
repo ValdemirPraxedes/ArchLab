@@ -1,0 +1,27 @@
+{
+  "legacy": {
+    "components": [
+      {
+        "id": "old-db",
+        "type": "DATABASE",
+        "displayName": "Legacy Database",
+        "processingMs": 5
+      }
+    ],
+    "connections": []
+  },
+  "migration": {
+    "from": "DATABASE",
+    "to": "RELATIONAL_DATABASE",
+    "requiresConfirmation": true,
+    "preserve": [
+      "id",
+      "displayName",
+      "connections"
+    ],
+    "requiresSemanticReview": [
+      "processingMs",
+      "DATABASE_QUERY"
+    ]
+  }
+}
