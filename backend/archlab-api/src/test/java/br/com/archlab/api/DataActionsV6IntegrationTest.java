@@ -153,6 +153,30 @@ class DataActionsV6IntegrationTest {
         assertEquals("ETL_TRANSFORM_FAILED",failed.get(1).get("errorCode").asText());
         assertEquals("SKIPPED",failed.get(2).get("status").asText());
         assertEquals(0,failed.get(2).get("writtenCount").asInt());
+        var filteredResponse=post("/api/v1/simulations",body.replace("\"transform\":\"IDENTITY\"",
+                "\"transform\":\"FILTER_VALID\",\"invalidRecordCount\":1"));
+        assertEquals(200,filteredResponse.statusCode(),filteredResponse.body());
+        JsonNode filtered=json.readTree(filteredResponse.body()).get("dataOutcomes");
+        assertEquals(3,filtered.get(1).get("readCount").asInt());
+        assertEquals(2,filtered.get(1).get("writtenCount").asInt());
+        assertEquals(1,filtered.get(1).get("rejectedCount").asInt());
+        assertEquals(2,filtered.get(2).get("writtenCount").asInt());
+        var normalizedResponse=post("/api/v1/simulations",body.replace("\"transform\":\"IDENTITY\"",
+                "\"transform\":\"NORMALIZE_METADATA\""));
+        assertEquals(200,normalizedResponse.statusCode(),normalizedResponse.body());
+        JsonNode normalized=json.readTree(normalizedResponse.body()).get("dataOutcomes");
+        assertEquals(3,normalized.get(1).get("normalizedCount").asInt());
+        assertEquals(3,normalized.get(2).get("normalizedCount").asInt());
+        var invalidCount=post("/api/v1/simulations",body.replace("\"transform\":\"IDENTITY\"",
+                "\"transform\":\"FILTER_VALID\",\"invalidRecordCount\":4"));
+        assertEquals(200,invalidCount.statusCode(),invalidCount.body());
+        JsonNode invalidOutcomes=json.readTree(invalidCount.body()).get("dataOutcomes");
+        assertEquals("ETL_INVALID_REJECTION_COUNT",invalidOutcomes.get(1).get("errorCode").asText());
+        assertEquals("SKIPPED",invalidOutcomes.get(2).get("status").asText());
+        var missingCount=post("/api/v1/scenarios/validate",body.replace("\"transform\":\"IDENTITY\"",
+                "\"transform\":\"FILTER_VALID\""));
+        assertEquals(200,missingCount.statusCode(),missingCount.body());
+        assertTrue(missingCount.body().contains("DATA_LIMIT_EXCEEDED"),missingCount.body());
     }
     @Test void poolOneQueuesConcurrentWritesWithoutLosingEither() throws Exception {
         String body=scenario("RELATIONAL_DATABASE","""

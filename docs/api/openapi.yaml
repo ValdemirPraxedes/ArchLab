@@ -1352,6 +1352,8 @@ components:
         readCount: {type: integer, minimum: 0, maximum: 1000000}
         writtenCount: {type: integer, minimum: 0, maximum: 1000000}
         rejectedCount: {type: integer, minimum: 0, maximum: 1000000}
+        normalizedCount: {type: integer, minimum: 0, maximum: 1000000}
+        transform: {type: string, enum: [IDENTITY, FILTER_VALID, NORMALIZE_METADATA]}
         logicalBytes: {type: integer, format: int64, minimum: 0, maximum: 1073741824}
         errorCode: {type: string, maxLength: 128}
     RelationalDatabaseV6:
@@ -1572,6 +1574,13 @@ components:
       type: object
       additionalProperties: false
       required: [id, kind, inputRef, transform]
+      allOf:
+      - if:
+          properties:
+            transform: {const: FILTER_VALID}
+          required: [transform]
+        then:
+          required: [invalidRecordCount]
       properties:
         id: {$ref: '#/components/schemas/Identifier'}
         kind: {type: string, const: ETL_TRANSFORM}
@@ -1580,6 +1589,7 @@ components:
         inputRef: {$ref: '#/components/schemas/Identifier'}
         connectionId: {$ref: '#/components/schemas/Identifier'}
         simulateFailure: {type: boolean, default: false}
+        invalidRecordCount: {type: integer, minimum: 0, maximum: 1000000, description: Required for FILTER_VALID; number of invalid records discarded from the input batch.}
         batchSize: {type: integer, minimum: 1, maximum: 100000}
         maxRecords: {type: integer, minimum: 1, maximum: 1000000}
         transform: {type: string, enum: [IDENTITY, FILTER_VALID, NORMALIZE_METADATA]}

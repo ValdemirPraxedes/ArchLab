@@ -91,7 +91,7 @@ final class UnifiedPlanV41 {
                         case "ETL_EXTRACT", "ETL_LOAD" -> only(action,"id","kind","dependsOn",
                                 "connectionId","outputRef","inputRef","batchSize","maxRecords","transform");
                         case "ETL_TRANSFORM" -> only(action,"id","kind","dependsOn",
-                                "connectionId","simulateFailure","outputRef","inputRef","batchSize","maxRecords","transform");
+                                "connectionId","simulateFailure","outputRef","inputRef","batchSize","maxRecords","transform","invalidRecordCount");
                         default -> throw new IllegalArgumentException("Unknown action kind");
                     }
                     List<String> dependencies = new ArrayList<>(), actionIds = new ArrayList<>();
@@ -520,10 +520,19 @@ final class UnifiedPlanV41 {
                     error("DATA_LIMIT_EXCEEDED",path+"."+name,"Data Action exceeds finite budget");
             }
         }
-        if ("ETL_TRANSFORM".equals(action.kind())
-                && !"IDENTITY".equals(values.get("transform")))
-            error("DATA_COMPONENT_UNSUPPORTED",path+".transform",
-                    "Only IDENTITY has defined P0 record semantics");
+        if ("ETL_TRANSFORM".equals(action.kind())) {
+            String transform=String.valueOf(values.get("transform"));
+            if (!Set.of("IDENTITY","FILTER_VALID","NORMALIZE_METADATA").contains(transform))
+                error("DATA_COMPONENT_UNSUPPORTED",path+".transform","Unknown declarative ETL transform");
+            Object invalid=values.get("invalidRecordCount");
+            if ("FILTER_VALID".equals(transform)) {
+                if (!(invalid instanceof Number n) || n.longValue()<0 || n.longValue()>1_000_000)
+                    error("DATA_LIMIT_EXCEEDED",path+".invalidRecordCount",
+                            "FILTER_VALID requires an explicit invalidRecordCount within 0..1000000");
+            } else if (invalid!=null)
+                error("INVALID_VIRTUAL_RESOURCE_OPERATION",path+".invalidRecordCount",
+                        "invalidRecordCount is only valid for FILTER_VALID");
+        }
         if ("DB_BULK_INSERT".equals(action.kind()) && values.containsKey("key"))
             error("INVALID_VIRTUAL_RESOURCE_OPERATION",path+".key",
                     "A logical bulk insert cannot assign one key to multiple records");

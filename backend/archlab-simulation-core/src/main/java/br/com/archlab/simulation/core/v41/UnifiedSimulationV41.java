@@ -195,7 +195,8 @@ public final class UnifiedSimulationV41 {
         private final Completion done;
         private final Map<String,String> status=new LinkedHashMap<>();
         private final Map<String,String> resultCodes=new HashMap<>();
-        private final Map<String,Long> batchRefs=new HashMap<>();
+        private record Batch(long count,boolean normalized) {}
+        private final Map<String,Batch> batchRefs=new HashMap<>();
         private boolean responseSent, completionSent;
 
         BehaviorRun(ComponentV2 api, Behavior behavior, String parent,long postDuration,Completion done) {
@@ -481,25 +482,32 @@ public final class UnifiedSimulationV41 {
             String ref=(String)action.options().get("outputRef");
             String input=(String)action.options().get("inputRef");
             if ("ETL_TRANSFORM".equals(kind)) {
-                Long count=batchRefs.get(input);
-                if (count==null) {finish.finish(false);return;}
+                Batch batch=batchRefs.get(input);
+                if (batch==null) {finish.finish(false);return;}
+                long count=batch.count();
                 ConnectionV2 transformEdge=action.connectionId()==null?null:connections.get(action.connectionId());
                 ComponentV2 transformTarget=transformEdge==null?api:components.get(transformEdge.targetId());
                 long cost=transformTarget instanceof DataProcessorV6 processor?processor.transformCostPerRecordMs():0;
                 long duration=Math.multiplyExact(cost,count);
-                boolean failed=Boolean.TRUE.equals(action.options().get("simulateFailure"));
+                String transform=String.valueOf(action.options().get("transform"));
+                long invalid="FILTER_VALID".equals(transform)
+                        ?((Number)action.options().get("invalidRecordCount")).longValue():0;
+                boolean failed=Boolean.TRUE.equals(action.options().get("simulateFailure")) || invalid>count;
+                long outputCount=failed?0:count-invalid;
+                boolean normalized=batch.normalized() || "NORMALIZE_METADATA".equals(transform);
                 String operationId=transformEdge==null?(parent==null?"request-1":parent):"exchange-"+(++exchangeNumber);
                 Runnable execute=() -> {
                 long started=now;
                 process(transformTarget.id(),"ETL_TRANSFORM",duration,() -> {
-                    if (!failed && ref!=null) batchRefs.put(ref,count);
+                    if (!failed && ref!=null) batchRefs.put(ref,new Batch(outputCount,normalized));
                     Map<String,Object> result=fields("operationId",operationId,
                             "actionId",action.id(),"componentId",api.id(),"resourceComponentId",transformTarget.id(),
                             "connectionId",transformEdge==null?"local":transformEdge.id(),"timestampMs",now,"startedAtMs",started,
                             "completedAtMs",now,"queueWaitMs",0,"processingMs",duration,
                             "status",failed?"FAILED":"SUCCEEDED","resultCode",failed?"FAILED":"TRANSFORMED","readCount",count,
-                            "writtenCount",failed?0:count,"rejectedCount",failed?count:0,"logicalBytes",0);
-                    if (failed) result.put("errorCode","ETL_TRANSFORM_FAILED");
+                            "writtenCount",outputCount,"rejectedCount",failed?count:invalid,"logicalBytes",0,
+                            "transform",transform,"normalizedCount",failed?0:normalized?outputCount:0);
+                    if (failed) result.put("errorCode",invalid>count?"ETL_INVALID_REJECTION_COUNT":"ETL_TRANSFORM_FAILED");
                     if (ref!=null) result.put("outputRef",ref);
                     dataOutcomes.add(result);
                     event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",transformTarget.id(),
@@ -523,8 +531,9 @@ public final class UnifiedSimulationV41 {
             String operationId="exchange-"+(++exchangeNumber);
             send(edge,edge.sourceId(),edge.targetId(),"REQUEST",kind,operationId,parent,() -> {
                 long started=now;
+                Batch sourceBatch="ETL_LOAD".equals(kind)?batchRefs.get(input):null;
                 long count="ETL_EXTRACT".equals(kind)?Math.min(virtualData.count(resource),
-                        action.options().get("maxRecords") instanceof Number n?n.longValue():1_000_000):batchRefs.get(input);
+                        action.options().get("maxRecords") instanceof Number n?n.longValue():1_000_000):sourceBatch.count();
                 if (count>1_000_000) throw new IllegalArgumentException("ETL record budget exceeded");
                 long duration=Math.multiplyExact("ETL_EXTRACT".equals(kind)
                         ?resource.readLatencyMs():resource.writeLatencyMs(),count);
@@ -534,7 +543,8 @@ public final class UnifiedSimulationV41 {
                             :new VirtualDataResourcesV6.Outcome("EXTRACTED",count,0,0,
                                     count*resource.averageRecordBytes(),Map.of());
                     boolean successful=!"LIMIT_EXCEEDED".equals(outcome.code());
-                    if (successful && ref!=null) batchRefs.put(ref,count);
+                    if (successful && ref!=null) batchRefs.put(ref,new Batch(count,
+                            sourceBatch!=null && sourceBatch.normalized()));
                     Map<String,Object> result=fields("operationId",operationId,"actionId",action.id(),
                             "componentId",api.id(),"resourceComponentId",resource.id(),
                             "connectionId",edge.id(),"timestampMs",now,"startedAtMs",started,
@@ -542,6 +552,7 @@ public final class UnifiedSimulationV41 {
                             "status",successful?"SUCCEEDED":"FAILED","resultCode",outcome.code(),
                             "readCount",outcome.readCount(),"writtenCount",outcome.writtenCount(),
                             "rejectedCount",outcome.rejectedCount(),"logicalBytes",outcome.logicalBytes());
+                    if (sourceBatch!=null && sourceBatch.normalized()) result.put("normalizedCount",count);
                     if (ref!=null) result.put("outputRef",ref);
                     dataOutcomes.add(result);
                     event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",resource.id(),

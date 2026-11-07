@@ -20,9 +20,9 @@ const actionFields:Partial<Record<Kind,readonly string[]>>={CACHE_GET:['key','ou
   DB_UPDATE:['collection','key','field','equals','outputRef'],DB_DELETE:['collection','key','outputRef'],
   DB_GET:['collection','key','outputRef'],DB_PUT:['collection','key','field','equals','outputRef'],
   DB_FIND:['collection','field','equals','limit','outputRef'],DB_BULK_INSERT:['collection','recordCount','averageRecordBytes','outputRef'],
-  ETL_EXTRACT:['maxRecords','batchSize','outputRef'],ETL_TRANSFORM:['inputRef','transform','simulateFailure','outputRef'],
+  ETL_EXTRACT:['maxRecords','batchSize','outputRef'],ETL_TRANSFORM:['inputRef','transform','invalidRecordCount','simulateFailure','outputRef'],
   ETL_LOAD:['inputRef','batchSize','outputRef']};
-const numberFields=new Set(['ttlMs','sizeBytes','durationMs','timeoutMs','limit','recordCount','averageRecordBytes','maxRecords','batchSize']);
+const numberFields=new Set(['ttlMs','sizeBytes','durationMs','timeoutMs','limit','recordCount','averageRecordBytes','maxRecords','batchSize','invalidRecordCount']);
 const objectFields=new Set(['metadata','tags']);
 function JsonMapField({label,value,onChange}:{label:string;value:unknown;onChange:(value:Record<string,string>)=>void}) {
   const [draft,setDraft]=useState(JSON.stringify(value ?? {}));
@@ -171,6 +171,10 @@ export function BehaviorEditorV41({node,nodes,edges,behaviors,onChange,disabled}
           {action.kind==='SCHEDULE_TRIGGER' && <label>Agendamento<select aria-label={`Agendamento ${bi+1}.${ai+1}`} value={action.scheduleId} onChange={e=>set({scheduleId:e.target.value})}><option value="">Selecione...</option>{(node.data.schedules ?? []).map(schedule=><option key={schedule.id} value={schedule.id}>{schedule.id}</option>)}</select></label>}
           {(actionFields[action.kind] ?? []).map(field=>{
             const value=(action as unknown as Record<string,unknown>)[field];
+            if(field==='invalidRecordCount' && action.kind==='ETL_TRANSFORM' && action.transform!=='FILTER_VALID') return null;
+            if(field==='transform') return <label key={field}>Transformação<select aria-label={`Transformação ${bi+1}.${ai+1}`} value={String(value ?? 'IDENTITY')} onChange={e=>set({transform:e.target.value,...(e.target.value==='FILTER_VALID'?{invalidRecordCount:0}:{invalidRecordCount:undefined})})}>
+              {['IDENTITY','FILTER_VALID','NORMALIZE_METADATA'].map(option=><option key={option} value={option}>{option}</option>)}
+            </select></label>;
             if(field==='simulateFailure') return <label key={field}><input type="checkbox" aria-label={`Simular falha ${bi+1}.${ai+1}`} checked={Boolean(value)} onChange={e=>set({simulateFailure:e.target.checked})}/> Simular falha na transformação</label>;
             if (field==='channel' || field==='simulatedResult' || field==='instanceStatus') {
               const options=field==='channel'?['EMAIL','SMS','PUSH']:field==='simulatedResult'?['SENT','FAILED','TIMED_OUT']:['ACTIVE','INACTIVE'];

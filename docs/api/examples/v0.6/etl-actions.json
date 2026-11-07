@@ -23,6 +23,7 @@
         "extract"
       ],
       "transform": "FILTER_VALID",
+      "invalidRecordCount": 1,
       "outputRef": "cleaned"
     },
     {
