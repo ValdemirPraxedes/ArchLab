@@ -32,6 +32,9 @@ for (const a of kv.actions) assert('KV action ' + a.kind, validate('BehaviorActi
 const etl = load('etl-actions.json');
 assert('ETL component schema', validate('Component', etl.component));
 for (const a of etl.actions) assert('ETL action ' + a.kind, validate('BehaviorAction', a), JSON.stringify(ajv.getSchema('#/components/schemas/BehaviorAction').errors));
+const filterWithoutCount = {...etl.actions.find(action => action.kind === 'ETL_TRANSFORM')};
+delete filterWithoutCount.invalidRecordCount;
+assert('FILTER_VALID requires invalidRecordCount', !validate('BehaviorAction', filterWithoutCount));
 assert('ETL identity simulation schema', validate('SimulationRequest', load('etl-identity-simulation.json')),
   JSON.stringify(ajv.getSchema('#/components/schemas/SimulationRequest').errors));
 const invalid = load('invalid-action.invalid.json');

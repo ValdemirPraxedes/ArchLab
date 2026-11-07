@@ -46,4 +46,16 @@ describe('painel contextual de comportamentos',()=>{
     expect(connection).toHaveTextContent(first.id);
     expect(connection).not.toHaveTextContent(second.id);
   });
+  it('mostra contagem explícita somente para FILTER_VALID',()=>{
+    const etl=createArchitectureNode('ETL_PIPELINE',{x:0,y:0});
+    const behavior={id:'run',trigger:'REQUEST_RECEIVED' as const,actions:[
+      {id:'transform',kind:'ETL_TRANSFORM' as const,inputRef:'raw',transform:'FILTER_VALID' as const,
+        invalidRecordCount:1,outputRef:'clean'}]};
+    const onChange=vi.fn();
+    render(<BehaviorEditorV41 node={etl} nodes={[etl]} edges={[]} behaviors={[behavior]} onChange={onChange} disabled={false}/>);
+    expect(screen.getByRole('spinbutton',{name:'invalidRecordCount 1.1'})).toHaveValue(1);
+    fireEvent.change(screen.getByRole('combobox',{name:'Transformação 1.1'}),{target:{value:'NORMALIZE_METADATA'}});
+    expect(onChange).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({actions:[
+      expect.objectContaining({transform:'NORMALIZE_METADATA',invalidRecordCount:undefined})]})]));
+  });
 });

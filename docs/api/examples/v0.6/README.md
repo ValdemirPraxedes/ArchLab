@@ -27,7 +27,7 @@ Para repetir o perfil local da API, inicie o backend na porta 18081 e execute `n
 
 1. Completar a reconciliação entre DTOs Java, tipos manuais e schema, incluindo resultado local de `ETL_TRANSFORM`.
 2. Homologar a política de migração quando `DATABASE_QUERY` ou `CALL` históricos tornam a conversão ambígua.
-3. Completar as regras declarativas de transformação além de `IDENTITY` e os cenários CT-6-01 a CT-6-10.
+3. Validar as regras declarativas `FILTER_VALID` e `NORMALIZE_METADATA` em cenários CT-6 completos e concluir CT-6-01 a CT-6-10.
 
 Neste checkpoint, `npx --yes @redocly/cli lint docs/api/openapi.yaml` validou o OpenAPI com dois avisos preexistentes (`info-license` e `LegacyApiMigrationV5` não referenciado). O validador de fixtures v0.4 também passou.
 

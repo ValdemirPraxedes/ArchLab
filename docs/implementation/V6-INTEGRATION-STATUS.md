@@ -34,7 +34,7 @@ No V6 task is marked complete solely from a passing build or a basic scenario te
 
 ## Remaining acceptance work
 
-- `FILTER_VALID` and `NORMALIZE_METADATA` are in the OpenAPI enum but are rejected by the Java semantic validator until their record semantics are specified and implemented. `IDENTITY` is executable.
+- `IDENTITY`, `FILTER_VALID` with explicit invalid record count, and count-preserving `NORMALIZE_METADATA` are executable over logical batches. The virtual model does not inspect actual record fields; broader record-level transform semantics remain outside P0.
 - Initial datasets and bulk inserts are represented by logical counts; detailed key/field lookup is available only for explicitly written records. This must be documented and checked against the intended CT-6 semantics.
 - `DB_BULK_INSERT` rejects a single `key` for a multi-record logical batch, because the runtime cannot assign that key unambiguously to every record.
 - Queue timeout, processing timeout and pool occupancy have focused tests. `VirtualDataResourcesV6LimitTest` verifies one million logical records and the 1 GiB logical-byte ceiling under a 64 MiB Java test heap. Local 200/1,000-request relational and ETL `IDENTITY` API profiles passed with deterministic outcomes; measurements and limits are in `V6-LIMIT-EVIDENCE.md`.
