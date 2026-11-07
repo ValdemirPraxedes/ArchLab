@@ -21,11 +21,13 @@ import { inFlightMessages, traceStateAt } from './traceV2';
 import type { TraceCursor } from './traceV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { toArchitectureV1 } from './architectureV1';
-import { prepareArchitectureImportV5 } from './migrationV5';
+import { prepareArchitectureImportV6 } from './migrationV6';
+import type { PreparedImportV6 } from './migrationV6';
+import { exportArchitectureV6 } from './exportV6';
 import { archlabV1Client, ArchlabV1HttpError } from '../../api/archlabV1Client';
 import type { ValidationIssue } from './validation';
 import {
-  VISUAL_CLIENT_TYPES, V5_SERVICE_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge, isProcessorType,
+  VISUAL_CLIENT_TYPES, V5_SERVICE_TYPES, V6_DATA_TYPES, V6_PROCESSOR_TYPES, COMPONENT_LABELS, createArchitectureNode, createArchitectureEdge, isProcessorType, isV6DataType,
   isComponentType, isClientType, allowedProtocols, validateConnection, validDuration, removeComponent, nextDisplayName, validDisplayName,
 } from './model';
 import type { ArchitectureNode as ArchitectureNodeType, ArchitectureEdge, ComponentType, Protocol } from './model';
@@ -38,7 +40,8 @@ const protocolForKind = (value: string): Protocol => value === 'HTTP_REST' ? 'RE
 const PALETTE_CATEGORIES = [
   { title: 'Clientes', types: VISUAL_CLIENT_TYPES },
   { title: 'Serviços', types: V5_SERVICE_TYPES.filter(type => !['CACHE','OBJECT_STORAGE','SEARCH_ENGINE','SERVICE_REGISTRY','RULES_ENGINE'].includes(type)) },
-  { title: 'Dados', types: ['DATABASE','CACHE','OBJECT_STORAGE','SEARCH_ENGINE','SERVICE_REGISTRY','RULES_ENGINE'] },
+  { title: 'Dados', types: [...V6_DATA_TYPES,'CACHE','OBJECT_STORAGE','SEARCH_ENGINE','SERVICE_REGISTRY','RULES_ENGINE'] },
+  { title: 'Processamento de dados', types: V6_PROCESSOR_TYPES },
   { title: 'Mensageria', types: ['BROKER'] },
 ] as const satisfies ReadonlyArray<{ title: string; types: readonly ComponentType[] }>;
 
@@ -68,6 +71,7 @@ function EditorCanvas() {
   const canvasRef = useRef<HTMLDivElement>(null);
   const propertiesRef = useRef<HTMLElement>(null);
   const importRef = useRef<HTMLInputElement>(null);
+  const [pendingImport,setPendingImport] = useState<PreparedImportV6 | null>(null);
   useEffect(() => {
     if (!selection) return;
     const dismiss = (event: PointerEvent) => {
@@ -128,7 +132,7 @@ function EditorCanvas() {
   const importArchitecture = async (file:File) => {
     if (executionLocked) return;
     try {
-      const prepared=prepareArchitectureImportV5(JSON.parse(await file.text()) as unknown);
+      const prepared=prepareArchitectureImportV6(JSON.parse(await file.text()) as unknown);
       const validation=await archlabV1Client.validateArchitecture(prepared.architecture);
       if (!validation.valid) {
         setIssues(validation.violations.map(v=>({code:v.code,path:v.path,message:v.message})));
@@ -136,14 +140,31 @@ function EditorCanvas() {
         setActionFeedback('Importação cancelada; o canvas original foi preservado.');
         return;
       }
-      setNodes(prepared.nodes);setEdges(prepared.edges);setEntry(emptyEntryV41());setSessions([]);select(null);
-      setIssues([]);setValidationStatus('valid');setValidationScope('architecture');
-      setActionFeedback(prepared.convertedIds.length
-        ? `Importação concluída: ${prepared.convertedIds.length} API convertida(s) para SERVICE. IDs: ${prepared.convertedIds.join(', ')}.`
-        : 'Importação concluída sem conversão de API.');
+      if (prepared.databaseIds.length) {
+        setPendingImport(prepared);
+        setActionFeedback('Prévia de migração pronta. Confirme para aplicar ao canvas.');
+      } else applyImport(prepared);
     } catch (cause) {
       setActionFeedback(`Importação cancelada; o canvas original foi preservado. ${cause instanceof Error?cause.message:'Arquivo inválido.'}`);
     }
+  };
+  const exportArchitecture = () => {
+    try {
+      const content=exportArchitectureV6(nodes,edges);
+      const url=URL.createObjectURL(new Blob([content],{type:'application/json'}));
+      const link=document.createElement('a');link.href=url;link.download='archlab-v0.6.json';link.click();
+      URL.revokeObjectURL(url);
+      setActionFeedback('Arquitetura canônica exportada em JSON.');
+    } catch(cause) {setActionFeedback(cause instanceof Error?cause.message:'Falha na exportação.');}
+  };
+  const applyImport = (prepared:PreparedImportV6) => {
+    setNodes(prepared.nodes);setEdges(prepared.edges);setEntry(emptyEntryV41());setSessions([]);select(null);
+    setPendingImport(null);setIssues([]);setValidationStatus('valid');setValidationScope('architecture');
+    setActionFeedback(prepared.databaseIds.length
+      ? `Importação concluída. ${prepared.databaseIds.length} DATABASE(s) convertido(s): ${prepared.databaseIds.join(', ')}.`
+      : prepared.convertedIds.length
+        ? `Importação concluída: ${prepared.convertedIds.length} API convertida(s) para SERVICE. IDs: ${prepared.convertedIds.join(', ')}.`
+        : 'Importação concluída sem conversão de API.');
   };
   const simulate = async () => {
     if (executionStatus !== 'READY' && executionStatus !== 'ERROR') return;
@@ -204,7 +225,7 @@ function EditorCanvas() {
     }
   };
   const addNode = useCallback((type: ComponentType, position: { x: number; y: number }) => {
-    if (executionLocked) return null;
+    if (executionLocked || type==='DATABASE' || type==='API') return null;
     resetValidation();
     const newNode = createArchitectureNode(type, position, nextDisplayName(type, nodes));
     setNodes((current) => [...current, newNode]);
@@ -225,7 +246,7 @@ function EditorCanvas() {
   const onDrop = useCallback((event: DragEvent<HTMLDivElement>) => {
     event.preventDefault();
     const rawType = event.dataTransfer.getData(DRAG_MIME);
-    if (!isComponentType(rawType) || rawType === 'API') return;
+    if (!isComponentType(rawType) || rawType === 'API' || rawType === 'DATABASE') return;
     const bounds = canvasRef.current?.getBoundingClientRect();
     if (!bounds || event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) return;
     const position = screenToFlowPosition({ x: event.clientX, y: event.clientY });
@@ -324,7 +345,13 @@ function EditorCanvas() {
         </section>)}
       </aside>
       <section className="editor-main" aria-label="Editor visual">
-        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><input ref={importRef} type="file" accept=".json,application/json" aria-label="Arquivo de arquitetura" hidden onChange={event=>{const file=event.target.files?.[0];if(file) void importArchitecture(file);event.target.value='';}}/><button type="button" onClick={()=>importRef.current?.click()} disabled={executionLocked}>Importar arquitetura JSON</button><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
+        <div className="editor-toolbar"><span>{nodes.length} componente(s) · {edges.length} conexão(ões)</span><span>{selection ? 'Elemento selecionado' : 'Selecione um componente'}</span><input ref={importRef} type="file" accept=".json,application/json" aria-label="Arquivo de arquitetura" hidden onChange={event=>{const file=event.target.files?.[0];if(file) void importArchitecture(file);event.target.value='';}}/><button type="button" onClick={()=>importRef.current?.click()} disabled={executionLocked}>Importar arquitetura JSON</button><button type="button" onClick={exportArchitecture} disabled={executionLocked || Boolean(pendingImport)}>Exportar arquitetura JSON</button><button type="button" onClick={() => void validateV2('architecture')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o grafo"><ShieldCheck size={16} aria-hidden="true" /> Validar arquitetura</button><button type="button" onClick={() => void validateV2('scenario')} disabled={executionLocked || validationStatus === 'checking'} title="Consultar o backend para validar o cenário selecionado"><ShieldCheck size={16} aria-hidden="true" /> Validar cenário</button><button type="button" onClick={simulate} disabled={executionLocked} title="Validar e executar a simulação no backend"><CirclePlay size={16} aria-hidden="true" /> Simular</button>{executionStatus !== 'READY' && <button type="button" onClick={restart} title="Limpar a execução mantendo o canvas"><RotateCcw size={16} aria-hidden="true" /> Reiniciar</button>}</div>
+        {pendingImport && <section aria-label="Prévia de migração DATABASE"><h3>Prévia de migração</h3>
+          <p>DATABASE → RELATIONAL_DATABASE: {pendingImport.databaseIds.join(', ')}. IDs e conexões preservados.</p>
+          <ul>{pendingImport.migrationNotes.map(note=><li key={note}>{note}</li>)}</ul>
+          <button type="button" onClick={()=>applyImport(pendingImport)}>Confirmar migração</button>
+          <button type="button" onClick={()=>{setPendingImport(null);setActionFeedback('Migração cancelada; canvas preservado.');}}>Cancelar migração</button>
+        </section>}
         {actionFeedback && <p className="action-feedback" role="status" aria-live="polite">{actionFeedback}</p>}
         <div className="execution-status" role="status">Execução: {simulationResultV2 ? v2PlaybackStatus : executionStatus}{simulationResultV2 && <span> · Tempo virtual total: {simulationResultV2.execution.totalDurationMs} ms</span>}</div>
         {validationStatus !== 'idle' && <section className="validation-result" aria-label="Resultado da validação" aria-live="polite">
@@ -355,12 +382,21 @@ function EditorCanvas() {
           <button type="button" disabled={executionLocked} onClick={commitName}><Save size={16} aria-hidden="true" /> Salvar nome</button>
           <p className="property-help">Os tempos são aplicados imediatamente ao canvas. Não é necessário salvar.</p>
           {isProcessorType(node.data.componentType) && <>
+            {!V6_PROCESSOR_TYPES.some(type=>type===node.data.componentType) && <>
             <label>Pré-processamento (ms)<input aria-label="Pré-processamento (ms)" type="number" min="0" step="1" value={node.data.preProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('preProcessingMs', e.target.value)} /></label>
             <label>Pós-processamento (ms)<input aria-label="Pós-processamento (ms)" type="number" min="0" step="1" value={node.data.postProcessingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('postProcessingMs', e.target.value)} /></label>
+            </>}
             <BehaviorEditorV41 node={node} nodes={nodes} edges={edges} behaviors={node.data.behaviors ?? []} disabled={executionLocked}
               onChange={behaviors => {setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,behaviors}}:item));resetValidation();}}/>
           </>}
           {node.data.componentType === 'DATABASE' && <label>Processamento (ms)<input aria-label="Processamento (ms)" type="number" min="0" step="1" value={node.data.processingMs ?? 0} disabled={executionLocked} onChange={(e) => updateTime('processingMs', e.target.value)} /></label>}
+          {isV6DataType(node.data.componentType) && node.data.dataProperties && <section aria-label="Propriedades de dados"><h3>Dados virtuais</h3>
+            {(['initialRecordCount','averageRecordBytes','readLatencyMs','writeLatencyMs','maxConcurrentOperations','connectionPoolSize','queueCapacity'] as const).map(field=><label key={field}>{field}<input aria-label={field} type="number" min="0" step="1" disabled={executionLocked} value={node.data.dataProperties?.[field] ?? 0} onChange={event=>{const value=Number(event.target.value);setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,dataProperties:{...item.data.dataProperties!,[field]:value}}}:item));resetValidation();}}/></label>)}
+          </section>}
+          {node.data.componentType === 'ETL_PIPELINE' && <section aria-label="Configuração ETL"><h3>Pipeline ETL</h3>
+            {(['batchSize','maxBatches'] as const).map(field=><label key={field}>{field}<input aria-label={field} type="number" min="1" step="1" disabled={executionLocked} value={node.data[field] ?? 1} onChange={event=>{const value=Number(event.target.value);setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,[field]:value}}:item));resetValidation();}}/></label>)}
+          </section>}
+          {node.data.componentType === 'DATA_TRANSFORMER' && <label>transformCostPerRecordMs<input aria-label="transformCostPerRecordMs" type="number" min="0" step="1" disabled={executionLocked} value={node.data.transformCostPerRecordMs ?? 0} onChange={event=>{const value=Number(event.target.value);setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,transformCostPerRecordMs:value}}:item));resetValidation();}}/></label>}
           {node.data.componentType === 'BROKER' && <BrokerEditor node={node} nodes={nodes} edges={edges} disabled={executionLocked}
             onChange={(destinations,subscriptions) => { setNodes(current => current.map(item => item.id === node.id ? {...item,data:{...item.data,destinations,subscriptions}} : item)); resetValidation(); }}/>}
           <ServicePropertiesV5 node={node} edges={edges} disabled={executionLocked} onChange={patch=>{setNodes(current=>current.map(item=>item.id===node.id?{...item,data:{...item.data,...patch}}:item));resetValidation();}}/>
