@@ -16,6 +16,41 @@ tags:
 - name: Simulations
   description: Execução determinística e resultados completos.
 paths:
+  /api/v1/architectures/migrate-v6:
+    post:
+      tags: [Architectures]
+      operationId: migrateLegacyArchitectureV6
+      summary: Prévia explícita da migração de API e DATABASE legados
+      description: Converte uma cópia apenas quando DATABASE não tem queryText, responseText nem CALL histórico; valida o grafo e os Behaviors resultantes. A entrada original não é alterada.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Architecture'
+      responses:
+        '200':
+          description: Documento convertido e relatório para confirmação pelo usuário.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [document, report]
+                properties:
+                  document: {$ref: '#/components/schemas/Architecture'}
+                  report:
+                    type: object
+                    additionalProperties: false
+                    required: [apiIds, databaseIds, notes]
+                    properties:
+                      apiIds: {type: array, items: {$ref: '#/components/schemas/Identifier'}}
+                      databaseIds: {type: array, items: {$ref: '#/components/schemas/Identifier'}}
+                      notes: {type: array, items: {type: string}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '413': {$ref: '#/components/responses/PayloadTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
   /api/v1/architectures/validate:
     post:
       tags:

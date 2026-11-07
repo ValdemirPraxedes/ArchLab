@@ -231,4 +231,24 @@ class DataActionsV6IntegrationTest {
         assertEquals(400,response.statusCode(),response.body());
         assertTrue(response.body().contains("INVALID_REQUEST"),response.body());
     }
+    @Test void explicitMigrationEndpointReturnsPreviewAndBlocksAmbiguousQuery() throws Exception {
+        String old="""
+            {"components":[
+              {"id":"client","type":"CLIENT","displayName":"Client"},
+              {"id":"service","type":"SERVICE","displayName":"Service"},
+              {"id":"db","type":"DATABASE","displayName":"DB","processingMs":3}
+            ],"connections":[
+              {"id":"entry","sourceId":"client","targetId":"service","integration":{"kind":"HTTP_REST"}},
+              {"id":"data","sourceId":"service","targetId":"db","integration":{"kind":"DATABASE_QUERY"}}
+            ]}
+            """;
+        var migrated=post("/api/v1/architectures/migrate-v6",old);
+        assertEquals(200,migrated.statusCode(),migrated.body());
+        JsonNode document=json.readTree(migrated.body()).get("document");
+        assertEquals("0.6",document.get("schemaVersion").asText());
+        assertEquals("RELATIONAL_DATABASE",document.get("components").get(2).get("type").asText());
+        var ambiguous=post("/api/v1/architectures/migrate-v6",old.replace(
+                "\"kind\":\"DATABASE_QUERY\"","\"kind\":\"DATABASE_QUERY\",\"queryText\":\"SELECT 1\""));
+        assertEquals(400,ambiguous.statusCode(),ambiguous.body());
+    }
 }
