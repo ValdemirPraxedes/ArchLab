@@ -2,7 +2,8 @@
   "private": true,
   "scripts": {
     "validate": "node validate.cjs",
-    "profile:api": "node profile-api.cjs"
+    "profile:api": "node profile-api.cjs",
+    "profile:limits": "node profile-limits.cjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",

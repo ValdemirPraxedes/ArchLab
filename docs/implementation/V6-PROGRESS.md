@@ -2,8 +2,19 @@
 
 > Registro de handoff entre agentes. Complementa (não substitui) `V6-INTEGRATION-STATUS.md`,
 > `V6-CONTRACT-GATE-AUDIT.md`, `V6-LIMIT-EVIDENCE.md` e `V6-REGRESSION-EVIDENCE.md`.
-> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 6 (V6-04; decisão 1 tomada pelo responsável).
+> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 7 (V6-23; decisão 4 tomada pelo responsável).
 > A sessão 1 (2026-11-06) fez apenas a auditoria; seu texto está preservado nas seções 1–6. A seção 0 abaixo prevalece onde houver diferença.
+
+## 000000. Sessão 7 — 2026-11-07 (Claude): V6-23 e decisão 4
+
+- PR #109 mesclado (`develop` @ `b0ce7d0`). Trello: V6-04 em **✅ Concluído**.
+- **Decisão 4 do responsável:** aceite funcional com teto folgado. Os critérios A1–A4 estão em `V6-LIMIT-EVIDENCE.md`.
+- **V6-23:**
+  - cenários de pior caso `performance/P6-01..06.json` (1M registros, 1 GiB, ETL com 1.000 lotes, fan-out acima de 50.000 eventos, relógio de 1 h, fila de 100), executados em todo build;
+  - `backend/pom.xml` com `argLine=-Xmx256m`: a suíte inteira roda com heap de 256 MiB (confirmado: `maxMemory`=256 MiB);
+  - `profile-api.cjs` ganhou o teto `ARCHLAB_PROFILE_MAX_P95_MS`; novo `profile-limits.cjs`;
+  - medição com o servidor em `-Xmx256m`: p95 de 77,9 ms (relacional) e 64,6 ms (ETL), ambos abaixo do teto de 100 ms; pior caso mais lento é o P6-04, com máximo de 629,5 ms; nenhum OOM.
+- Pendentes: V6-22 (evidência manual v0.1–v0.3) e V6-24 (DoD).
 
 ## 00000. Sessão 6 — 2026-11-07 (Claude): V6-04 e decisão 1
 
@@ -227,7 +238,7 @@ Legenda: **Concluída** = aceite do TASKS-V6-001 atendido com teste; **Parcial**
 2. ~~Tratamento de `queryText`/`responseText` e `CALL` histórico.~~ **Decidido em 2026-11-07: converter com equivalência temporal** (`CALL` → `DB_SELECT`, texto mantido na conexão, concorrência 1000). Ver MIGRATION-V6-001.
 3. ~~Atomicidade de `DB_BULK_INSERT` ao atingir limite.~~ **Decidido em 2026-11-07: rejeição total (lote atômico).** Ver DATA-BUDGETS-V6-001.
 5. ~~`DB_BULK_INSERT` em `KEY_VALUE_STORE`.~~ **Decidido em 2026-11-07: não em P0.** Ver DM-V6-001 §2.1.
-4. Limiares de aceite de performance (V6-23).
+4. ~~Limiares de aceite de performance.~~ **Decidido em 2026-11-07: aceite funcional (heap de 256 MiB, < 2 s, erro controlado) + p95 ≤ 100 ms com concorrência 32 em casos pequenos.** Ver V6-LIMIT-EVIDENCE.
 
 ## 4. Problemas conhecidos
 

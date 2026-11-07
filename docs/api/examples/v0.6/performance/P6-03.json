@@ -1,0 +1,285 @@
+{
+  "id": "P6-03",
+  "title": "Pior caso de ETL: 1.000.000 registros em 1.000 lotes (batchSize × maxBatches = 1.000.000) carregados; com um lote a menos, o EXTRACT falha de forma controlada.",
+  "cases": [
+    {
+      "name": "one-million-records-in-1000-batches",
+      "endpoint": "/api/v1/simulations",
+      "maxWallMs": 2000,
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "etl",
+              "type": "ETL_PIPELINE",
+              "displayName": "ETL",
+              "batchSize": 1000,
+              "maxBatches": 1000,
+              "behaviors": [
+                {
+                  "id": "run",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "extract",
+                      "kind": "ETL_EXTRACT",
+                      "connectionId": "src",
+                      "outputRef": "raw"
+                    },
+                    {
+                      "id": "transform",
+                      "kind": "ETL_TRANSFORM",
+                      "inputRef": "raw",
+                      "transform": "NORMALIZE_METADATA",
+                      "dependsOn": [
+                        "extract"
+                      ],
+                      "outputRef": "clean",
+                      "simulateFailure": false
+                    },
+                    {
+                      "id": "load",
+                      "kind": "ETL_LOAD",
+                      "connectionId": "dst",
+                      "inputRef": "clean",
+                      "dependsOn": [
+                        "transform"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "source",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "source",
+              "dataProperties": {
+                "initialRecordCount": 1000000,
+                "averageRecordBytes": 1,
+                "readLatencyMs": 0,
+                "writeLatencyMs": 0,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            },
+            {
+              "id": "target",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "target",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 1,
+                "readLatencyMs": 0,
+                "writeLatencyMs": 0,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "etl",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "src",
+              "sourceId": "etl",
+              "targetId": "source",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            },
+            {
+              "id": "dst",
+              "sourceId": "etl",
+              "targetId": "target",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "extract",
+            "readCount": 1000000,
+            "batchCount": 1000
+          },
+          {
+            "actionId": "transform",
+            "writtenCount": 1000000,
+            "normalizedCount": 1000000
+          },
+          {
+            "actionId": "load",
+            "resultCode": "LOADED",
+            "writtenCount": 1000000,
+            "batchCount": 1000
+          }
+        ]
+      }
+    },
+    {
+      "name": "one-batch-short",
+      "endpoint": "/api/v1/simulations",
+      "maxWallMs": 2000,
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "etl",
+              "type": "ETL_PIPELINE",
+              "displayName": "ETL",
+              "batchSize": 1000,
+              "maxBatches": 999,
+              "behaviors": [
+                {
+                  "id": "run",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "extract",
+                      "kind": "ETL_EXTRACT",
+                      "connectionId": "src",
+                      "outputRef": "raw"
+                    },
+                    {
+                      "id": "transform",
+                      "kind": "ETL_TRANSFORM",
+                      "inputRef": "raw",
+                      "transform": "NORMALIZE_METADATA",
+                      "dependsOn": [
+                        "extract"
+                      ],
+                      "outputRef": "clean",
+                      "simulateFailure": false
+                    },
+                    {
+                      "id": "load",
+                      "kind": "ETL_LOAD",
+                      "connectionId": "dst",
+                      "inputRef": "clean",
+                      "dependsOn": [
+                        "transform"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "source",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "source",
+              "dataProperties": {
+                "initialRecordCount": 1000000,
+                "averageRecordBytes": 1,
+                "readLatencyMs": 0,
+                "writeLatencyMs": 0,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            },
+            {
+              "id": "target",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "target",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 1,
+                "readLatencyMs": 0,
+                "writeLatencyMs": 0,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "etl",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "src",
+              "sourceId": "etl",
+              "targetId": "source",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            },
+            {
+              "id": "dst",
+              "sourceId": "etl",
+              "targetId": "target",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "extract",
+            "resultCode": "LIMIT_EXCEEDED",
+            "errorCode": "ETL_BATCH_LIMIT_EXCEEDED"
+          },
+          {
+            "actionId": "load",
+            "status": "SKIPPED"
+          }
+        ]
+      }
+    }
+  ]
+}

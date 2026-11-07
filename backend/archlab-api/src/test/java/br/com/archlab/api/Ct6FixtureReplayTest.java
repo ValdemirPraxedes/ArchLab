@@ -35,6 +35,11 @@ class Ct6FixtureReplayTest {
         return replay(FIXTURES.getParent().resolve("normative"),"N6-\\d\\d\\.json",8);
     }
 
+    /** V6-23 / decision 4: worst-case envelopes finish with a controlled result within maxWallMs. */
+    @TestFactory Stream<DynamicTest> worstCaseEnvelopesFinishControlled() throws Exception {
+        return replay(FIXTURES.getParent().resolve("performance"),"P6-\\d\\d\\.json",6);
+    }
+
     private Stream<DynamicTest> replay(Path directory,String pattern,int expected) throws Exception {
         List<Path> files;
         try (Stream<Path> listing=Files.list(directory)) {
@@ -55,7 +60,13 @@ class Ct6FixtureReplayTest {
         String endpoint=testCase.get("endpoint").asText();
         assertTrue(endpoint.startsWith("/api/v1/"),id+" must use /api/v1");
         String request=testCase.get("request").toString();
+        long started=System.nanoTime();
         HttpResponse<String> response=post(endpoint,request);
+        long wallMs=(System.nanoTime()-started)/1_000_000;
+        if (testCase.has("maxWallMs"))
+            assertTrue(wallMs<=testCase.get("maxWallMs").asLong(),
+                    id+"/"+testCase.get("name").asText()+" took "+wallMs+" ms (limit "+testCase.get("maxWallMs").asLong()+" ms)");
+        assertTrue(response.statusCode()<500,id+" must not fail with a server error: "+response.body());
         if (endpoint.equals("/api/v1/simulations") && response.statusCode()==200) {
             // Kept for contract checks: docs/api/examples/v0.6/validate.cjs validates these against SimulationResponse.
             Path out=Path.of("target","ct6-responses");
