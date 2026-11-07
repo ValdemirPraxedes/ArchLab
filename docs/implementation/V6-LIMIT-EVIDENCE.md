@@ -38,4 +38,22 @@ ARCHLAB_API_URL=http://127.0.0.1:18081 node profile-api.cjs
 ARCHLAB_API_URL=http://127.0.0.1:18081 ARCHLAB_PROFILE_ITERATIONS=1000 ARCHLAB_PROFILE_CONCURRENCY=32 node profile-api.cjs
 ```
 
-The profile covers one small relational scenario on one Windows host. Large payloads, ETL, long runs, and other concurrency levels remain unprofiled. V6-23 remains in progress.
+The relational profile covers one small scenario on one Windows host. Large payloads, long runs, and other concurrency levels remain unprofiled. V6-23 remains in progress.
+
+## Local ETL profile
+
+The same API heap cap (`-Xmx256m`) was used for an ETL `IDENTITY` scenario with 100 source records and an explicit `DATA_TRANSFORMER`. The profile runner checked `EXTRACTED`, `TRANSFORMED`, `LOADED`, each with a count of 100, and compared full responses across runs.
+
+| Measured requests | Concurrency | Elapsed wall time | Throughput | p50 | p95 | Maximum |
+| ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 200 | 8 | 130.32 ms | 1,534.65 requests/s | 4.92 ms | 7.84 ms | 9.73 ms |
+| 1,000 | 32 | 537.76 ms | 1,859.57 requests/s | 16.03 ms | 27.57 ms | 35.76 ms |
+
+All 1,200 measured ETL requests had identical responses. Peak process working set after the second run was 179,687,424 bytes (171.36 MiB); private memory was 227,004,416 bytes. These are local observations, not acceptance thresholds. The fixture is `docs/api/examples/v0.6/etl-identity-simulation.json` and passes the v0.6 OpenAPI fixture validator.
+
+```text
+ARCHLAB_API_URL=http://127.0.0.1:18081 ARCHLAB_PROFILE_KIND=etl node profile-api.cjs
+ARCHLAB_API_URL=http://127.0.0.1:18081 ARCHLAB_PROFILE_KIND=etl ARCHLAB_PROFILE_ITERATIONS=1000 ARCHLAB_PROFILE_CONCURRENCY=32 node profile-api.cjs
+```
+
+Large ETL batches, non-IDENTITY transforms, longer runs and target-specific performance thresholds remain outside this profile.

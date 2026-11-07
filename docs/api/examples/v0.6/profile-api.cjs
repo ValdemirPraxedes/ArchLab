@@ -9,7 +9,14 @@ if (!Number.isInteger(iterations) || iterations < 1 || iterations > 1000 ||
     !Number.isInteger(concurrency) || concurrency < 1 || concurrency > 32)
   throw new Error('Iterations must be 1..1000 and concurrency 1..32');
 
-const body = fs.readFileSync(path.join(__dirname, 'relational-insert-select.json'), 'utf8');
+const profiles = {
+  relational: {file: 'relational-insert-select.json', codes: ['INSERTED', 'FOUND']},
+  etl: {file: 'etl-identity-simulation.json', codes: ['EXTRACTED', 'TRANSFORMED', 'LOADED']},
+};
+const profileName = process.env.ARCHLAB_PROFILE_KIND || 'relational';
+const profile = profiles[profileName];
+if (!profile) throw new Error('ARCHLAB_PROFILE_KIND must be relational or etl');
+const body = fs.readFileSync(path.join(__dirname, profile.file), 'utf8');
 const samples = [];
 let reference;
 
@@ -23,8 +30,9 @@ async function runOne(record) {
   if (!response.ok) throw new Error(`HTTP ${response.status}: ${text.slice(0, 400)}`);
   const result = JSON.parse(text);
   const outcomes = result.dataOutcomes || [];
-  if (outcomes.length !== 2 || outcomes[0].resultCode !== 'INSERTED' ||
-      outcomes[1].resultCode !== 'FOUND')
+  if (JSON.stringify(outcomes.map(outcome => outcome.resultCode)) !== JSON.stringify(profile.codes) ||
+      (profileName === 'etl' && outcomes.some(outcome =>
+        outcome.readCount !== 100 && outcome.writtenCount !== 100)))
     throw new Error(`Unexpected data outcome: ${JSON.stringify(outcomes)}`);
   if (reference === undefined) reference = text;
   else if (text !== reference) throw new Error('Response changed across isolated runs');
@@ -48,8 +56,8 @@ async function batch(count, record) {
   const elapsedMs = performance.now() - start;
   samples.sort((a, b) => a - b);
   const percentile = p => Number(samples[Math.ceil(samples.length * p) - 1].toFixed(2));
-  console.log(JSON.stringify({requests: iterations, concurrency,
+  console.log(JSON.stringify({profile: profileName, requests: iterations, concurrency,
     elapsedMs: Number(elapsedMs.toFixed(2)), requestsPerSecond: Number((iterations * 1000 / elapsedMs).toFixed(2)),
     latencyMs: {p50: percentile(.5), p95: percentile(.95), max: percentile(1)},
-    deterministic: true, outcome: ['INSERTED', 'FOUND']}, null, 2));
+    deterministic: true, outcome: profile.codes}, null, 2));
 })().catch(error => {console.error(error); process.exitCode = 1;});
