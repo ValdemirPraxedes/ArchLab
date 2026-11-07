@@ -106,6 +106,8 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
         {outcome.timestampMs} ms · {outcome.resourceComponentId} · ação {outcome.actionId} · <strong>{outcome.resultCode}</strong> ({outcome.status})
         {' · lidos '}{outcome.readCount}{' · escritos '}{outcome.writtenCount}{' · rejeitados '}{outcome.rejectedCount}
         {' · bytes '}{outcome.logicalBytes}{' · fila '}{outcome.queueWaitMs ?? 0} ms
+        {outcome.batchCount!==undefined && ` · lotes ${outcome.batchCount}${outcome.batchSize!==undefined?` × ${outcome.batchSize}`:''}`}
+        {outcome.normalizedCount!==undefined && ` · normalizados ${outcome.normalizedCount}`}
         {outcome.errorCode && ` · ${outcome.errorCode}`}
       </li>)}</ol>
     </section>}
