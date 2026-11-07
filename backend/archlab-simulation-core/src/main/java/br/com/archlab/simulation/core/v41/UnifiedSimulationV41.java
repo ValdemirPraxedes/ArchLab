@@ -43,7 +43,11 @@ public final class UnifiedSimulationV41 {
     private final Map<String,long[]> messagingMetrics = new LinkedHashMap<>();
     private final List<Map<String,Object>> rootOperations = new ArrayList<>();
     private final List<Map<String,Object>> resourceOutcomes = new ArrayList<>();
+    private final List<Map<String,Object>> dataOutcomes = new ArrayList<>();
     private final VirtualResourcesV5 virtualResources = new VirtualResourcesV5();
+    private final VirtualDataResourcesV6 virtualData = new VirtualDataResourcesV6();
+    private final Map<String,Integer> activeData = new HashMap<>();
+    private final Map<String,Deque<Runnable>> waitingData = new HashMap<>();
     private long now, scheduleOrder;
     private int messageNumber, exchangeNumber, resourceNumber, activityNumber, pendingRoots, scheduledCount,
             scheduleInvocationNumber;
@@ -191,6 +195,7 @@ public final class UnifiedSimulationV41 {
         private final Completion done;
         private final Map<String,String> status=new LinkedHashMap<>();
         private final Map<String,String> resultCodes=new HashMap<>();
+        private final Map<String,Long> batchRefs=new HashMap<>();
         private boolean responseSent, completionSent;
 
         BehaviorRun(ComponentV2 api, Behavior behavior, String parent,long postDuration,Completion done) {
@@ -207,7 +212,22 @@ public final class UnifiedSimulationV41 {
                 } else if (dependencies.stream().anyMatch(id -> "FAILED".equals(status.get(id)))
                         && !("BRANCH".equals(action.kind())
                             && resultCodes.containsKey(action.options().get("resultRef")))) {
-                    status.put(action.id(),"FAILED"); actionEvent(api.id(),action.id(),"FAILED","DEPENDENCY_FAILED",parent);
+                    boolean skipped="ETL_LOAD".equals(action.kind());
+                    status.put(action.id(),skipped?"SKIPPED":"FAILED");
+                    actionEvent(api.id(),action.id(),skipped?"SKIPPED":"FAILED","DEPENDENCY_FAILED",parent);
+                    if (skipped) {
+                        ConnectionV2 edge=connections.get(action.connectionId());
+                        Map<String,Object> result=fields("operationId",parent==null?"request-1":parent,
+                                "actionId",action.id(),"componentId",api.id(),
+                                "resourceComponentId",edge.targetId(),"connectionId",edge.id(),
+                                "timestampMs",now,"status","SKIPPED","resultCode","FAILED",
+                                "readCount",0,"writtenCount",0,"rejectedCount",0,"logicalBytes",0,
+                                "errorCode","ETL_UPSTREAM_FAILED");
+                        dataOutcomes.add(result);
+                        event(fields("type","ACTION_EVENT","actionId",action.id(),
+                                "componentId",edge.targetId(),"operationId",parent==null?"request-1":parent,
+                                "status","SKIPPED","cause","ETL_UPSTREAM_FAILED","outcome",result));
+                    }
                 } else if (dependencies.stream().allMatch(id -> "COMPLETED".equals(status.get(id))
                         || "BRANCH".equals(action.kind()) && "FAILED".equals(status.get(id)))) {
                     status.put(action.id(),"SCHEDULED");
@@ -317,6 +337,9 @@ public final class UnifiedSimulationV41 {
                      "OBJECT_DELETE", "SEND_NOTIFICATION", "INDEX_DOCUMENT", "SEARCH_DOCUMENTS",
                      "REGISTER_SERVICE", "UNREGISTER_SERVICE", "DISCOVER_SERVICE", "EVALUATE_RULE"
                      -> resourceAction(action,finish);
+                case "DB_SELECT", "DB_INSERT", "DB_UPDATE", "DB_DELETE", "DB_GET", "DB_PUT",
+                     "DB_FIND", "DB_BULK_INSERT" -> dataAction(action,finish);
+                case "ETL_EXTRACT", "ETL_TRANSFORM", "ETL_LOAD" -> etlAction(action,finish);
                 case "TRANSFORM" -> {
                     Object ref=action.options().get("outputRef");
                     if (ref instanceof String name) resultCodes.put(name,"TRANSFORMED");
@@ -371,6 +394,160 @@ public final class UnifiedSimulationV41 {
                 if (deadline) finish.finish(false);
                 else send(edge,edge.targetId(),edge.sourceId(),"RESPONSE",action.kind(),operationId,parent,
                         () -> finish.finish(successful));
+                });
+            });
+        }
+        void dataAction(Action action,Completion finish) {
+            ConnectionV2 edge=connections.get(action.connectionId());
+            DataResourceV6 resource=(DataResourceV6)components.get(edge.targetId());
+            String operationId="exchange-"+(++exchangeNumber);
+            send(edge,edge.sourceId(),edge.targetId(),"REQUEST",action.kind(),operationId,parent,() -> {
+                long arrived=now;
+                int capacity=Math.min(resource.connectionPoolSize(),resource.maxConcurrentOperations());
+                Runnable start=() -> {
+                    activeData.merge(resource.id(),1,Integer::sum);
+                    long started=now, wait=started-arrived;
+                    long count=action.options().get("recordCount") instanceof Number n?n.longValue():1;
+                    boolean read=Set.of("DB_GET","DB_SELECT","DB_FIND").contains(action.kind());
+                    long duration=Math.multiplyExact(read?resource.readLatencyMs():resource.writeLatencyMs(),count);
+                    boolean deadline=action.timeoutMs()>0 && duration>action.timeoutMs()-wait;
+                    long processing=deadline?Math.max(0,action.timeoutMs()-wait):duration;
+                    process(resource.id(),"DATA_OPERATION",processing,() -> {
+                        VirtualDataResourcesV6.Outcome outcome=deadline
+                                ?new VirtualDataResourcesV6.Outcome("TIMED_OUT",0,0,0,0,
+                                        Map.of("errorCode","DATA_TIMEOUT"))
+                                :virtualData.execute(resource,action);
+                        boolean successful=!Set.of("FAILED","LIMIT_EXCEEDED","TIMED_OUT").contains(outcome.code());
+                        Map<String,Object> result=fields("operationId",operationId,"actionId",action.id(),
+                                "componentId",api.id(),"resourceComponentId",resource.id(),
+                                "connectionId",edge.id(),"timestampMs",now,"startedAtMs",started,
+                                "completedAtMs",now,"queueWaitMs",wait,"processingMs",processing,
+                                "status",deadline?"TIMED_OUT":successful?"SUCCEEDED":"FAILED","resultCode",outcome.code(),
+                                "readCount",outcome.readCount(),"writtenCount",outcome.writtenCount(),
+                                "rejectedCount",outcome.rejectedCount(),"logicalBytes",outcome.logicalBytes());
+                        if (parent!=null) result.put("parentOperationId",parent);
+                        if (action.options().get("outputRef") instanceof String ref) {
+                            result.put("outputRef",ref); resultCodes.put(ref,outcome.code());
+                        }
+                        result.putAll(outcome.details());
+                        dataOutcomes.add(result);
+                        event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",resource.id(),
+                                "operationId",operationId,"parentExchangeId",parent,"status","COMPLETED",
+                                "cause","DATA_OPERATION","outcome",result));
+                        activeData.merge(resource.id(),-1,Integer::sum);
+                        Deque<Runnable> waiting=waitingData.get(resource.id());
+                        if (waiting!=null && !waiting.isEmpty()) waiting.removeFirst().run();
+                        send(edge,edge.targetId(),edge.sourceId(),"RESPONSE",action.kind(),operationId,parent,
+                                () -> finish.finish(successful));
+                    });
+                };
+                if (activeData.getOrDefault(resource.id(),0)<capacity) start.run();
+                else {
+                    Deque<Runnable> waiting=waitingData.computeIfAbsent(resource.id(),k -> new ArrayDeque<>());
+                    if (waiting.size()>=resource.queueCapacity()) {
+                        dataOutcomes.add(fields("operationId",operationId,"actionId",action.id(),
+                                "componentId",api.id(),"resourceComponentId",resource.id(),
+                                "connectionId",edge.id(),"timestampMs",now,"status","REJECTED",
+                                "resultCode","LIMIT_EXCEEDED","readCount",0,"writtenCount",0,
+                                "rejectedCount",1,"logicalBytes",0,"errorCode","DATA_QUEUE_FULL"));
+                        finish.finish(false);
+                    } else {
+                        boolean[] terminal={false};
+                        Scheduled[] timeout={null};
+                        Runnable queued=() -> {
+                            if (terminal[0]) return;
+                            terminal[0]=true;
+                            if (timeout[0]!=null) queue.remove(timeout[0]);
+                            start.run();
+                        };
+                        waiting.addLast(queued);
+                        if (action.timeoutMs()>0) timeout[0]=schedule(add(arrived,action.timeoutMs()),() -> {
+                            if (terminal[0]) return;
+                            terminal[0]=true; waiting.remove(queued);
+                            dataOutcomes.add(fields("operationId",operationId,"actionId",action.id(),
+                                    "componentId",api.id(),"resourceComponentId",resource.id(),
+                                    "connectionId",edge.id(),"timestampMs",now,"queueWaitMs",now-arrived,
+                                    "status","TIMED_OUT","resultCode","TIMED_OUT","readCount",0,
+                                    "writtenCount",0,"rejectedCount",0,"logicalBytes",0,
+                                    "errorCode","DATA_TIMEOUT"));
+                            finish.finish(false);
+                        });
+                    }
+                }
+            });
+        }
+        void etlAction(Action action,Completion finish) {
+            String kind=action.kind();
+            String ref=(String)action.options().get("outputRef");
+            String input=(String)action.options().get("inputRef");
+            if ("ETL_TRANSFORM".equals(kind)) {
+                Long count=batchRefs.get(input);
+                if (count==null) {finish.finish(false);return;}
+                ConnectionV2 transformEdge=action.connectionId()==null?null:connections.get(action.connectionId());
+                ComponentV2 transformTarget=transformEdge==null?api:components.get(transformEdge.targetId());
+                long cost=transformTarget instanceof DataProcessorV6 processor?processor.transformCostPerRecordMs():0;
+                long duration=Math.multiplyExact(cost,count);
+                boolean failed=Boolean.TRUE.equals(action.options().get("simulateFailure"));
+                String operationId=transformEdge==null?(parent==null?"request-1":parent):"exchange-"+(++exchangeNumber);
+                Runnable execute=() -> {
+                long started=now;
+                process(transformTarget.id(),"ETL_TRANSFORM",duration,() -> {
+                    if (!failed && ref!=null) batchRefs.put(ref,count);
+                    Map<String,Object> result=fields("operationId",operationId,
+                            "actionId",action.id(),"componentId",api.id(),"resourceComponentId",transformTarget.id(),
+                            "connectionId",transformEdge==null?"local":transformEdge.id(),"timestampMs",now,"startedAtMs",started,
+                            "completedAtMs",now,"queueWaitMs",0,"processingMs",duration,
+                            "status",failed?"FAILED":"SUCCEEDED","resultCode",failed?"FAILED":"TRANSFORMED","readCount",count,
+                            "writtenCount",failed?0:count,"rejectedCount",failed?count:0,"logicalBytes",0);
+                    if (failed) result.put("errorCode","ETL_TRANSFORM_FAILED");
+                    if (ref!=null) result.put("outputRef",ref);
+                    dataOutcomes.add(result);
+                    event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",transformTarget.id(),
+                            "operationId",operationId,"status","COMPLETED",
+                            "cause","ETL_TRANSFORM","outcome",result));
+                    if (transformEdge==null) finish.finish(!failed);
+                    else send(transformEdge,transformEdge.targetId(),transformEdge.sourceId(),"RESPONSE",
+                            kind,operationId,parent,() -> finish.finish(!failed));
+                });
+                };
+                if (transformEdge==null) execute.run();
+                else send(transformEdge,transformEdge.sourceId(),transformEdge.targetId(),"REQUEST",kind,
+                        operationId,parent,execute);
+                return;
+            }
+            ConnectionV2 edge=connections.get(action.connectionId());
+            DataResourceV6 resource=(DataResourceV6)components.get(edge.targetId());
+            if ("ETL_LOAD".equals(kind) && !batchRefs.containsKey(input)) {
+                finish.finish(false);return;
+            }
+            String operationId="exchange-"+(++exchangeNumber);
+            send(edge,edge.sourceId(),edge.targetId(),"REQUEST",kind,operationId,parent,() -> {
+                long started=now;
+                long count="ETL_EXTRACT".equals(kind)?Math.min(virtualData.count(resource),
+                        action.options().get("maxRecords") instanceof Number n?n.longValue():1_000_000):batchRefs.get(input);
+                if (count>1_000_000) throw new IllegalArgumentException("ETL record budget exceeded");
+                long duration=Math.multiplyExact("ETL_EXTRACT".equals(kind)
+                        ?resource.readLatencyMs():resource.writeLatencyMs(),count);
+                process(resource.id(),kind,duration,() -> {
+                    VirtualDataResourcesV6.Outcome outcome="ETL_LOAD".equals(kind)
+                            ?virtualData.load(resource,count)
+                            :new VirtualDataResourcesV6.Outcome("EXTRACTED",count,0,0,
+                                    count*resource.averageRecordBytes(),Map.of());
+                    boolean successful=!"LIMIT_EXCEEDED".equals(outcome.code());
+                    if (successful && ref!=null) batchRefs.put(ref,count);
+                    Map<String,Object> result=fields("operationId",operationId,"actionId",action.id(),
+                            "componentId",api.id(),"resourceComponentId",resource.id(),
+                            "connectionId",edge.id(),"timestampMs",now,"startedAtMs",started,
+                            "completedAtMs",now,"queueWaitMs",0,"processingMs",duration,
+                            "status",successful?"SUCCEEDED":"FAILED","resultCode",outcome.code(),
+                            "readCount",outcome.readCount(),"writtenCount",outcome.writtenCount(),
+                            "rejectedCount",outcome.rejectedCount(),"logicalBytes",outcome.logicalBytes());
+                    if (ref!=null) result.put("outputRef",ref);
+                    dataOutcomes.add(result);
+                    event(fields("type","ACTION_EVENT","actionId",action.id(),"componentId",resource.id(),
+                            "operationId",operationId,"status","COMPLETED","cause",kind,"outcome",result));
+                    send(edge,edge.targetId(),edge.sourceId(),"RESPONSE",kind,operationId,parent,
+                            () -> finish.finish(successful));
                 });
             });
         }
@@ -717,7 +894,7 @@ public final class UnifiedSimulationV41 {
                         "processingByComponent",processingMetrics,"communicationByConnection",communicationMetrics,
                         "waitingByComponent",waits,"exchanges",exchanges,"websocket",websocketMetrics,"messaging",messaging),
                 "messageRepresentations",representations,"resourceStates",resourceStates,
-                "resourceOutcomes",resourceOutcomes,"rootOperations",rootOperations);
+                "resourceOutcomes",resourceOutcomes,"dataOutcomes",dataOutcomes,"rootOperations",rootOperations);
     }
 
     private static String destination(IntegrationV2 integration) {

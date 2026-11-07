@@ -37,6 +37,7 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
   const canonical = result as unknown as Partial<SimulationResponseV1>;
   const unified = canonical.execution?.mode === 'UNIFIED';
   const visibleOutcomes=(canonical.resourceOutcomes ?? []).filter(outcome => (outcome.timestampMs ?? 0)<=cursor.time);
+  const visibleData=(canonical.dataOutcomes ?? []).filter(outcome => outcome.timestampMs<=cursor.time);
   const actionEvents=(canonical.trace ?? []).filter((event):event is Extract<SimulationResponseV1['trace'][number],{type:'ACTION_EVENT'}>=>event.type==='ACTION_EVENT' && (event.timestampMs<cursor.time || event.timestampMs===cursor.time && event.sequence<=cursor.sequence));
   const sorted = orderedTrace(result.trace);
   useEffect(() => {
@@ -96,6 +97,16 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
         {outcome.timestampMs ?? 0} ms · {outcome.componentId ?? 'recurso'} · ação {outcome.actionId} · <strong>{outcome.resultCode}</strong> ({outcome.status})
         {outcome.resultRef && ` · ${outcome.resultRef}`}
         {outcome.details && Object.keys(outcome.details).length>0 && <span> · {Object.entries(outcome.details).map(([key,value])=>`${key}: ${String(value)}`).join(', ')}</span>}
+      </li>)}</ol>
+    </section>}
+    {(canonical.dataOutcomes?.length ?? 0)>0 && <section aria-label="Resultados de dados v0.6">
+      <h3>Operações de dados</h3>
+      <p>{visibleData.length} de {canonical.dataOutcomes?.length} operações até {Math.round(time)} ms.</p>
+      <ol>{visibleData.map((outcome,index)=><li key={`${outcome.operationId}-${outcome.actionId}-${index}`}>
+        {outcome.timestampMs} ms · {outcome.resourceComponentId} · ação {outcome.actionId} · <strong>{outcome.resultCode}</strong> ({outcome.status})
+        {' · lidos '}{outcome.readCount}{' · escritos '}{outcome.writtenCount}{' · rejeitados '}{outcome.rejectedCount}
+        {' · bytes '}{outcome.logicalBytes}{' · fila '}{outcome.queueWaitMs ?? 0} ms
+        {outcome.errorCode && ` · ${outcome.errorCode}`}
       </li>)}</ol>
     </section>}
     {actionEvents.length>0 && <section aria-label="Actions e ramos v0.5"><h3>Actions e ramos</h3><ol>{actionEvents.map(event=><li key={event.sequence}>{event.timestampMs} ms · {event.actionId} · <strong>{event.status}</strong>{event.status==='SKIPPED'?' (ramo descartado)':''}</li>)}</ol></section>}

@@ -1,6 +1,6 @@
 # Contrato v0.6 — fixtures e verificações
 
-> **Status:** exemplos para revisão contratual; não significa execução pelo backend v0.5.
+> **Status:** exemplos de contrato e implementação P0 parcial em PRs encadeados. A homologação v0.6 continua pendente.
 
 ## Arquivos
 
@@ -18,14 +18,14 @@ npm install
 npm run validate
 ```
 
-O script faz parse do YAML, verifica discriminadores, usa JSON Schema/Ajv 2020 para exemplos e verifica invariantes básicas. **Não substitui** validação OpenAPI 3.1 por ferramenta especializada, compatibilidade de migração no runtime, smoke tests contra a API Java, nem geração de tipos TypeScript. Não foi executado no ambiente do GitHub por esta alteração documental.
+O script faz parse do YAML, verifica discriminadores e usa JSON Schema/Ajv 2020 para exemplos. Arquiteturas com `schemaVersion: "0.6"` rejeitam `API` e `DATABASE`; documentos históricos sem marcador continuam legíveis para migração explícita. Os testes de integração Java verificam operações P0 e o frontend gera os tipos TypeScript.
 
 ## Gates ainda pendentes
 
-1. Executar o script acima, corrigir problemas do schema/fixtures e executar `npm run validate` dos exemplos v0.4.
-2. Executar Redocly/OpenAPI lint e validação de `$ref`, `oneOf` e discriminação.
-3. Gerar TypeScript e comparar com tipos manuais; revisar DTOs/mappers Java.
-4. Testar conversão explícita `DATABASE` legada, preservando IDs e dependências.
-5. Aprovar compatibilidade e semântica antes de iniciar implementação P0.
+1. Completar a reconciliação entre DTOs Java, tipos manuais e schema, incluindo resultado local de `ETL_TRANSFORM`.
+2. Homologar a política de migração quando `DATABASE_QUERY` ou `CALL` históricos tornam a conversão ambígua.
+3. Completar as regras declarativas de transformação além de `IDENTITY` e os cenários CT-6-01 a CT-6-10.
 
-**Importante:** `DATABASE` aparece no `Component.oneOf` exclusivamente para entrada legada, garantindo que fixtures antigas possam ser lidas. O contrato de criação/exportação canônica e o editor devem rejeitar novos nós genéricos. Um schema de leitura separado poderá formalizar essa diferença na etapa de compatibilidade.
+Neste checkpoint, `npx --yes @redocly/cli lint docs/api/openapi.yaml` validou o OpenAPI com dois avisos preexistentes (`info-license` e `LegacyApiMigrationV5` não referenciado). O validador de fixtures v0.4 também passou.
+
+**Importante:** `Component.oneOf` ainda permite leitura legada. O marcador `schemaVersion: "0.6"` impõe a restrição canônica em `Architecture`; o editor exporta esse marcador e não oferece `DATABASE` na paleta. Sem o marcador, a API mantém a compatibilidade histórica.
