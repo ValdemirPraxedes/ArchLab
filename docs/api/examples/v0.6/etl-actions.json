@@ -1,0 +1,40 @@
+{
+  "component": {
+    "id": "etl",
+    "displayName": "Daily ETL",
+    "type": "ETL_PIPELINE",
+    "batchSize": 100,
+    "maxBatches": 10
+  },
+  "actions": [
+    {
+      "id": "extract",
+      "kind": "ETL_EXTRACT",
+      "connectionId": "etl-source",
+      "batchSize": 100,
+      "maxRecords": 1000,
+      "outputRef": "extracted"
+    },
+    {
+      "id": "transform",
+      "kind": "ETL_TRANSFORM",
+      "inputRef": "extracted",
+      "dependsOn": [
+        "extract"
+      ],
+      "transform": "FILTER_VALID",
+      "outputRef": "cleaned"
+    },
+    {
+      "id": "load",
+      "kind": "ETL_LOAD",
+      "connectionId": "etl-target",
+      "dependsOn": [
+        "transform"
+      ],
+      "inputRef": "cleaned",
+      "batchSize": 100,
+      "outputRef": "loaded"
+    }
+  ]
+}
