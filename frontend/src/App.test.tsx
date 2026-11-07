@@ -45,7 +45,7 @@ describe('Editor visual', () => {
     expect(screen.getByRole('region', { name: 'Editor visual' })).toBeInTheDocument();
     expect(screen.getByRole('complementary', { name: 'Propriedades' })).toBeInTheDocument();
   });
-  it('agrupa os seis clientes, API e Database e adiciona por clique', () => {
+  it('agrupa os seis clientes e os bancos P0 sem oferecer DATABASE legado', () => {
     render(<App />);
     const clients = screen.getByRole('region', { name: 'Clientes' });
     expect(screen.queryByRole('button', { name: /^Client$/ })).not.toBeInTheDocument();
@@ -55,7 +55,10 @@ describe('Editor visual', () => {
     }
     expect(screen.getByRole('region', { name: 'Serviços' })).toContainElement(screen.getByRole('button', { name: 'Service' }));
     expect(screen.queryByRole('button',{name:'API'})).not.toBeInTheDocument();
-    expect(screen.getByRole('region', { name: 'Dados' })).toContainElement(screen.getByRole('button', { name: 'Database' }));
+    const data=screen.getByRole('region', { name: 'Dados' });
+    for (const name of ['Relational Database','Document Database','Key-Value Store'])
+      expect(data).toContainElement(screen.getByRole('button', { name }));
+    expect(screen.queryByRole('button',{name:'Database'})).not.toBeInTheDocument();
     expect(screen.getByText(/6 componente\(s\)/)).toBeInTheDocument();
   });
   it('importa API histórica como SERVICE após validação e anuncia os IDs convertidos',async()=>{
@@ -71,6 +74,24 @@ describe('Editor visual', () => {
     fireEvent.change(screen.getByLabelText('Arquivo de arquitetura'),{target:{files:[file]}});
     expect(await screen.findByText(/1 API convertida\(s\) para SERVICE/)).toHaveTextContent('old-api');
     expect(screen.getByRole('button',{name:'Nó: Legacy'})).toHaveAttribute('data-component-type','SERVICE');
+  });
+  it('mostra prévia de DATABASE legado e só altera o canvas após confirmação',async()=>{
+    server.use(http.post('/api/v1/architectures/validate',()=>HttpResponse.json({valid:true,violations:[]})));
+    render(<App/>);
+    fireEvent.click(screen.getByRole('button',{name:'Service'}));
+    const document={components:[{id:'old-db',type:'DATABASE',displayName:'Legacy DB',processingMs:5}],connections:[]};
+    const file=new File([JSON.stringify(document)],'legacy.json',{type:'application/json'});
+    Object.defineProperty(file,'text',{value:async()=>JSON.stringify(document)});
+    fireEvent.change(screen.getByLabelText('Arquivo de arquitetura'),{target:{files:[file]}});
+    expect(await screen.findByRole('region',{name:'Prévia de migração DATABASE'})).toHaveTextContent('old-db');
+    expect(screen.getByRole('button',{name:'Nó: Service 1'})).toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Nó: Legacy DB'})).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button',{name:'Cancelar migração'}));
+    expect(screen.getByRole('button',{name:'Nó: Service 1'})).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText('Arquivo de arquitetura'),{target:{files:[file]}});
+    await screen.findByRole('region',{name:'Prévia de migração DATABASE'});
+    fireEvent.click(screen.getByRole('button',{name:'Confirmar migração'}));
+    expect(screen.getByRole('button',{name:'Nó: Legacy DB'})).toHaveAttribute('data-component-type','RELATIONAL_DATABASE');
   });
   it('mantém o canvas quando a arquitetura importada falha na validação',async()=>{
     server.use(http.post('/api/v1/architectures/validate',()=>HttpResponse.json({valid:false,violations:[{code:'INVALID_CONNECTION',path:'connections[0]',message:'Conexão inválida'}]})));
@@ -148,19 +169,19 @@ describe('Editor visual', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
     fireEvent.click(screen.getByRole('button', { name: 'Web Browser' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Database' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Relational Database' }));
     expect(screen.getByTestId('flow')).toHaveTextContent('Nó: Web Browser');
     expect(screen.getByText(/3 componente\(s\)/)).toBeInTheDocument();
   });
-  it('configura API, conecta ao Database e remove apenas a conexão', () => {
+  it('configura Service, conecta ao banco relacional e remove apenas a conexão', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', { name: 'Service' }));
-    fireEvent.click(screen.getByRole('button', { name: 'Database' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Relational Database' }));
     fireEvent.click(screen.getByRole('button', { name: 'Nó: Service 1' }));
     fireEvent.change(screen.getByRole('spinbutton', { name: 'Pré-processamento (ms)' }), { target: { value: '30' } });
     expect(screen.getByRole('spinbutton', { name: 'Pré-processamento (ms)' })).toHaveValue(30);
     const target = screen.getByRole('combobox', { name: 'Destino' });
-    const databaseOption = screen.getByRole('option', { name: /Database/ });
+    const databaseOption = screen.getByRole('option', { name: /Relational Database/ });
     fireEvent.change(target, { target: { value: (databaseOption as HTMLOptionElement).value } });
     expect(screen.getByRole('combobox', { name: 'Protocolo' })).toHaveValue('TCP');
     fireEvent.click(screen.getByRole('button', { name: 'Conectar' }));
@@ -181,13 +202,13 @@ describe('Editor visual', () => {
   it('anuncia alterações aplicadas e descartadas com feedback acessível', () => {
     render(<App />);
     fireEvent.click(screen.getByRole('button', {name:'Service'}));
-    fireEvent.click(screen.getByRole('button', {name:'Database'}));
+    fireEvent.click(screen.getByRole('button', {name:'Relational Database'}));
     fireEvent.click(screen.getByRole('button', {name:'Nó: Service 1'}));
     expect(screen.getByText(/Os tempos são aplicados imediatamente/)).toBeInTheDocument();
     fireEvent.change(screen.getByRole('spinbutton', {name:'Pré-processamento (ms)'}), {target:{value:'30'}});
     expect(screen.getByText('Tempo aplicado imediatamente ao componente.')).toBeInTheDocument();
     const destination=screen.getByRole('combobox',{name:'Destino'});
-    fireEvent.change(destination,{target:{value:(screen.getByRole('option',{name:/Database/}) as HTMLOptionElement).value}});
+    fireEvent.change(destination,{target:{value:(screen.getByRole('option',{name:/Relational Database/}) as HTMLOptionElement).value}});
     fireEvent.click(screen.getByRole('button',{name:'Conectar'}));
     expect(screen.getByText('Conexão criada no canvas.')).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button',{name:'Conexão: TCP'}));

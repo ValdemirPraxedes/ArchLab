@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { allowedProtocols, COMPONENT_LABELS, createArchitectureEdge, createArchitectureNode, isComponentType, isVisualClientType, removeComponent, validDuration, validateConnection, validDisplayName, nextDisplayName, VISUAL_CLIENT_TYPES } from './model';
+import { toArchitectureV1 } from './architectureV1';
 
 describe('modelo do editor', () => {
   it('aceita somente tipos conhecidos', () => {
@@ -35,6 +36,19 @@ describe('modelo do editor', () => {
     expect(allowedProtocols('CLIENT', 'API')).toEqual(['REST', 'SOAP', 'HTTP_GENERIC', 'GRAPHQL_HTTP', 'GRPC_UNARY', 'COAP', 'WEBSOCKET']);
     expect(allowedProtocols('API', 'DATABASE')).toEqual(['TCP']);
     expect(allowedProtocols('DATABASE', 'API')).toEqual([]);
+    expect(allowedProtocols('SERVICE','RELATIONAL_DATABASE')).toEqual(['TCP']);
+    expect(allowedProtocols('SERVICE','DOCUMENT_DATABASE')).toEqual(['TCP']);
+    expect(allowedProtocols('ETL_PIPELINE','KEY_VALUE_STORE')).toEqual(['TCP']);
+  });
+  it('serializa bancos P0 com propriedades e IDs preservados', () => {
+    const service=createArchitectureNode('SERVICE',{x:0,y:0});
+    const data=createArchitectureNode('RELATIONAL_DATABASE',{x:1,y:0});
+    const edge=createArchitectureEdge(service.id,data.id,'TCP',2);
+    const architecture=toArchitectureV1([service,data],[edge]);
+    expect(architecture.components[1]).toMatchObject({id:data.id,type:'RELATIONAL_DATABASE',
+      dataProperties:{initialRecordCount:0,averageRecordBytes:512,connectionPoolSize:1}});
+    expect(architecture.connections[0]).toMatchObject({id:edge.id,sourceId:service.id,targetId:data.id,
+      integration:{kind:'DATABASE_QUERY'}});
   });
   it.each(VISUAL_CLIENT_TYPES)('permite %s → API e bloqueia pares incompatíveis', (type) => {
     const visual = createArchitectureNode(type, { x: 0, y: 0 });
