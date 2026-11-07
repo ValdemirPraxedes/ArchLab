@@ -11,7 +11,8 @@ This is an implementation checkpoint, not product acceptance. PRs #93–#98 were
 | V6-14 | In progress | Explicit backend migration preview is implemented; historical operation equivalence and ambiguous-case choice remain pending |
 | V6-15–V6-20 | In progress | Contextual validation, all migration choices and integrated round-trip |
 | V6-21–V6-22 | In progress | Complete CT fixtures and v0.1–v0.3 comparison evidence; live v0.4/v0.5 replay passed |
-| V6-23–V6-24 | Pending | Memory/performance profile and product acceptance |
+| V6-23 | In progress | Low-heap logical-state limit tests pass; full API load and memory profile remain pending |
+| V6-24 | Pending | Product acceptance, demo and final checklist |
 
 No V6 task is marked complete solely from a passing build or a basic scenario test.
 
@@ -36,7 +37,7 @@ No V6 task is marked complete solely from a passing build or a basic scenario te
 - `FILTER_VALID` and `NORMALIZE_METADATA` are in the OpenAPI enum but are rejected by the Java semantic validator until their record semantics are specified and implemented. `IDENTITY` is executable.
 - Initial datasets and bulk inserts are represented by logical counts; detailed key/field lookup is available only for explicitly written records. This must be documented and checked against the intended CT-6 semantics.
 - `DB_BULK_INSERT` rejects a single `key` for a multi-record logical batch, because the runtime cannot assign that key unambiguously to every record.
-- Queue timeout, processing timeout and pool occupancy have focused tests, but broader load and memory profiling remain pending.
+- Queue timeout, processing timeout and pool occupancy have focused tests. `VirtualDataResourcesV6LimitTest` verifies one million logical records and the 1 GiB logical-byte ceiling under a 64 MiB Java test heap; full API load and memory profiling remain pending.
 - Legacy `DATABASE_QUERY` with text or `CALL` is ambiguous and intentionally blocks automatic conversion. An explicit user choice flow is still needed for those documents.
 - `POST /api/v1/architectures/migrate-v6` returns a copy-based migration preview and report for unambiguous `API`/`DATABASE` documents. Backend tests verify preserved IDs/connections, source immutability, and rejection of ambiguous text/CALL; historical simulation equivalence remains to be established.
 - The `/api/v1` OpenAPI allows unversioned historical input. Versioned `0.6` documents reject `API` and `DATABASE`. This boundary requires final contract review.
