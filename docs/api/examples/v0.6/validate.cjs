@@ -104,5 +104,36 @@ if (fs.existsSync(responsesDir)) {
       JSON.stringify((ajv.getSchema('#/components/schemas/SimulationResponse').errors || []).slice(0, 3)));
   }
 } else console.log('SKIP backend response conformance (no backend/archlab-api/target/ct6-responses)');
+// V6-04: contract integrity — every $ref resolves, discriminators match their oneOf, valid/invalid cases
+const refs = [];
+(function walk(node) {
+  if (Array.isArray(node)) node.forEach(walk);
+  else if (node && typeof node === 'object') for (const [k, v] of Object.entries(node)) { if (k === '$ref' && typeof v === 'string') refs.push(v); else walk(v); }
+})(document);
+const unresolved = [...new Set(refs)].filter((r) => {
+  if (!r.startsWith('#/')) return true;
+  return r.slice(2).split('/').reduce((n, key) => (n == null ? n : n[key.replace(/~1/g, '/').replace(/~0/g, '~')]), document) === undefined;
+});
+assert('All ' + new Set(refs).size + ' distinct $ref resolve', unresolved.length === 0, unresolved.join(', '));
+const compileErrors = [];
+for (const name of Object.keys(schemas)) { try { ajv.getSchema('#/components/schemas/' + name); } catch (e) { compileErrors.push(name + ': ' + e.message); } }
+assert('All component schemas compile', compileErrors.length === 0, compileErrors.join('; '));
+for (const union of ['Component', 'CanonicalComponentV6']) {
+  const schema = schemas[union];
+  const branches = schema.oneOf.map((b) => b.$ref).sort();
+  const mapped = Object.values(schema.discriminator.mapping).sort();
+  assert(union + ' discriminator mapping covers exactly its oneOf', JSON.stringify(branches) === JSON.stringify(mapped));
+  const wrong = Object.entries(schema.discriminator.mapping).filter(([type, ref]) => schemas[ref.split('/').pop()].properties.type.const !== type);
+  assert(union + ' discriminator keys equal each branch type const', wrong.length === 0, JSON.stringify(wrong));
+}
+const canonicalTypes = Object.keys(schemas.CanonicalComponentV6.discriminator.mapping);
+assert('CanonicalComponentV6 excludes API and DATABASE', !canonicalTypes.includes('API') && !canonicalTypes.includes('DATABASE'));
+assert('Historical API and DATABASE are deprecated', schemas.Api.deprecated === true && schemas.Database.deprecated === true);
+const contract = load('contract-cases.json');
+for (const c of contract.cases)
+  assert('Contract case ' + c.name + ' is ' + (c.valid ? 'accepted' : 'rejected') + ' by Architecture',
+    validate('Architecture', c.architecture) === c.valid,
+    JSON.stringify((ajv.getSchema('#/components/schemas/Architecture').errors || []).slice(0, 2)));
+
 console.log('NOTE: semantic validation, OpenAPI lint, TS generation, Java DTOs and backend execution are separate gates.');
 process.exitCode = failed ? 1 : 0;

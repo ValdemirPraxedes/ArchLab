@@ -20,6 +20,8 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Lint OpenAPI 3.1 contract (errors fail; 2 known warnings documented in API-V6-001)
+        run: npx --yes @redocly/cli@2.76.0 lint docs/api/openapi.yaml
       - name: Install v0.6 fixture validator dependencies
         working-directory: docs/api/examples/v0.6
         run: npm install --no-audit --no-fund
