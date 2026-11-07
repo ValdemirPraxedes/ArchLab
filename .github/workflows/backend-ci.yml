@@ -1,0 +1,29 @@
+name: Backend CI
+on:
+  push:
+    paths:
+      - 'backend/**'
+      - 'docs/api/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    paths:
+      - 'backend/**'
+      - 'docs/api/**'
+      - '.github/workflows/backend-ci.yml'
+  workflow_dispatch:
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          cache: maven
+      # Runs every backend suite, including the v0.6 CT-6, normative, migration, contract, worst-case
+      # (256 MiB heap via argLine) and v0.1-v0.5 historical regression tests, which read docs/api/examples.
+      - run: chmod +x mvnw && ./mvnw -B test

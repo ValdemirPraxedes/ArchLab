@@ -2,8 +2,19 @@
 
 > Registro de handoff entre agentes. Complementa (não substitui) `V6-INTEGRATION-STATUS.md`,
 > `V6-CONTRACT-GATE-AUDIT.md`, `V6-LIMIT-EVIDENCE.md` e `V6-REGRESSION-EVIDENCE.md`.
-> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 7 (V6-23; decisão 4 tomada pelo responsável).
+> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 8 (V6-22).
 > A sessão 1 (2026-11-06) fez apenas a auditoria; seu texto está preservado nas seções 1–6. A seção 0 abaixo prevalece onde houver diferença.
+
+## 0000000. Sessão 8 — 2026-11-07 (Claude): V6-22
+
+- PR #110 mesclado (`develop` @ `45a8c73`). Trello: V6-23 em **✅ Concluído**.
+- **V6-22:**
+  - diferencial lado a lado entre a release v0.5 (`origin/main` @ `5e6ae09b`) e a `develop`: 45 requests congelados × 6 endpoints (`/api/v1`, `/api/v2`) = 270 chamadas, **0 diferenças** (14 `dataOutcomes: []` aditivos tolerados);
+  - `HistoricalRegressionV6Test`: repete as 270 com hash do golden v0.5 em todo build; uma mutação de 1 caractere derrubou 187 verificações;
+  - verificadores ao vivo do frontend (v0.1/v0.2, v0.3 com 24 cenários) e da API (v0.4, v0.5): PASS contra a v0.5 e contra a `develop`;
+  - **novo `backend-ci.yml`**: o repositório não executava testes Java no CI.
+- Evidência: `docs/implementation/V6-REGRESSION-EVIDENCE.md` §V6-22. Ferramentas: `docs/api/examples/regression/`.
+- Pendente: V6-24 (revisão final e DoD, com aprovação do responsável).
 
 ## 000000. Sessão 7 — 2026-11-07 (Claude): V6-23 e decisão 4
 
