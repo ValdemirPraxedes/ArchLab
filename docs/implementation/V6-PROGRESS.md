@@ -2,8 +2,17 @@
 
 > Registro de handoff entre agentes. Complementa (não substitui) `V6-INTEGRATION-STATUS.md`,
 > `V6-CONTRACT-GATE-AUDIT.md`, `V6-LIMIT-EVIDENCE.md` e `V6-REGRESSION-EVIDENCE.md`.
-> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 4 (V6-02; decisões 3 e 5 tomadas pelo responsável).
+> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 5 (V6-03 e V6-14; decisão 2 tomada pelo responsável).
 > A sessão 1 (2026-11-06) fez apenas a auditoria; seu texto está preservado nas seções 1–6. A seção 0 abaixo prevalece onde houver diferença.
+
+## 0000. Sessão 5 — 2026-11-07 (Claude): V6-03, V6-14 e decisão 2
+
+- PR #107 mesclado (`develop` @ `9859ab9`). Trello: V6-01 e V6-02 em **✅ Concluído**.
+- **Decisão 2 do responsável:** converter com equivalência temporal. `CALL` → `DB_SELECT`; `queryText`/`responseText` ficam na conexão; pool e concorrência em 1000. Continuam bloqueados `NON_QUERY_CONNECTION` e `HISTORICAL_CALL_TIMEOUT` (o prazo do `CALL` inclui a rede).
+- **V6-03:** política normativa em [`docs/architecture/MIGRATION-V6-001.md`](../architecture/MIGRATION-V6-001.md). Backend (`LegacyDatabaseMigrationV6`) e editor (`migrationV6.ts`) aplicam as mesmas regras, e o teste do editor compara a saída com a fixture CT-6-07 do backend. CT-6-07 ganhou o caso de conversão; CT-6-08 agora cobre os dois bloqueios restantes. `migration-legacy.json` foi atualizado.
+- **V6-14:** `LegacyMigrationEquivalenceV6Test` com `docs/api/examples/v0.6/migration/M6-01..04.json`, comparando relatório esperado, IDs, conexões, Actions e `dependsOn` preservados, e simulações equivalentes (status, duração total, resposta e tempo de cada atividade da timeline). Um teste de mutação (pool 1) confirmou que a comparação detecta divergência.
+- Gates: `mvnw test` (core 121 / API 140), `npm test` (34 arquivos / 219 testes), lint e build OK, `npm run validate` 95 PASS / 0 FAIL.
+- Pendentes: decisões 1 e 4; V6-04, V6-22, V6-23 e V6-24.
 
 ## 000. Sessão 4 — 2026-11-07 (Claude): V6-02 e decisões 3/5
 
@@ -203,7 +212,7 @@ Legenda: **Concluída** = aceite do TASKS-V6-001 atendido com teste; **Parcial**
 ## 3. Decisões pendentes do responsável (bloqueiam o fechamento de gates)
 
 1. Fronteira de schema canônico × legado: `/api/v1/architectures/validate` deve aceitar `DATABASE` histórico diretamente ou somente após migração explícita?
-2. Tratamento de `DATABASE_QUERY` com `queryText`/`responseText` e `CALL` histórico: bloquear (atual), oferecer escolha manual ou mapear para uma Action padrão?
+2. ~~Tratamento de `queryText`/`responseText` e `CALL` histórico.~~ **Decidido em 2026-11-07: converter com equivalência temporal** (`CALL` → `DB_SELECT`, texto mantido na conexão, concorrência 1000). Ver MIGRATION-V6-001.
 3. ~~Atomicidade de `DB_BULK_INSERT` ao atingir limite.~~ **Decidido em 2026-11-07: rejeição total (lote atômico).** Ver DATA-BUDGETS-V6-001.
 5. ~~`DB_BULK_INSERT` em `KEY_VALUE_STORE`.~~ **Decidido em 2026-11-07: não em P0.** Ver DM-V6-001 §2.1.
 4. Limiares de aceite de performance (V6-23).

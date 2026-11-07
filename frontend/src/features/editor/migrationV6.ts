@@ -6,7 +6,7 @@ export type PreparedImportV6 = ReturnType<typeof prepareArchitectureImportV5> & 
   migrationNotes: string[];
 };
 
-export type MigrationAmbiguityReasonV6 = 'HISTORICAL_QUERY_TEXT' | 'NON_QUERY_CONNECTION' | 'HISTORICAL_CALL';
+export type MigrationAmbiguityReasonV6 = 'NON_QUERY_CONNECTION' | 'HISTORICAL_CALL_TIMEOUT';
 export type MigrationDiagnosticV6 = {
   code:'DATA_MIGRATION_AMBIGUOUS'; componentId:string; path:string; reason:MigrationAmbiguityReasonV6; message:string;
 };
@@ -21,37 +21,45 @@ export class MigrationAmbiguityErrorV6 extends Error {
   }
 }
 
-/** Lists the historical semantics that block an automatic DATABASE → RELATIONAL_DATABASE conversion. */
+/**
+ * Lists what still blocks DATABASE → RELATIONAL_DATABASE (product decision 2, 2026-11-07): a connection
+ * that is not DATABASE_QUERY, or a CALL with timeoutMs (its deadline covers the network round trip, a
+ * data Action deadline does not, so timing would change). queryText/responseText and plain CALLs convert.
+ */
 export function findMigrationAmbiguitiesV6(source:ArchitectureV1):MigrationDiagnosticV6[] {
   const diagnostics:MigrationDiagnosticV6[]=[];
-  source.components.forEach(component=>{
-    if (component.type!=='DATABASE') return;
+  for (const component of source.components) {
+    if (component.type!=='DATABASE') continue;
     source.connections.forEach((edge,edgeIndex)=>{
       if (edge.targetId!==component.id) return;
-      const integration=edge.integration as {kind:string;queryText?:string;responseText?:string};
-      if (integration.kind!=='DATABASE_QUERY' || integration.queryText || integration.responseText) {
-        const reason=integration.kind!=='DATABASE_QUERY'?'NON_QUERY_CONNECTION':'HISTORICAL_QUERY_TEXT';
-        diagnostics.push({code:'DATA_MIGRATION_AMBIGUOUS',componentId:component.id,
-          path:`connections[${edgeIndex}].integration`,reason,
-          message:reason==='NON_QUERY_CONNECTION'
-            ?`DATABASE ${component.id}: a conexão ${edge.id} (${integration.kind}) não é DATABASE_QUERY; escolha a operação de dados equivalente.`
-            :`DATABASE ${component.id}: a conexão ${edge.id} tem queryText/responseText histórico; substitua por uma Action DB_* declarativa.`});
-      }
-      source.components.forEach((actor,actorIndex)=>{
-        if (!('behaviors' in actor)) return;
-        actor.behaviors?.forEach((behavior,behaviorIndex)=>behavior.actions.forEach((action,actionIndex)=>{
-          if (action.kind==='CALL' && action.connectionId===edge.id)
-            diagnostics.push({code:'DATA_MIGRATION_AMBIGUOUS',componentId:component.id,
-              path:`components[${actorIndex}].behaviors[${behaviorIndex}].actions[${actionIndex}]`,reason:'HISTORICAL_CALL',
-              message:`DATABASE ${component.id}: a Action CALL ${action.id} de ${actor.id} não tem equivalente DB_* inequívoco; escolha a operação.`});
-        }));
+      if (edge.integration.kind!=='DATABASE_QUERY')
+        diagnostics.push({code:'DATA_MIGRATION_AMBIGUOUS',componentId:component.id,path:`connections[${edgeIndex}].integration`,
+          reason:'NON_QUERY_CONNECTION',
+          message:`DATABASE ${component.id}: a conexão ${edge.id} (${edge.integration.kind}) não é DATABASE_QUERY; escolha a operação de dados equivalente.`});
+      callsTo(source,edge.id).forEach(({actor,actorIndex,behaviorIndex,actionIndex,action})=>{
+        if ((action as {timeoutMs?:number}).timeoutMs)
+          diagnostics.push({code:'DATA_MIGRATION_AMBIGUOUS',componentId:component.id,
+            path:`components[${actorIndex}].behaviors[${behaviorIndex}].actions[${actionIndex}]`,reason:'HISTORICAL_CALL_TIMEOUT',
+            message:`DATABASE ${component.id}: o CALL ${action.id} de ${actor.id} tem timeoutMs, que conta a ida e volta pela rede; numa Action de dados o prazo conta só fila + processamento. Remova o timeout ou converta manualmente.`});
       });
     });
-  });
+  }
   return diagnostics;
 }
 
-/** Converts only unambiguous legacy DATABASE nodes, on a copy of the input. */
+type BehaviorAction = NonNullable<Extract<ArchitectureV1['components'][number],{behaviors?:unknown}>['behaviors']>[number]['actions'][number];
+function callsTo(source:ArchitectureV1,edgeId:string) {
+  const found:{actor:ArchitectureV1['components'][number];actorIndex:number;behaviorIndex:number;actionIndex:number;action:BehaviorAction}[]=[];
+  source.components.forEach((actor,actorIndex)=>{
+    if (!('behaviors' in actor)) return;
+    actor.behaviors?.forEach((behavior,behaviorIndex)=>behavior.actions.forEach((action,actionIndex)=>{
+      if (action.kind==='CALL' && action.connectionId===edgeId) found.push({actor,actorIndex,behaviorIndex,actionIndex,action});
+    }));
+  });
+  return found;
+}
+
+/** Converts legacy DATABASE nodes and their CALLs on a copy of the input; mirrors POST /api/v1/architectures/migrate-v6. */
 export function prepareArchitectureImportV6(input:unknown):PreparedImportV6 {
   if (!input || typeof input!=='object' || !('components' in input) || !('connections' in input))
     throw new Error('Documento deve conter components e connections.');
@@ -61,17 +69,30 @@ export function prepareArchitectureImportV6(input:unknown):PreparedImportV6 {
   const ambiguities=findMigrationAmbiguitiesV6(source);
   if (ambiguities.length) throw new MigrationAmbiguityErrorV6(ambiguities);
   const databaseIds:string[]=[];
+  const calls:BehaviorAction[]=[];
   const migrationNotes:string[]=[];
   source.components=source.components.map(component=>{
     if (component.type!=='DATABASE') return component;
     const processingMs=component.processingMs;
     databaseIds.push(component.id);
-    migrationNotes.push(`${component.id}: processingMs ${processingMs} → latências de leitura/escrita; registros iniciais 0; 512 bytes por registro.`);
+    for (const edge of source.connections.filter(edge=>edge.targetId===component.id)) {
+      const integration=edge.integration as {queryText?:string;responseText?:string};
+      if (integration.queryText || integration.responseText)
+        migrationNotes.push(`${component.id}: a conexão ${edge.id} mantém queryText/responseText como texto da mensagem (sem semântica executável).`);
+      for (const {actor,behaviorIndex,action} of callsTo(source,edge.id)) {
+        const behavior=(actor as {behaviors:{id:string}[]}).behaviors[behaviorIndex];
+        calls.push(action);
+        migrationNotes.push(`${component.id}: ${actor.id}/${behavior.id}/${action.id} CALL → DB_SELECT (collection default; mesmo tempo virtual).`);
+      }
+    }
+    migrationNotes.push(`${component.id}: processingMs ${processingMs} → latências de leitura/escrita; registros iniciais 0; 512 bytes por registro; pool e concorrência 1000 (o legado não tinha fila).`);
     return {id:component.id,displayName:component.displayName,type:'RELATIONAL_DATABASE',dataProperties:{
       initialRecordCount:0,averageRecordBytes:512,readLatencyMs:processingMs,writeLatencyMs:processingMs,
-      maxConcurrentOperations:1,connectionPoolSize:1,queueCapacity:10,
+      maxConcurrentOperations:1000,connectionPoolSize:1000,queueCapacity:10,
     }} as ArchitectureV1['components'][number];
   });
+  // The copy's CALL objects are rewritten in place only after every DATABASE was accepted.
+  for (const call of calls) Object.assign(call,{kind:'DB_SELECT',collection:'default'});
   const prepared=prepareArchitectureImportV5(source);
   return {...prepared,databaseIds,migrationNotes};
 }

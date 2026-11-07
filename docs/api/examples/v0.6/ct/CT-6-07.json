@@ -1,6 +1,6 @@
 {
   "id": "CT-6-07",
-  "title": "Importar arquitetura legada com DATABASE, obter prévia e converter para RELATIONAL_DATABASE preservando IDs e conexões.",
+  "title": "Importar arquitetura legada com DATABASE, obter prévia e converter para RELATIONAL_DATABASE preservando IDs e conexões. CALL histórico vira DB_SELECT com o mesmo tempo virtual, e queryText/responseText ficam na conexão (decisão 2).",
   "cases": [
     {
       "name": "legacy-preview",
@@ -57,6 +57,91 @@
         },
         "documentNotContains": [
           "\"DATABASE\""
+        ]
+      }
+    },
+    {
+      "name": "legacy-call-and-query-text-convert",
+      "endpoint": "/api/v1/architectures/migrate-v6",
+      "replay": true,
+      "request": {
+        "components": [
+          {
+            "id": "client",
+            "type": "CLIENT",
+            "displayName": "Client"
+          },
+          {
+            "id": "service",
+            "type": "SERVICE",
+            "displayName": "Service",
+            "behaviors": [
+              {
+                "id": "handle",
+                "trigger": "REQUEST_RECEIVED",
+                "actions": [
+                  {
+                    "id": "load-order",
+                    "kind": "CALL",
+                    "connectionId": "data"
+                  },
+                  {
+                    "id": "respond",
+                    "kind": "RESPOND",
+                    "dependsOn": [
+                      "load-order"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "db",
+            "type": "DATABASE",
+            "displayName": "Orders DB",
+            "processingMs": 3
+          }
+        ],
+        "connections": [
+          {
+            "id": "entry",
+            "sourceId": "client",
+            "targetId": "service",
+            "integration": {
+              "kind": "HTTP_REST"
+            }
+          },
+          {
+            "id": "data",
+            "sourceId": "service",
+            "targetId": "db",
+            "integration": {
+              "kind": "DATABASE_QUERY",
+              "queryText": "SELECT * FROM orders WHERE id = :id",
+              "responseText": "1 row"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": 200,
+        "fields": {
+          "/document/components/1/behaviors/0/actions/0/id": "load-order",
+          "/document/components/1/behaviors/0/actions/0/kind": "DB_SELECT",
+          "/document/components/1/behaviors/0/actions/0/collection": "default",
+          "/document/components/1/behaviors/0/actions/1/dependsOn/0": "load-order",
+          "/document/connections/1/integration/queryText": "SELECT * FROM orders WHERE id = :id",
+          "/document/components/2/dataProperties/readLatencyMs": 3,
+          "/document/components/2/dataProperties/connectionPoolSize": 1000
+        },
+        "bodyContains": [
+          "service/handle/load-order CALL -> DB_SELECT",
+          "queryText/responseText as message representation"
+        ],
+        "documentNotContains": [
+          "\"DATABASE\"",
+          "\"CALL\""
         ]
       }
     }

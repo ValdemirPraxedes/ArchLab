@@ -17,11 +17,22 @@
     "preserve": [
       "id",
       "displayName",
-      "connections"
+      "connections",
+      "queryText",
+      "responseText",
+      "behaviorIds",
+      "actionIds",
+      "dependsOn"
     ],
-    "requiresSemanticReview": [
-      "processingMs",
-      "DATABASE_QUERY"
-    ]
+    "convert": {
+      "processingMs": "readLatencyMs and writeLatencyMs",
+      "CALL": "DB_SELECT (collection default)",
+      "concurrency": "maxConcurrentOperations = connectionPoolSize = 1000"
+    },
+    "blocked": [
+      "NON_QUERY_CONNECTION",
+      "HISTORICAL_CALL_TIMEOUT"
+    ],
+    "policy": "docs/architecture/MIGRATION-V6-001.md (product decision 2, 2026-11-07)"
   }
 }

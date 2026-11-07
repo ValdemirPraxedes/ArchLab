@@ -75,6 +75,18 @@ for (const file of normFiles) {
   }
 }
 
+// V6-03 / V6-14: legacy migration equivalence fixtures (replayed by LegacyMigrationEquivalenceV6Test)
+const migDir = path.join(__dirname, 'migration');
+const migFiles = fs.readdirSync(migDir).filter((f) => /^M6-\d\d\.json$/.test(f)).sort();
+assert('M6-01..04 migration fixtures present', migFiles.length === 4, migFiles.join(','));
+for (const file of migFiles) {
+  const fixture = JSON.parse(fs.readFileSync(path.join(migDir, file), 'utf8'));
+  assert(fixture.id + ' legacy architecture is decodable (unversioned historical)', validate('Architecture', fixture.legacy.architecture),
+    JSON.stringify(ajv.getSchema('#/components/schemas/Architecture').errors));
+  assert(fixture.id + ' has an expected conversion report', fixture.expectedReport.databaseIds.length > 0
+    && fixture.expectedReport.notesContain.length > 0);
+}
+
 // V6-20: canonical frontend export (golden shared with exportV6.test.ts and Ct6FixtureReplayTest)
 const golden = load('canonical-export-p0.json');
 assert('Canonical P0 export matches Architecture', validate('Architecture', golden),

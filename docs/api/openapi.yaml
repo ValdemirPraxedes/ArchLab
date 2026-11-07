@@ -21,7 +21,7 @@ paths:
       tags: [Architectures]
       operationId: migrateLegacyArchitectureV6
       summary: Prévia explícita da migração de API e DATABASE legados
-      description: Converte uma cópia apenas quando DATABASE não tem queryText, responseText nem CALL histórico; valida o grafo e os Behaviors resultantes. A entrada original não é alterada.
+      description: "Converte uma cópia (decisão 2, MIGRATION-V6-001): DATABASE vira RELATIONAL_DATABASE com latências = processingMs e concorrência 1000; CALL para ele vira DB_SELECT com o mesmo tempo virtual; queryText/responseText permanecem na conexão. Bloqueia com 400 DATA_MIGRATION_AMBIGUOUS uma conexão não DATABASE_QUERY (NON_QUERY_CONNECTION) e um CALL com timeoutMs (HISTORICAL_CALL_TIMEOUT). Valida o grafo e os Behaviors resultantes. A entrada original não é alterada."
       requestBody:
         required: true
         content:
