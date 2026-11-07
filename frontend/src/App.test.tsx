@@ -93,6 +93,26 @@ describe('Editor visual', () => {
     fireEvent.click(screen.getByRole('button',{name:'Confirmar migração'}));
     expect(screen.getByRole('button',{name:'Nó: Legacy DB'})).toHaveAttribute('data-component-type','RELATIONAL_DATABASE');
   });
+  it('lista diagnósticos acionáveis de migração ambígua e preserva o canvas',async()=>{
+    render(<App/>);
+    fireEvent.click(screen.getByRole('button',{name:'Service'}));
+    const document={components:[
+      {id:'svc',type:'SERVICE',displayName:'Legacy Service',behaviors:[]},
+      {id:'old-db',type:'DATABASE',displayName:'Legacy DB',processingMs:5}],
+      connections:[{id:'q',sourceId:'svc',targetId:'old-db',latencyMs:1,
+        integration:{kind:'DATABASE_QUERY',queryText:'SELECT * FROM orders'}}]};
+    const file=new File([JSON.stringify(document)],'ambiguous.json',{type:'application/json'});
+    Object.defineProperty(file,'text',{value:async()=>JSON.stringify(document)});
+    fireEvent.change(screen.getByLabelText('Arquivo de arquitetura'),{target:{files:[file]}});
+    expect(await screen.findByText(/Importação cancelada; o canvas original foi preservado/)).toBeInTheDocument();
+    const result=screen.getByRole('region',{name:'Resultado da validação'});
+    expect(result).toHaveTextContent('DATA_MIGRATION_AMBIGUOUS');
+    expect(result).toHaveTextContent('connections[0].integration');
+    expect(result).toHaveTextContent('HISTORICAL_QUERY_TEXT');
+    expect(screen.queryByRole('region',{name:'Prévia de migração DATABASE'})).not.toBeInTheDocument();
+    expect(screen.getByRole('button',{name:'Nó: Service 1'})).toBeInTheDocument();
+    expect(screen.queryByRole('button',{name:'Nó: Legacy DB'})).not.toBeInTheDocument();
+  });
   it('mantém o canvas quando a arquitetura importada falha na validação',async()=>{
     server.use(http.post('/api/v1/architectures/validate',()=>HttpResponse.json({valid:false,violations:[{code:'INVALID_CONNECTION',path:'connections[0]',message:'Conexão inválida'}]})));
     render(<App/>);

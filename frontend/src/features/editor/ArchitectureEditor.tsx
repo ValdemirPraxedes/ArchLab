@@ -21,7 +21,7 @@ import { inFlightMessages, traceStateAt } from './traceV2';
 import type { TraceCursor } from './traceV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { toArchitectureV1 } from './architectureV1';
-import { prepareArchitectureImportV6 } from './migrationV6';
+import { MigrationAmbiguityErrorV6, prepareArchitectureImportV6 } from './migrationV6';
 import type { PreparedImportV6 } from './migrationV6';
 import { exportArchitectureV6 } from './exportV6';
 import { archlabV1Client, ArchlabV1HttpError } from '../../api/archlabV1Client';
@@ -145,6 +145,10 @@ function EditorCanvas() {
         setActionFeedback('Prévia de migração pronta. Confirme para aplicar ao canvas.');
       } else applyImport(prepared);
     } catch (cause) {
+      if (cause instanceof MigrationAmbiguityErrorV6) {
+        setIssues(cause.diagnostics.map(d=>({code:d.code,path:d.path,message:`${d.message} (${d.reason})`})));
+        setValidationStatus('invalid'); setValidationScope('architecture');
+      }
       setActionFeedback(`Importação cancelada; o canvas original foi preservado. ${cause instanceof Error?cause.message:'Arquivo inválido.'}`);
     }
   };
