@@ -550,6 +550,8 @@ components:
       - type
       - displayName
     Database:
+      description: 'DEPRECATED v0.6: tipo histórico aceito somente em documentos sem schemaVersion (leitura v0.1–v0.5) e convertido apenas por POST /api/v1/architectures/migrate-v6 (MIGRATION-V6-001). Novos modelos usam RELATIONAL_DATABASE, DOCUMENT_DATABASE ou KEY_VALUE_STORE.'
+      deprecated: true
       type: object
       additionalProperties: false
       properties:
@@ -1583,6 +1585,11 @@ components:
           required: [transform]
         then:
           required: [invalidRecordCount]
+          properties:
+            invalidRecordCount: {type: integer, minimum: 0, maximum: 1000000}
+        else:
+          properties:
+            invalidRecordCount: false
       properties:
         id: {$ref: '#/components/schemas/Identifier'}
         kind: {type: string, const: ETL_TRANSFORM}
@@ -1610,6 +1617,7 @@ components:
         maxRecords: {type: integer, minimum: 1, maximum: 1000000}
         transform: {type: string, enum: [IDENTITY, FILTER_VALID, NORMALIZE_METADATA]}
     Component:
+      description: União de leitura de /api/v1. Contém os tipos canônicos v0.6 (CanonicalComponentV6) e os históricos API e DATABASE (deprecated). A fronteira é o marcador Architecture.schemaVersion — com "0.6" somente CanonicalComponentV6 é aceito; sem marcador o documento é histórico (compatibilidade v0.1–v0.5) e a conversão é explícita via migrate-v6.
       oneOf:
       - $ref: '#/components/schemas/Client'
       - $ref: '#/components/schemas/WEB_BROWSERClient'
@@ -1618,8 +1626,8 @@ components:
       - $ref: '#/components/schemas/CLIClient'
       - $ref: '#/components/schemas/BOTClient'
       - $ref: '#/components/schemas/EMBEDDED_SYSTEMClient'
-      - $ref: '#/components/schemas/Api' # DEPRECATED: apenas importação de arquitetura histórica; reexportar SERVICE
-      - $ref: '#/components/schemas/Database' # DEPRECATED: entrada legada apenas; novas arquiteturas usam tipos P0 de dados
+      - $ref: '#/components/schemas/Api'
+      - $ref: '#/components/schemas/Database'
       - $ref: '#/components/schemas/Broker'
       - $ref: '#/components/schemas/ServiceV5'
       - $ref: '#/components/schemas/ApiGatewayV5'
@@ -1651,8 +1659,70 @@ components:
           CLI: '#/components/schemas/CLIClient'
           BOT: '#/components/schemas/BOTClient'
           EMBEDDED_SYSTEM: '#/components/schemas/EMBEDDED_SYSTEMClient'
-          API: '#/components/schemas/Api' # deprecated legacy import only
-          DATABASE: '#/components/schemas/Database' # deprecated legacy import only; migração explícita
+          API: '#/components/schemas/Api'
+          DATABASE: '#/components/schemas/Database'
+          BROKER: '#/components/schemas/Broker'
+          SERVICE: '#/components/schemas/ServiceV5'
+          API_GATEWAY: '#/components/schemas/ApiGatewayV5'
+          BFF: '#/components/schemas/BffV5'
+          WORKER: '#/components/schemas/WorkerV5'
+          SCHEDULER: '#/components/schemas/SchedulerV5'
+          AUTHENTICATION_SERVICE: '#/components/schemas/AuthenticationServiceV5'
+          WEBHOOK_RECEIVER: '#/components/schemas/WebhookReceiverV5'
+          ORCHESTRATOR_SERVICE: '#/components/schemas/OrchestratorServiceV5'
+          INTEGRATION_BUS: '#/components/schemas/IntegrationBusV5'
+          CACHE: '#/components/schemas/CacheV5'
+          OBJECT_STORAGE: '#/components/schemas/ObjectStorageV5'
+          NOTIFICATION_SERVICE: '#/components/schemas/NotificationServiceV5'
+          SEARCH_ENGINE: '#/components/schemas/SearchEngineV5'
+          SERVICE_REGISTRY: '#/components/schemas/ServiceRegistryV5'
+          RULES_ENGINE: '#/components/schemas/RulesEngineV5'
+          RELATIONAL_DATABASE: '#/components/schemas/RelationalDatabaseV6'
+          DOCUMENT_DATABASE: '#/components/schemas/DocumentDatabaseV6'
+          KEY_VALUE_STORE: '#/components/schemas/KeyValueStoreV6'
+          ETL_PIPELINE: '#/components/schemas/EtlPipelineV6'
+          DATA_TRANSFORMER: '#/components/schemas/DataTransformerV6'
+    CanonicalComponentV6:
+      description: Componentes aceitos em uma Architecture com schemaVersion "0.6" (decisão 1, 2026-11-07). Exclui os tipos históricos API e DATABASE, que só aparecem em documentos sem schemaVersion e devem passar por migrate-v6.
+      oneOf:
+      - $ref: '#/components/schemas/Client'
+      - $ref: '#/components/schemas/WEB_BROWSERClient'
+      - $ref: '#/components/schemas/MOBILE_APPClient'
+      - $ref: '#/components/schemas/DESKTOP_APPClient'
+      - $ref: '#/components/schemas/CLIClient'
+      - $ref: '#/components/schemas/BOTClient'
+      - $ref: '#/components/schemas/EMBEDDED_SYSTEMClient'
+      - $ref: '#/components/schemas/Broker'
+      - $ref: '#/components/schemas/ServiceV5'
+      - $ref: '#/components/schemas/ApiGatewayV5'
+      - $ref: '#/components/schemas/BffV5'
+      - $ref: '#/components/schemas/WorkerV5'
+      - $ref: '#/components/schemas/SchedulerV5'
+      - $ref: '#/components/schemas/AuthenticationServiceV5'
+      - $ref: '#/components/schemas/WebhookReceiverV5'
+      - $ref: '#/components/schemas/OrchestratorServiceV5'
+      - $ref: '#/components/schemas/IntegrationBusV5'
+      - $ref: '#/components/schemas/CacheV5'
+      - $ref: '#/components/schemas/ObjectStorageV5'
+      - $ref: '#/components/schemas/NotificationServiceV5'
+      - $ref: '#/components/schemas/SearchEngineV5'
+      - $ref: '#/components/schemas/ServiceRegistryV5'
+      - $ref: '#/components/schemas/RulesEngineV5'
+      - $ref: '#/components/schemas/RelationalDatabaseV6'
+      - $ref: '#/components/schemas/DocumentDatabaseV6'
+      - $ref: '#/components/schemas/KeyValueStoreV6'
+      - $ref: '#/components/schemas/EtlPipelineV6'
+      - $ref: '#/components/schemas/DataTransformerV6'
+      discriminator:
+        propertyName: type
+        mapping:
+          CLIENT: '#/components/schemas/Client'
+          WEB_BROWSER: '#/components/schemas/WEB_BROWSERClient'
+          MOBILE_APP: '#/components/schemas/MOBILE_APPClient'
+          DESKTOP_APP: '#/components/schemas/DESKTOP_APPClient'
+          CLI: '#/components/schemas/CLIClient'
+          BOT: '#/components/schemas/BOTClient'
+          EMBEDDED_SYSTEM: '#/components/schemas/EMBEDDED_SYSTEMClient'
           BROKER: '#/components/schemas/Broker'
           SERVICE: '#/components/schemas/ServiceV5'
           API_GATEWAY: '#/components/schemas/ApiGatewayV5'
@@ -1725,12 +1795,7 @@ components:
           properties:
             components:
               items:
-                allOf:
-                - $ref: '#/components/schemas/Component'
-                - not:
-                    properties:
-                      type: {enum: [API, DATABASE]}
-                    required: [type]
+                $ref: '#/components/schemas/CanonicalComponentV6'
       properties:
         schemaVersion: {type: string, const: '0.6'}
         components:

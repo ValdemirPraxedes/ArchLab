@@ -1,0 +1,625 @@
+{
+  "id": "CONTRACT-CASES-V6",
+  "description": "Valid and invalid Architecture documents for the v0.6 contract (V6-04). validate.cjs checks them against the OpenAPI schema; ContractCasesV6Test requires POST /api/v1/architectures/validate to accept/reject the same ones.",
+  "cases": [
+    {
+      "name": "canonical-p0-export",
+      "valid": true,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "client",
+            "type": "WEB_BROWSER",
+            "displayName": "Client"
+          },
+          {
+            "id": "scheduler",
+            "type": "SCHEDULER",
+            "displayName": "Scheduler",
+            "schedules": [
+              {
+                "id": "nightly",
+                "firstAtMs": 5,
+                "intervalMs": 5,
+                "occurrenceCount": 1,
+                "behaviorId": "tick"
+              }
+            ],
+            "behaviors": [
+              {
+                "id": "start",
+                "trigger": "REQUEST_RECEIVED",
+                "actions": [
+                  {
+                    "id": "plan",
+                    "kind": "SCHEDULE_TRIGGER",
+                    "scheduleId": "nightly"
+                  },
+                  {
+                    "id": "respond",
+                    "kind": "RESPOND",
+                    "dependsOn": [
+                      "plan"
+                    ],
+                    "statusCode": 202
+                  }
+                ]
+              },
+              {
+                "id": "tick",
+                "trigger": "SCHEDULED_TRIGGER",
+                "actions": [
+                  {
+                    "id": "call",
+                    "kind": "CALL",
+                    "connectionId": "scheduler-etl"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "etl",
+            "type": "ETL_PIPELINE",
+            "displayName": "ETL",
+            "batchSize": 5,
+            "maxBatches": 3,
+            "behaviors": [
+              {
+                "id": "run",
+                "trigger": "REQUEST_RECEIVED",
+                "actions": [
+                  {
+                    "id": "extract",
+                    "kind": "ETL_EXTRACT",
+                    "connectionId": "source-edge",
+                    "outputRef": "raw"
+                  },
+                  {
+                    "id": "transform",
+                    "kind": "ETL_TRANSFORM",
+                    "connectionId": "transform-edge",
+                    "inputRef": "raw",
+                    "dependsOn": [
+                      "extract"
+                    ],
+                    "outputRef": "clean",
+                    "simulateFailure": false,
+                    "transform": "FILTER_VALID",
+                    "invalidRecordCount": 2
+                  },
+                  {
+                    "id": "load",
+                    "kind": "ETL_LOAD",
+                    "connectionId": "target-edge",
+                    "inputRef": "clean",
+                    "dependsOn": [
+                      "transform"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "source",
+            "type": "DOCUMENT_DATABASE",
+            "displayName": "source",
+            "dataProperties": {
+              "initialRecordCount": 12,
+              "averageRecordBytes": 128,
+              "readLatencyMs": 2,
+              "writeLatencyMs": 3,
+              "maxConcurrentOperations": 1,
+              "connectionPoolSize": 1,
+              "queueCapacity": 2
+            }
+          },
+          {
+            "id": "transformer",
+            "type": "DATA_TRANSFORMER",
+            "displayName": "Transformer",
+            "transformCostPerRecordMs": 1,
+            "behaviors": []
+          },
+          {
+            "id": "target",
+            "type": "RELATIONAL_DATABASE",
+            "displayName": "target",
+            "dataProperties": {
+              "initialRecordCount": 0,
+              "averageRecordBytes": 128,
+              "readLatencyMs": 2,
+              "writeLatencyMs": 3,
+              "maxConcurrentOperations": 1,
+              "connectionPoolSize": 1,
+              "queueCapacity": 2
+            }
+          },
+          {
+            "id": "orders-api",
+            "type": "SERVICE",
+            "displayName": "Orders API",
+            "behaviors": [
+              {
+                "id": "handle",
+                "trigger": "REQUEST_RECEIVED",
+                "actions": [
+                  {
+                    "id": "cache-miss",
+                    "kind": "DB_GET",
+                    "connectionId": "orders-kv",
+                    "key": "order:1"
+                  },
+                  {
+                    "id": "insert",
+                    "kind": "DB_INSERT",
+                    "connectionId": "orders-target",
+                    "dependsOn": [
+                      "cache-miss"
+                    ],
+                    "collection": "orders",
+                    "key": "order:1"
+                  },
+                  {
+                    "id": "respond",
+                    "kind": "RESPOND",
+                    "dependsOn": [
+                      "insert"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "sessions",
+            "type": "KEY_VALUE_STORE",
+            "displayName": "Sessions",
+            "dataProperties": {
+              "initialRecordCount": 0,
+              "averageRecordBytes": 64,
+              "readLatencyMs": 1,
+              "writeLatencyMs": 1,
+              "maxConcurrentOperations": 4,
+              "connectionPoolSize": 4,
+              "queueCapacity": 8
+            }
+          }
+        ],
+        "connections": [
+          {
+            "id": "entry",
+            "sourceId": "client",
+            "targetId": "scheduler",
+            "latencyMs": 1,
+            "integration": {
+              "kind": "HTTP_REST",
+              "request": {
+                "method": "POST",
+                "path": "/schedule"
+              },
+              "response": {
+                "statusCode": 202
+              }
+            }
+          },
+          {
+            "id": "scheduler-etl",
+            "sourceId": "scheduler",
+            "targetId": "etl",
+            "latencyMs": 1,
+            "integration": {
+              "kind": "HTTP_REST",
+              "request": {
+                "method": "POST",
+                "path": "/etl/run"
+              },
+              "response": {
+                "statusCode": 200
+              }
+            }
+          },
+          {
+            "id": "source-edge",
+            "sourceId": "etl",
+            "targetId": "source",
+            "latencyMs": 1,
+            "integration": {
+              "kind": "DATABASE_QUERY"
+            }
+          },
+          {
+            "id": "transform-edge",
+            "sourceId": "etl",
+            "targetId": "transformer",
+            "latencyMs": 1,
+            "integration": {
+              "kind": "HTTP_REST",
+              "request": {
+                "method": "POST",
+                "path": "/transform"
+              },
+              "response": {
+                "statusCode": 200
+              }
+            }
+          },
+          {
+            "id": "target-edge",
+            "sourceId": "etl",
+            "targetId": "target",
+            "latencyMs": 1,
+            "integration": {
+              "kind": "DATABASE_QUERY"
+            }
+          },
+          {
+            "id": "orders-kv",
+            "sourceId": "orders-api",
+            "targetId": "sessions",
+            "latencyMs": 1,
+            "integration": {
+              "kind": "DATABASE_QUERY"
+            }
+          },
+          {
+            "id": "orders-target",
+            "sourceId": "orders-api",
+            "targetId": "target",
+            "latencyMs": 1,
+            "integration": {
+              "kind": "DATABASE_QUERY"
+            }
+          }
+        ]
+      },
+      "why": "Golden canônico com os 5 tipos P0"
+    },
+    {
+      "name": "canonical-relational",
+      "valid": true,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "db",
+            "type": "RELATIONAL_DATABASE",
+            "displayName": "DB",
+            "dataProperties": {
+              "initialRecordCount": 0,
+              "averageRecordBytes": 64,
+              "readLatencyMs": 1,
+              "writeLatencyMs": 1,
+              "maxConcurrentOperations": 1,
+              "connectionPoolSize": 1,
+              "queueCapacity": 1
+            }
+          }
+        ],
+        "connections": []
+      }
+    },
+    {
+      "name": "historical-database-unversioned",
+      "valid": true,
+      "architecture": {
+        "components": [
+          {
+            "id": "db",
+            "type": "DATABASE",
+            "displayName": "DB",
+            "processingMs": 3
+          }
+        ],
+        "connections": []
+      },
+      "why": "Leitura histórica v0.1–v0.5 (decisão 1)"
+    },
+    {
+      "name": "historical-api-unversioned",
+      "valid": true,
+      "architecture": {
+        "components": [
+          {
+            "id": "api",
+            "type": "API",
+            "displayName": "API",
+            "preProcessingMs": 0,
+            "postProcessingMs": 0,
+            "behaviors": []
+          }
+        ],
+        "connections": []
+      },
+      "why": "Leitura histórica v0.5"
+    },
+    {
+      "name": "database-in-v06",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "db",
+            "type": "DATABASE",
+            "displayName": "DB",
+            "processingMs": 3
+          }
+        ],
+        "connections": []
+      },
+      "why": "schemaVersion 0.6 só aceita CanonicalComponentV6"
+    },
+    {
+      "name": "api-in-v06",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "api",
+            "type": "API",
+            "displayName": "API",
+            "preProcessingMs": 0,
+            "postProcessingMs": 0,
+            "behaviors": []
+          }
+        ],
+        "connections": []
+      },
+      "why": "schemaVersion 0.6 só aceita CanonicalComponentV6"
+    },
+    {
+      "name": "p1-type-not-in-contract",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "db",
+            "type": "GRAPH_DATABASE",
+            "displayName": "DB",
+            "dataProperties": {
+              "initialRecordCount": 0,
+              "averageRecordBytes": 64,
+              "readLatencyMs": 1,
+              "writeLatencyMs": 1,
+              "maxConcurrentOperations": 1,
+              "connectionPoolSize": 1,
+              "queueCapacity": 1
+            }
+          }
+        ],
+        "connections": []
+      },
+      "why": "Tipos P1/P2 não são publicados"
+    },
+    {
+      "name": "unknown-schema-version",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.7",
+        "components": [
+          {
+            "id": "db",
+            "type": "RELATIONAL_DATABASE",
+            "displayName": "DB",
+            "dataProperties": {
+              "initialRecordCount": 0,
+              "averageRecordBytes": 64,
+              "readLatencyMs": 1,
+              "writeLatencyMs": 1,
+              "maxConcurrentOperations": 1,
+              "connectionPoolSize": 1,
+              "queueCapacity": 1
+            }
+          }
+        ],
+        "connections": []
+      }
+    },
+    {
+      "name": "missing-required-data-property",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "db",
+            "type": "RELATIONAL_DATABASE",
+            "displayName": "DB",
+            "dataProperties": {
+              "initialRecordCount": 0,
+              "averageRecordBytes": 64,
+              "readLatencyMs": 1,
+              "writeLatencyMs": 1,
+              "maxConcurrentOperations": 1,
+              "connectionPoolSize": 1
+            }
+          }
+        ],
+        "connections": []
+      }
+    },
+    {
+      "name": "data-property-above-max",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "db",
+            "type": "RELATIONAL_DATABASE",
+            "displayName": "DB",
+            "dataProperties": {
+              "initialRecordCount": 0,
+              "averageRecordBytes": 64,
+              "readLatencyMs": 1,
+              "writeLatencyMs": 1,
+              "maxConcurrentOperations": 1,
+              "connectionPoolSize": 1,
+              "queueCapacity": 10001
+            }
+          }
+        ],
+        "connections": []
+      }
+    },
+    {
+      "name": "sql-text-on-data-action",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "svc",
+            "type": "SERVICE",
+            "displayName": "Svc",
+            "behaviors": [
+              {
+                "id": "h",
+                "trigger": "REQUEST_RECEIVED",
+                "actions": [
+                  {
+                    "id": "s",
+                    "kind": "DB_SELECT",
+                    "connectionId": "data",
+                    "collection": "c",
+                    "queryText": "SELECT 1"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "db",
+            "type": "RELATIONAL_DATABASE",
+            "displayName": "DB",
+            "dataProperties": {
+              "initialRecordCount": 0,
+              "averageRecordBytes": 64,
+              "readLatencyMs": 1,
+              "writeLatencyMs": 1,
+              "maxConcurrentOperations": 1,
+              "connectionPoolSize": 1,
+              "queueCapacity": 1
+            }
+          }
+        ],
+        "connections": [
+          {
+            "id": "data",
+            "sourceId": "svc",
+            "targetId": "db",
+            "latencyMs": 1,
+            "integration": {
+              "kind": "DATABASE_QUERY"
+            }
+          }
+        ]
+      },
+      "why": "Sem SQL executável: DB_* não aceita queryText"
+    },
+    {
+      "name": "invalid-count-outside-filter-valid",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "etl",
+            "type": "ETL_PIPELINE",
+            "displayName": "ETL",
+            "batchSize": 10,
+            "maxBatches": 1,
+            "behaviors": [
+              {
+                "id": "r",
+                "trigger": "REQUEST_RECEIVED",
+                "actions": [
+                  {
+                    "id": "t",
+                    "kind": "ETL_TRANSFORM",
+                    "inputRef": "raw",
+                    "transform": "IDENTITY",
+                    "invalidRecordCount": 1,
+                    "simulateFailure": false
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "connections": []
+      },
+      "why": "invalidRecordCount só existe para FILTER_VALID"
+    },
+    {
+      "name": "filter-valid-without-count",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "etl",
+            "type": "ETL_PIPELINE",
+            "displayName": "ETL",
+            "batchSize": 10,
+            "maxBatches": 1,
+            "behaviors": [
+              {
+                "id": "r",
+                "trigger": "REQUEST_RECEIVED",
+                "actions": [
+                  {
+                    "id": "t",
+                    "kind": "ETL_TRANSFORM",
+                    "inputRef": "raw",
+                    "transform": "FILTER_VALID",
+                    "simulateFailure": false
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "connections": []
+      }
+    },
+    {
+      "name": "unknown-transform",
+      "valid": false,
+      "architecture": {
+        "schemaVersion": "0.6",
+        "components": [
+          {
+            "id": "etl",
+            "type": "ETL_PIPELINE",
+            "displayName": "ETL",
+            "batchSize": 10,
+            "maxBatches": 1,
+            "behaviors": [
+              {
+                "id": "r",
+                "trigger": "REQUEST_RECEIVED",
+                "actions": [
+                  {
+                    "id": "t",
+                    "kind": "ETL_TRANSFORM",
+                    "inputRef": "raw",
+                    "transform": "CUSTOM_SCRIPT",
+                    "simulateFailure": false
+                  }
+                ]
+              }
+            ]
+          }
+        ],
+        "connections": []
+      },
+      "why": "Sem scripts arbitrários"
+    }
+  ]
+}
