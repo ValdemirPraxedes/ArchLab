@@ -1,0 +1,3998 @@
+{
+ "id": "CORPUS-V05",
+ "baseline": "origin/main 5e6ae09b (v0.5 release)",
+ "description": "Historical request corpus frozen from the v0.5 release (origin/main). Each body is posted to every /api/v1 and /api/v2 endpoint by diff-baseline.cjs and HistoricalRegressionV6Test.",
+ "entries": [
+  {
+   "id": "ac4964a91022",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/architecture/LegacyApiMigrationV5Test.java#block1",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "old-1",
+       "type": "API",
+       "behaviors": [
+        {
+         "id": "b",
+         "actions": [
+          {
+           "id": "a"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "gateway",
+       "type": "API_GATEWAY"
+      },
+      {
+       "id": "old-2",
+       "type": "API",
+       "preProcessingMs": 7
+      }
+     ],
+     "connections": [
+      {
+       "id": "edge",
+       "sourceId": "old-1",
+       "targetId": "old-2"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "afff7938963a",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/architecture/LegacyApiMigrationV5Test.java#block2",
+   "body": {
+    "components": [
+     {
+      "id": "a",
+      "type": "API"
+     },
+     {
+      "id": "bad"
+     }
+    ],
+    "connections": []
+   }
+  },
+  {
+   "id": "06799439feca",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ArchitectureControllerTest.java#block1",
+   "body": {
+    "components": [
+     {
+      "id": "client-1",
+      "type": "CLIENT"
+     },
+     {
+      "id": "api-1",
+      "type": "API",
+      "preProcessingMs": 30,
+      "postProcessingMs": 20
+     },
+     {
+      "id": "db-1",
+      "type": "DATABASE",
+      "processingMs": 150
+     }
+    ],
+    "connections": [
+     {
+      "id": "connection-1",
+      "sourceId": "client-1",
+      "targetId": "api-1",
+      "protocol": "REST",
+      "latencyMs": 20
+     },
+     {
+      "id": "connection-2",
+      "sourceId": "api-1",
+      "targetId": "db-1",
+      "protocol": "TCP",
+      "latencyMs": 10
+     }
+    ]
+   }
+  },
+  {
+   "id": "eaa6fd494387",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ArchitectureControllerTest.java#block2",
+   "body": {
+    "components": [
+     {
+      "id": "client-1",
+      "type": "CLIENT"
+     },
+     {
+      "id": "api-1",
+      "type": "API",
+      "preProcessingMs": 30,
+      "postProcessingMs": 20
+     }
+    ],
+    "connections": []
+   }
+  },
+  {
+   "id": "998ca989df02",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ArchitectureMigrationServiceV5Test.java#block1",
+   "body": {
+    "components": [
+     {
+      "id": "client",
+      "type": "CLIENT",
+      "displayName": "Client"
+     },
+     {
+      "id": "api-one",
+      "type": "API",
+      "displayName": "One",
+      "preProcessingMs": 3,
+      "behaviors": [
+       {
+        "id": "b1",
+        "trigger": "REQUEST_RECEIVED",
+        "actions": [
+         {
+          "id": "call",
+          "kind": "CALL",
+          "connectionId": "one-two"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "id": "api-two",
+      "type": "API",
+      "displayName": "Two",
+      "postProcessingMs": 2,
+      "behaviors": [
+       {
+        "id": "b2",
+        "trigger": "REQUEST_RECEIVED",
+        "actions": [
+         {
+          "id": "respond",
+          "kind": "RESPOND",
+          "statusCode": 200
+         }
+        ]
+       }
+      ]
+     }
+    ],
+    "connections": [
+     {
+      "id": "in",
+      "sourceId": "client",
+      "targetId": "api-one",
+      "latencyMs": 1,
+      "integration": {
+       "kind": "HTTP_REST",
+       "request": {
+        "method": "GET",
+        "path": "/one"
+       }
+      }
+     },
+     {
+      "id": "one-two",
+      "sourceId": "api-one",
+      "targetId": "api-two",
+      "latencyMs": 1,
+      "integration": {
+       "kind": "HTTP_REST",
+       "request": {
+        "method": "GET",
+        "path": "/two"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "8989d1bca3be",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ArchitectureMigrationServiceV5Test.java#block2",
+   "body": {
+    "components": [
+     {
+      "id": "client",
+      "type": "CLIENT",
+      "displayName": "Client"
+     },
+     {
+      "id": "producer",
+      "type": "API",
+      "displayName": "Producer",
+      "behaviors": [
+       {
+        "id": "request",
+        "trigger": "REQUEST_RECEIVED",
+        "actions": [
+         {
+          "id": "publish",
+          "kind": "PUBLISH",
+          "connectionId": "producer-broker",
+          "destinationName": "jobs"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "id": "broker",
+      "type": "BROKER",
+      "displayName": "Broker",
+      "destinations": [
+       {
+        "name": "jobs",
+        "kind": "QUEUE"
+       }
+      ],
+      "subscriptions": [
+       {
+        "destinationName": "jobs",
+        "consumerComponentId": "consumer",
+        "connectionId": "broker-consumer"
+       }
+      ]
+     },
+     {
+      "id": "consumer",
+      "type": "API",
+      "displayName": "Consumer",
+      "behaviors": [
+       {
+        "id": "consume",
+        "trigger": "MESSAGE_CONSUMED",
+        "match": {
+         "destinationName": "jobs"
+        },
+        "actions": [
+         {
+          "id": "read",
+          "kind": "CALL",
+          "connectionId": "consumer-db"
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "id": "database",
+      "type": "DATABASE",
+      "displayName": "Database",
+      "processingMs": 3
+     }
+    ],
+    "connections": [
+     {
+      "id": "in",
+      "sourceId": "client",
+      "targetId": "producer",
+      "latencyMs": 1,
+      "integration": {
+       "kind": "HTTP_REST",
+       "request": {
+        "method": "POST",
+        "path": "/jobs"
+       }
+      }
+     },
+     {
+      "id": "producer-broker",
+      "sourceId": "producer",
+      "targetId": "broker",
+      "latencyMs": 1,
+      "integration": {
+       "kind": "QUEUE",
+       "queueName": "jobs"
+      }
+     },
+     {
+      "id": "broker-consumer",
+      "sourceId": "broker",
+      "targetId": "consumer",
+      "latencyMs": 1,
+      "integration": {
+       "kind": "QUEUE",
+       "queueName": "jobs"
+      }
+     },
+     {
+      "id": "consumer-db",
+      "sourceId": "consumer",
+      "targetId": "database",
+      "latencyMs": 1,
+      "integration": {
+       "kind": "DATABASE_QUERY"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "dfb8f8287126",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ServiceV5IntegrationTest.java#block1",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "browser",
+       "type": "WEB_BROWSER",
+       "displayName": "Browser"
+      },
+      {
+       "id": "orders",
+       "type": "SERVICE",
+       "displayName": "Orders",
+       "behaviors": [
+        {
+         "id": "read",
+         "trigger": "REQUEST_RECEIVED",
+         "match": {
+          "operation": "GET /orders"
+         },
+         "actions": [
+          {
+           "id": "get",
+           "kind": "CACHE_GET",
+           "connectionId": "to-cache",
+           "key": "order-1",
+           "outputRef": "cache-result"
+          },
+          {
+           "id": "branch",
+           "kind": "BRANCH",
+           "dependsOn": [
+            "get"
+           ],
+           "resultRef": "cache-result",
+           "cases": [
+            {
+             "equals": "HIT",
+             "actionIds": [
+              "respond-hit"
+             ]
+            },
+            {
+             "equals": "MISS",
+             "actionIds": [
+              "db",
+              "respond-miss"
+             ]
+            }
+           ]
+          },
+          {
+           "id": "db",
+           "kind": "CALL",
+           "connectionId": "to-db",
+           "dependsOn": [
+            "branch"
+           ]
+          },
+          {
+           "id": "respond-miss",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "db"
+           ],
+           "statusCode": 200
+          },
+          {
+           "id": "respond-hit",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "branch"
+           ],
+           "statusCode": 204
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "cache",
+       "type": "CACHE",
+       "displayName": "Cache",
+       "defaultTtlMs": 100
+      },
+      {
+       "id": "db",
+       "type": "DATABASE",
+       "displayName": "Database",
+       "processingMs": 2
+      }
+     ],
+     "connections": [
+      {
+       "id": "in",
+       "sourceId": "browser",
+       "targetId": "orders",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/orders"
+        }
+       }
+      },
+      {
+       "id": "to-cache",
+       "sourceId": "orders",
+       "targetId": "cache",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/cache"
+        }
+       }
+      },
+      {
+       "id": "to-db",
+       "sourceId": "orders",
+       "targetId": "db",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "DATABASE_QUERY"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "browser",
+      "connectionId": "in",
+      "operation": "GET /orders"
+     }
+    }
+   }
+  },
+  {
+   "id": "fe97fa6d8ae1",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ServiceV5IntegrationTest.java#block2",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "browser",
+       "type": "WEB_BROWSER",
+       "displayName": "Browser"
+      },
+      {
+       "id": "gateway",
+       "type": "API_GATEWAY",
+       "displayName": "Gateway",
+       "routes": [
+        {
+         "operation": "GET /home",
+         "connectionId": "gateway-bff"
+        }
+       ],
+       "behaviors": [
+        {
+         "id": "route",
+         "trigger": "REQUEST_RECEIVED",
+         "match": {
+          "operation": "GET /home"
+         },
+         "actions": [
+          {
+           "id": "forward",
+           "kind": "CALL",
+           "connectionId": "gateway-bff"
+          },
+          {
+           "id": "response",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "forward"
+           ],
+           "statusCode": 200
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "bff",
+       "type": "BFF",
+       "displayName": "BFF",
+       "behaviors": [
+        {
+         "id": "compose",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "first",
+           "kind": "CALL",
+           "connectionId": "bff-a"
+          },
+          {
+           "id": "second",
+           "kind": "CALL",
+           "connectionId": "bff-b",
+           "dependsOn": [
+            "first"
+           ]
+          },
+          {
+           "id": "response",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "second"
+           ],
+           "statusCode": 200
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "a",
+       "type": "SERVICE",
+       "displayName": "A",
+       "behaviors": [
+        {
+         "id": "handle",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "work",
+           "kind": "PROCESS",
+           "durationMs": 2
+          },
+          {
+           "id": "response",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "work"
+           ],
+           "statusCode": 200
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "b",
+       "type": "SERVICE",
+       "displayName": "B",
+       "behaviors": [
+        {
+         "id": "handle",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "work",
+           "kind": "PROCESS",
+           "durationMs": 3
+          },
+          {
+           "id": "response",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "work"
+           ],
+           "statusCode": 200
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     "connections": [
+      {
+       "id": "browser-gateway",
+       "sourceId": "browser",
+       "targetId": "gateway",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/home"
+        }
+       }
+      },
+      {
+       "id": "gateway-bff",
+       "sourceId": "gateway",
+       "targetId": "bff",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/home"
+        }
+       }
+      },
+      {
+       "id": "bff-a",
+       "sourceId": "bff",
+       "targetId": "a",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/a"
+        }
+       }
+      },
+      {
+       "id": "bff-b",
+       "sourceId": "bff",
+       "targetId": "b",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/b"
+        }
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "browser",
+      "connectionId": "browser-gateway",
+      "operation": "GET /home"
+     }
+    }
+   }
+  },
+  {
+   "id": "7b2e7f8399fc",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ServiceV5IntegrationTest.java#block3",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "browser",
+       "type": "WEB_BROWSER",
+       "displayName": "Browser"
+      },
+      {
+       "id": "orders",
+       "type": "SERVICE",
+       "displayName": "Orders",
+       "behaviors": [
+        {
+         "id": "accept",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "publish",
+           "kind": "PUBLISH",
+           "connectionId": "to-broker",
+           "destinationName": "created"
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "publish"
+           ],
+           "statusCode": 202
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "broker",
+       "type": "BROKER",
+       "displayName": "Broker",
+       "destinations": [
+        {
+         "name": "created",
+         "kind": "QUEUE"
+        }
+       ],
+       "subscriptions": [
+        {
+         "destinationName": "created",
+         "consumerComponentId": "worker",
+         "connectionId": "to-worker"
+        }
+       ]
+      },
+      {
+       "id": "worker",
+       "type": "WORKER",
+       "displayName": "Worker",
+       "behaviors": [
+        {
+         "id": "consume",
+         "trigger": "MESSAGE_CONSUMED",
+         "match": {
+          "destinationName": "created"
+         },
+         "actions": [
+          {
+           "id": "notify",
+           "kind": "SEND_NOTIFICATION",
+           "connectionId": "to-notify",
+           "channel": "EMAIL",
+           "recipientAlias": "customer-1",
+           "outputRef": "notification-result"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "notifications",
+       "type": "NOTIFICATION_SERVICE",
+       "displayName": "Notifications"
+      }
+     ],
+     "connections": [
+      {
+       "id": "in",
+       "sourceId": "browser",
+       "targetId": "orders",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/orders"
+        }
+       }
+      },
+      {
+       "id": "to-broker",
+       "sourceId": "orders",
+       "targetId": "broker",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "created"
+       }
+      },
+      {
+       "id": "to-worker",
+       "sourceId": "broker",
+       "targetId": "worker",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "created"
+       }
+      },
+      {
+       "id": "to-notify",
+       "sourceId": "worker",
+       "targetId": "notifications",
+       "latencyMs": 2,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/notify"
+        }
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "browser",
+      "connectionId": "in",
+      "operation": "POST /orders"
+     }
+    }
+   }
+  },
+  {
+   "id": "cde21b2803f8",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ServiceV5IntegrationTest.java#block4",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "browser",
+       "type": "WEB_BROWSER",
+       "displayName": "Browser"
+      },
+      {
+       "id": "auth",
+       "type": "AUTHENTICATION_SERVICE",
+       "displayName": "Auth",
+       "behaviors": [
+        {
+         "id": "check",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "evaluate",
+           "kind": "EVALUATE_RULE",
+           "connectionId": "auth-rules",
+           "outputRef": "decision"
+          },
+          {
+           "id": "branch",
+           "kind": "BRANCH",
+           "dependsOn": [
+            "evaluate"
+           ],
+           "resultRef": "decision",
+           "cases": [
+            {
+             "equals": "ALLOW",
+             "actionIds": [
+              "allow"
+             ]
+            },
+            {
+             "equals": "DENY",
+             "actionIds": [
+              "deny"
+             ]
+            },
+            {
+             "equals": "REVIEW",
+             "actionIds": [
+              "review"
+             ]
+            }
+           ]
+          },
+          {
+           "id": "allow",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "branch"
+           ],
+           "statusCode": 200
+          },
+          {
+           "id": "deny",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "branch"
+           ],
+           "statusCode": 403
+          },
+          {
+           "id": "review",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "branch"
+           ],
+           "statusCode": 202
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "rules",
+       "type": "RULES_ENGINE",
+       "displayName": "Rules",
+       "defaultDecision": "DENY"
+      }
+     ],
+     "connections": [
+      {
+       "id": "in",
+       "sourceId": "browser",
+       "targetId": "auth",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/secure"
+        }
+       }
+      },
+      {
+       "id": "auth-rules",
+       "sourceId": "auth",
+       "targetId": "rules",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/decide"
+        }
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "browser",
+      "connectionId": "in",
+      "operation": "GET /secure"
+     }
+    }
+   }
+  },
+  {
+   "id": "45d9ecb0140b",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ServiceV5IntegrationTest.java#block5",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client",
+       "type": "WEB_BROWSER",
+       "displayName": "Client"
+      },
+      {
+       "id": "service",
+       "type": "SERVICE",
+       "displayName": "Service",
+       "behaviors": [
+        {
+         "id": "run",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "cache-put",
+           "kind": "CACHE_PUT",
+           "connectionId": "cache-edge",
+           "key": "k",
+           "valueMetadata": "v",
+           "ttlMs": 100
+          },
+          {
+           "id": "cache-get",
+           "kind": "CACHE_GET",
+           "connectionId": "cache-edge",
+           "key": "k",
+           "dependsOn": [
+            "cache-put"
+           ]
+          },
+          {
+           "id": "object-put",
+           "kind": "OBJECT_PUT",
+           "connectionId": "object-edge",
+           "objectKey": "o",
+           "sizeBytes": 8,
+           "dependsOn": [
+            "cache-get"
+           ]
+          },
+          {
+           "id": "object-get",
+           "kind": "OBJECT_GET",
+           "connectionId": "object-edge",
+           "objectKey": "o",
+           "dependsOn": [
+            "object-put"
+           ]
+          },
+          {
+           "id": "object-delete",
+           "kind": "OBJECT_DELETE",
+           "connectionId": "object-edge",
+           "objectKey": "o",
+           "dependsOn": [
+            "object-get"
+           ]
+          },
+          {
+           "id": "index",
+           "kind": "INDEX_DOCUMENT",
+           "connectionId": "search-edge",
+           "indexName": "i",
+           "documentId": "d",
+           "tags": {
+            "type": "order"
+           },
+           "dependsOn": [
+            "object-delete"
+           ]
+          },
+          {
+           "id": "search",
+           "kind": "SEARCH_DOCUMENTS",
+           "connectionId": "search-edge",
+           "indexName": "i",
+           "tags": {
+            "type": "order"
+           },
+           "dependsOn": [
+            "index"
+           ]
+          },
+          {
+           "id": "register",
+           "kind": "REGISTER_SERVICE",
+           "connectionId": "registry-edge",
+           "serviceName": "orders",
+           "instanceId": "one",
+           "targetComponentId": "service",
+           "dependsOn": [
+            "search"
+           ]
+          },
+          {
+           "id": "discover",
+           "kind": "DISCOVER_SERVICE",
+           "connectionId": "registry-edge",
+           "serviceName": "orders",
+           "dependsOn": [
+            "register"
+           ]
+          },
+          {
+           "id": "unregister",
+           "kind": "UNREGISTER_SERVICE",
+           "connectionId": "registry-edge",
+           "serviceName": "orders",
+           "instanceId": "one",
+           "dependsOn": [
+            "discover"
+           ]
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "unregister"
+           ],
+           "statusCode": 200
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "cache",
+       "type": "CACHE",
+       "displayName": "Cache"
+      },
+      {
+       "id": "objects",
+       "type": "OBJECT_STORAGE",
+       "displayName": "Objects"
+      },
+      {
+       "id": "search",
+       "type": "SEARCH_ENGINE",
+       "displayName": "Search"
+      },
+      {
+       "id": "registry",
+       "type": "SERVICE_REGISTRY",
+       "displayName": "Registry"
+      }
+     ],
+     "connections": [
+      {
+       "id": "in",
+       "sourceId": "client",
+       "targetId": "service",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/run"
+        }
+       }
+      },
+      {
+       "id": "cache-edge",
+       "sourceId": "service",
+       "targetId": "cache",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/cache"
+        }
+       }
+      },
+      {
+       "id": "object-edge",
+       "sourceId": "service",
+       "targetId": "objects",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/objects"
+        }
+       }
+      },
+      {
+       "id": "search-edge",
+       "sourceId": "service",
+       "targetId": "search",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/search"
+        }
+       }
+      },
+      {
+       "id": "registry-edge",
+       "sourceId": "service",
+       "targetId": "registry",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/registry"
+        }
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "client",
+      "connectionId": "in",
+      "operation": "GET /run"
+     }
+    }
+   }
+  },
+  {
+   "id": "1f2d0a2c64f4",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ServiceV5IntegrationTest.java#block6",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client",
+       "type": "WEB_BROWSER",
+       "displayName": "Client"
+      },
+      {
+       "id": "webhook",
+       "type": "WEBHOOK_RECEIVER",
+       "displayName": "Webhook",
+       "behaviors": [
+        {
+         "id": "receive",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "forward",
+           "kind": "CALL",
+           "connectionId": "webhook-orchestrator"
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "forward"
+           ],
+           "statusCode": 202
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "orchestrator",
+       "type": "ORCHESTRATOR_SERVICE",
+       "displayName": "Orchestrator",
+       "behaviors": [
+        {
+         "id": "coordinate",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "bus",
+           "kind": "CALL",
+           "connectionId": "orchestrator-bus"
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "bus"
+           ],
+           "statusCode": 200
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "bus",
+       "type": "INTEGRATION_BUS",
+       "displayName": "ESB",
+       "behaviors": [
+        {
+         "id": "transform",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "transform",
+           "kind": "TRANSFORM",
+           "connectionId": "bus-service",
+           "outputRef": "mapped",
+           "metadata": {
+            "format": "normalized"
+           }
+          },
+          {
+           "id": "call",
+           "kind": "CALL",
+           "connectionId": "bus-service",
+           "dependsOn": [
+            "transform"
+           ]
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "call"
+           ],
+           "statusCode": 200
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "service",
+       "type": "SERVICE",
+       "displayName": "Service",
+       "behaviors": [
+        {
+         "id": "handle",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "statusCode": 200
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     "connections": [
+      {
+       "id": "in",
+       "sourceId": "client",
+       "targetId": "webhook",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/webhook"
+        }
+       }
+      },
+      {
+       "id": "webhook-orchestrator",
+       "sourceId": "webhook",
+       "targetId": "orchestrator",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/coordinate"
+        }
+       }
+      },
+      {
+       "id": "orchestrator-bus",
+       "sourceId": "orchestrator",
+       "targetId": "bus",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/bus"
+        }
+       }
+      },
+      {
+       "id": "bus-service",
+       "sourceId": "bus",
+       "targetId": "service",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/service"
+        }
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "client",
+      "connectionId": "in",
+      "operation": "POST /webhook"
+     }
+    }
+   }
+  },
+  {
+   "id": "355a941f3715",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/ServiceV5IntegrationTest.java#block7",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client",
+       "type": "WEB_BROWSER",
+       "displayName": "Client"
+      },
+      {
+       "id": "scheduler",
+       "type": "SCHEDULER",
+       "displayName": "Scheduler",
+       "schedules": [
+        {
+         "id": "three",
+         "firstAtMs": 5,
+         "intervalMs": 5,
+         "occurrenceCount": 3,
+         "behaviorId": "tick"
+        }
+       ],
+       "behaviors": [
+        {
+         "id": "start",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "plan",
+           "kind": "SCHEDULE_TRIGGER",
+           "scheduleId": "three"
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "plan"
+           ],
+           "statusCode": 202
+          }
+         ]
+        },
+        {
+         "id": "tick",
+         "trigger": "SCHEDULED_TRIGGER",
+         "actions": [
+          {
+           "id": "call",
+           "kind": "CALL",
+           "connectionId": "scheduler-service"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "service",
+       "type": "SERVICE",
+       "displayName": "Target",
+       "behaviors": [
+        {
+         "id": "handle",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "statusCode": 200
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     "connections": [
+      {
+       "id": "in",
+       "sourceId": "client",
+       "targetId": "scheduler",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/schedule"
+        }
+       }
+      },
+      {
+       "id": "scheduler-service",
+       "sourceId": "scheduler",
+       "targetId": "service",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/work"
+        }
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "client",
+      "connectionId": "in",
+      "operation": "POST /schedule"
+     }
+    }
+   }
+  },
+  {
+   "id": "40e119cf187c",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/UnifiedSimulationV41Test.java#block1",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "browser",
+       "type": "WEB_BROWSER",
+       "displayName": "Browser"
+      },
+      {
+       "id": "orders",
+       "type": "API",
+       "displayName": "Orders",
+       "behaviors": [
+        {
+         "id": "handle",
+         "trigger": "REQUEST_RECEIVED",
+         "match": {
+          "operation": "POST /orders"
+         },
+         "actions": [
+          {
+           "id": "db",
+           "kind": "CALL",
+           "connectionId": "orders-db"
+          },
+          {
+           "id": "publish",
+           "kind": "PUBLISH",
+           "connectionId": "orders-broker",
+           "destinationName": "orders",
+           "dependsOn": [
+            "db"
+           ]
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "statusCode": 201,
+           "dependsOn": [
+            "publish"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "database",
+       "type": "DATABASE",
+       "displayName": "DB",
+       "processingMs": 20
+      },
+      {
+       "id": "broker",
+       "type": "BROKER",
+       "displayName": "Broker",
+       "destinations": [
+        {
+         "name": "orders",
+         "kind": "QUEUE"
+        }
+       ],
+       "subscriptions": [
+        {
+         "destinationName": "orders",
+         "consumerComponentId": "notification",
+         "connectionId": "broker-notification"
+        }
+       ]
+      },
+      {
+       "id": "notification",
+       "type": "API",
+       "displayName": "Notification",
+       "preProcessingMs": 10,
+       "behaviors": [
+        {
+         "id": "consume",
+         "trigger": "MESSAGE_CONSUMED",
+         "match": {
+          "destinationName": "orders"
+         },
+         "actions": [
+          {
+           "id": "send",
+           "kind": "WS_SEND",
+           "sessionAlias": "notification-session",
+           "payload": "created",
+           "sender": "TARGET"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     "connections": [
+      {
+       "id": "browser-orders",
+       "sourceId": "browser",
+       "targetId": "orders",
+       "latencyMs": 2,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/orders"
+        },
+        "response": {
+         "statusCode": 201
+        }
+       }
+      },
+      {
+       "id": "orders-db",
+       "sourceId": "orders",
+       "targetId": "database",
+       "latencyMs": 3,
+       "integration": {
+        "kind": "DATABASE_QUERY"
+       }
+      },
+      {
+       "id": "orders-broker",
+       "sourceId": "orders",
+       "targetId": "broker",
+       "latencyMs": 4,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "orders"
+       }
+      },
+      {
+       "id": "broker-notification",
+       "sourceId": "broker",
+       "targetId": "notification",
+       "latencyMs": 6,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "orders"
+       }
+      },
+      {
+       "id": "browser-notification",
+       "sourceId": "browser",
+       "targetId": "notification",
+       "latencyMs": 5,
+       "integration": {
+        "kind": "WEBSOCKET",
+        "path": "/notify",
+        "closeMode": "AUTOMATIC"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "browser",
+      "connectionId": "browser-orders",
+      "operation": "POST /orders"
+     },
+     "sessionSetup": [
+      {
+       "connectionId": "browser-notification",
+       "sessionAlias": "notification-session",
+       "autoCloseAtEnd": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "da2e25bb5349",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/UnifiedSimulationV41Test.java#block2",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client",
+       "type": "CLIENT",
+       "displayName": "Client"
+      },
+      {
+       "id": "socket-api",
+       "type": "API",
+       "displayName": "Socket API",
+       "behaviors": [
+        {
+         "id": "on-message",
+         "trigger": "WS_MESSAGE_RECEIVED",
+         "match": {
+          "websocketPath": "/socket"
+         },
+         "actions": [
+          {
+           "id": "call",
+           "kind": "CALL",
+           "connectionId": "rest-link"
+          },
+          {
+           "id": "reply",
+           "kind": "WS_SEND",
+           "sessionAlias": "socket-link",
+           "sender": "TARGET",
+           "dependsOn": [
+            "call"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "rest-api",
+       "type": "API",
+       "displayName": "REST API",
+       "preProcessingMs": 4,
+       "postProcessingMs": 4
+      }
+     ],
+     "connections": [
+      {
+       "id": "socket-link",
+       "sourceId": "client",
+       "targetId": "socket-api",
+       "latencyMs": 2,
+       "integration": {
+        "kind": "WEBSOCKET",
+        "path": "/socket",
+        "closeMode": "AUTOMATIC",
+        "messages": [
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0,
+          "payload": "ping"
+         }
+        ]
+       }
+      },
+      {
+       "id": "rest-link",
+       "sourceId": "socket-api",
+       "targetId": "rest-api",
+       "latencyMs": 3,
+       "integration": {
+        "kind": "HTTP_REST"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "client",
+      "connectionId": "socket-link"
+     }
+    }
+   }
+  },
+  {
+   "id": "6db15af14ce5",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/UnifiedSimulationV41Test.java#block3",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client",
+       "type": "CLIENT",
+       "displayName": "Client"
+      },
+      {
+       "id": "api-a",
+       "type": "API",
+       "displayName": "A",
+       "behaviors": [
+        {
+         "id": "request",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "call",
+           "kind": "CALL",
+           "connectionId": "grpc",
+           "timeoutMs": 1000
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "call"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "api-b",
+       "type": "API",
+       "displayName": "B",
+       "preProcessingMs": 4,
+       "postProcessingMs": 5
+      }
+     ],
+     "connections": [
+      {
+       "id": "entry",
+       "sourceId": "client",
+       "targetId": "api-a",
+       "latencyMs": 2,
+       "integration": {
+        "kind": "HTTP_REST"
+       }
+      },
+      {
+       "id": "grpc",
+       "sourceId": "api-a",
+       "targetId": "api-b",
+       "latencyMs": 3,
+       "integration": {
+        "kind": "GRPC_UNARY",
+        "service": "Inventory",
+        "method": "Get"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "client",
+      "connectionId": "entry"
+     }
+    }
+   }
+  },
+  {
+   "id": "d21329fd8302",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/UnifiedSimulationV41Test.java#block4",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client",
+       "type": "CLIENT",
+       "displayName": "Client"
+      },
+      {
+       "id": "api",
+       "type": "API",
+       "displayName": "API"
+      },
+      {
+       "id": "db",
+       "type": "DATABASE",
+       "displayName": "DB",
+       "processingMs": 100
+      }
+     ],
+     "connections": [
+      {
+       "id": "entry",
+       "sourceId": "client",
+       "targetId": "api",
+       "latencyMs": 2,
+       "integration": {
+        "kind": "HTTP_REST"
+       }
+      },
+      {
+       "id": "unused",
+       "sourceId": "api",
+       "targetId": "db",
+       "latencyMs": 3,
+       "integration": {
+        "kind": "DATABASE_QUERY"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "client",
+      "connectionId": "entry"
+     }
+    }
+   }
+  },
+  {
+   "id": "bff34cf984f6",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/UnifiedSimulationV41Test.java#block5",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client",
+       "type": "CLIENT",
+       "displayName": "Client"
+      },
+      {
+       "id": "api",
+       "type": "API",
+       "displayName": "API",
+       "behaviors": [
+        {
+         "id": "on-request",
+         "trigger": "REQUEST_RECEIVED",
+         "actions": [
+          {
+           "id": "fork",
+           "kind": "FORK",
+           "actionIds": [
+            "local",
+            "call"
+           ]
+          },
+          {
+           "id": "local",
+           "kind": "PROCESS",
+           "durationMs": 20,
+           "dependsOn": [
+            "fork"
+           ]
+          },
+          {
+           "id": "call",
+           "kind": "CALL",
+           "connectionId": "db-link",
+           "dependsOn": [
+            "fork"
+           ]
+          },
+          {
+           "id": "join",
+           "kind": "JOIN",
+           "actionIds": [
+            "local",
+            "call"
+           ]
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "dependsOn": [
+            "join"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "db",
+       "type": "DATABASE",
+       "displayName": "DB",
+       "processingMs": 10
+      }
+     ],
+     "connections": [
+      {
+       "id": "entry",
+       "sourceId": "client",
+       "targetId": "api",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST"
+       }
+      },
+      {
+       "id": "db-link",
+       "sourceId": "api",
+       "targetId": "db",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "DATABASE_QUERY"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "client",
+      "connectionId": "entry"
+     }
+    }
+   }
+  },
+  {
+   "id": "f842d208ab5a",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/V1PublicContractRegressionTest.java#block2",
+   "body": {
+    "components": [
+     {
+      "id": "c",
+      "type": "CLIENT"
+     },
+     {
+      "id": "a",
+      "type": "API",
+      "preProcessingMs": 1,
+      "postProcessingMs": 1
+     }
+    ],
+    "connections": [
+     {
+      "id": "ca",
+      "sourceId": "c",
+      "targetId": "a",
+      "protocol": "REST",
+      "latencyMs": 1
+     }
+    ]
+   }
+  },
+  {
+   "id": "ebd8c0be4385",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/V2PublicContractTest.java#block1",
+   "body": {
+    "components": [
+     {
+      "id": "c",
+      "type": "CLIENT",
+      "displayName": "Client"
+     },
+     {
+      "id": "a",
+      "type": "API",
+      "displayName": "API A",
+      "preProcessingMs": 10,
+      "postProcessingMs": 5
+     },
+     {
+      "id": "b",
+      "type": "API",
+      "displayName": "API B",
+      "preProcessingMs": 7,
+      "postProcessingMs": 3
+     },
+     {
+      "id": "d",
+      "type": "DATABASE",
+      "displayName": "Database",
+      "processingMs": 20
+     }
+    ],
+    "connections": [
+     {
+      "id": "ca",
+      "sourceId": "c",
+      "targetId": "a",
+      "latencyMs": 2,
+      "integration": {
+       "kind": "HTTP_REST",
+       "request": {
+        "method": "POST",
+        "path": "/x"
+       },
+       "response": {
+        "statusCode": 500
+       }
+      }
+     },
+     {
+      "id": "ab",
+      "sourceId": "a",
+      "targetId": "b",
+      "latencyMs": 2,
+      "integration": {
+       "kind": "SOAP_HTTP",
+       "soapVersion": "1.2",
+       "requestEnvelope": "<Envelope/>"
+      }
+     },
+     {
+      "id": "bd",
+      "sourceId": "b",
+      "targetId": "d",
+      "latencyMs": 2,
+      "integration": {
+       "kind": "DATABASE_QUERY",
+       "queryText": "SELECT 1"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "9b0fa53df4bd",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/V4ApiConsolidationTest.java#block1",
+   "body": {
+    "components": [
+     {
+      "id": "client-1",
+      "type": "CLIENT",
+      "displayName": "Client"
+     },
+     {
+      "id": "api-1",
+      "type": "API",
+      "displayName": "API",
+      "preProcessingMs": 30,
+      "postProcessingMs": 20
+     },
+     {
+      "id": "db-1",
+      "type": "DATABASE",
+      "displayName": "Database",
+      "processingMs": 150
+     }
+    ],
+    "connections": [
+     {
+      "id": "connection-1",
+      "sourceId": "client-1",
+      "targetId": "api-1",
+      "latencyMs": 20,
+      "integration": {
+       "kind": "HTTP_REST"
+      }
+     },
+     {
+      "id": "connection-2",
+      "sourceId": "api-1",
+      "targetId": "db-1",
+      "latencyMs": 10,
+      "integration": {
+       "kind": "DATABASE_QUERY"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "8e4abd8bd7b2",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/V4ApiConsolidationTest.java#block3",
+   "body": {
+    "components": [
+     {
+      "id": "c",
+      "type": "CLIENT",
+      "displayName": "Client"
+     },
+     {
+      "id": "a",
+      "type": "API",
+      "displayName": "API"
+     }
+    ],
+    "connections": [
+     {
+      "id": "ca",
+      "sourceId": "c",
+      "targetId": "a",
+      "integration": {
+       "kind": "HTTP_REST"
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "f3b68cd30f85",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/V4ApiConsolidationTest.java#block4",
+   "body": {
+    "components": [
+     {
+      "id": "c",
+      "type": "CLIENT"
+     },
+     {
+      "id": "a",
+      "type": "API",
+      "preProcessingMs": 0,
+      "postProcessingMs": 0
+     },
+     {
+      "id": "d",
+      "type": "DATABASE",
+      "processingMs": 0
+     }
+    ],
+    "connections": [
+     {
+      "id": "ca",
+      "sourceId": "c",
+      "targetId": "a",
+      "protocol": "TCP",
+      "latencyMs": 0
+     },
+     {
+      "id": "ad",
+      "sourceId": "a",
+      "targetId": "d",
+      "protocol": "TCP",
+      "latencyMs": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "ff2581b76746",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/V4ApiConsolidationTest.java#block5",
+   "body": {
+    "components": [
+     {
+      "id": "client-1",
+      "type": "CLIENT"
+     },
+     {
+      "id": "api-1",
+      "type": "API",
+      "preProcessingMs": 0,
+      "postProcessingMs": 0
+     },
+     {
+      "id": "db-1",
+      "type": "DATABASE",
+      "processingMs": 0
+     }
+    ],
+    "connections": [
+     {
+      "id": "ca",
+      "sourceId": "client-1",
+      "targetId": "api-1",
+      "protocol": "REST",
+      "latencyMs": 0
+     },
+     {
+      "id": "ad",
+      "sourceId": "api-1",
+      "targetId": "db-1",
+      "protocol": "TCP",
+      "latencyMs": 0
+     }
+    ]
+   }
+  },
+  {
+   "id": "6da7d870d92a",
+   "source": "backend/archlab-api/src/test/java/br/com/archlab/api/V4ApiConsolidationTest.java#block6",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "api-a",
+       "type": "API",
+       "displayName": "API A"
+      },
+      {
+       "id": "api-b",
+       "type": "API",
+       "displayName": "API B"
+      }
+     ],
+     "connections": [
+      {
+       "id": "ab",
+       "sourceId": "api-a",
+       "targetId": "api-b",
+       "latencyMs": 2,
+       "integration": {
+        "kind": "WEBSOCKET",
+        "path": "/events",
+        "messages": [
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "TARGET",
+          "intervalMs": 3
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "WEBSOCKET_SESSION",
+     "entryComponentId": "api-a",
+     "entryConnectionId": "ab"
+    }
+   }
+  },
+  {
+   "id": "3911cdffa0df",
+   "source": "docs/api/examples/v0.4/coap.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "WEB_BROWSER",
+       "displayName": "client-1"
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "COAP",
+        "method": "GET",
+        "resource": "/sensors/temperature",
+        "mode": "CON"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "REQUEST_RESPONSE",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "apiExecutions": []
+    }
+   }
+  },
+  {
+   "id": "6277fae8e1a5",
+   "source": "docs/api/examples/v0.4/database-query.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "CLI",
+       "displayName": "client-1"
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      },
+      {
+       "id": "db-1",
+       "type": "DATABASE",
+       "displayName": "db-1",
+       "processingMs": 20
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "HTTP_REST"
+       }
+      },
+      {
+       "id": "conn-db",
+       "sourceId": "api-1",
+       "targetId": "db-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "DATABASE_QUERY",
+        "queryText": "SELECT id FROM orders WHERE id = ?"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "REQUEST_RESPONSE",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "apiExecutions": [
+      {
+       "componentId": "api-1",
+       "dependencyConnectionId": "conn-db"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "a81739bc95e5",
+   "source": "docs/api/examples/v0.4/graphql-http.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "WEB_BROWSER",
+       "displayName": "client-1"
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "GRAPHQL_HTTP",
+        "operationType": "QUERY",
+        "operationName": "GetOrders"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "REQUEST_RESPONSE",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "apiExecutions": []
+    }
+   }
+  },
+  {
+   "id": "4aba6044773e",
+   "source": "docs/api/examples/v0.4/grpc-unary.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "WEB_BROWSER",
+       "displayName": "client-1"
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "GRPC_UNARY",
+        "service": "orders.OrderService",
+        "method": "GetOrder"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "REQUEST_RESPONSE",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "apiExecutions": []
+    }
+   }
+  },
+  {
+   "id": "33c16b17b83e",
+   "source": "docs/api/examples/v0.4/http-generic.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "WEB_BROWSER",
+       "displayName": "client-1"
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "HTTP_GENERIC",
+        "method": "POST",
+        "path": "/events"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "REQUEST_RESPONSE",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "apiExecutions": []
+    }
+   }
+  },
+  {
+   "id": "f1ae39d06494",
+   "source": "docs/api/examples/v0.4/http-rest.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "WEB_BROWSER",
+       "displayName": "client-1"
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/orders"
+        },
+        "response": {
+         "statusCode": 200
+        }
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "REQUEST_RESPONSE",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "apiExecutions": []
+    }
+   }
+  },
+  {
+   "id": "5f31cc1d4bcc",
+   "source": "docs/api/examples/v0.4/missing-broker-destination.invalid.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "BOT",
+       "displayName": "client-1"
+      },
+      {
+       "id": "broker-1",
+       "type": "BROKER",
+       "displayName": "broker-1",
+       "destinations": [
+        {
+         "name": "order-events",
+         "kind": "TOPIC"
+        }
+       ],
+       "subscriptions": [
+        {
+         "destinationName": "order-events",
+         "consumerComponentId": "api-1",
+         "connectionId": "conn-consumer-1"
+        },
+        {
+         "destinationName": "order-events",
+         "consumerComponentId": "api-2",
+         "connectionId": "conn-consumer-2"
+        }
+       ]
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      },
+      {
+       "id": "api-2",
+       "type": "API",
+       "displayName": "api-2"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "broker-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "TOPIC",
+        "topic": "order-events"
+       }
+      },
+      {
+       "id": "conn-consumer-1",
+       "sourceId": "broker-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "TOPIC",
+        "topic": "order-events"
+       }
+      },
+      {
+       "id": "conn-consumer-2",
+       "sourceId": "broker-1",
+       "targetId": "api-2",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "TOPIC",
+        "topic": "order-events"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "MESSAGE_PUBLISH",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "destinationName": "unknown",
+     "publishCount": 1
+    }
+   }
+  },
+  {
+   "id": "2d7bd0b87e5e",
+   "source": "docs/api/examples/v0.4/mqtt-qos0.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "BOT",
+       "displayName": "client-1"
+      },
+      {
+       "id": "broker-1",
+       "type": "BROKER",
+       "displayName": "broker-1",
+       "destinations": [
+        {
+         "name": "sensors/temperature",
+         "kind": "MQTT"
+        }
+       ],
+       "subscriptions": [
+        {
+         "destinationName": "sensors/temperature",
+         "consumerComponentId": "api-1",
+         "connectionId": "conn-consumer-1"
+        }
+       ]
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "broker-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "MQTT",
+        "topic": "sensors/temperature",
+        "qos": 0
+       }
+      },
+      {
+       "id": "conn-consumer-1",
+       "sourceId": "broker-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "MQTT",
+        "topic": "sensors/temperature",
+        "qos": 0
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "MESSAGE_PUBLISH",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "destinationName": "sensors/temperature",
+     "publishCount": 1
+    }
+   }
+  },
+  {
+   "id": "90b925bef209",
+   "source": "docs/api/examples/v0.4/mqtt-qos1.invalid.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "BOT",
+       "displayName": "client-1"
+      },
+      {
+       "id": "broker-1",
+       "type": "BROKER",
+       "displayName": "broker-1",
+       "destinations": [
+        {
+         "name": "sensors/temperature",
+         "kind": "MQTT"
+        }
+       ],
+       "subscriptions": [
+        {
+         "destinationName": "sensors/temperature",
+         "consumerComponentId": "api-1",
+         "connectionId": "conn-consumer-1"
+        }
+       ]
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "broker-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "MQTT",
+        "topic": "sensors/temperature",
+        "qos": 1
+       }
+      },
+      {
+       "id": "conn-consumer-1",
+       "sourceId": "broker-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "MQTT",
+        "topic": "sensors/temperature",
+        "qos": 0
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "MESSAGE_PUBLISH",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "destinationName": "sensors/temperature",
+     "publishCount": 1
+    }
+   }
+  },
+  {
+   "id": "65b1684e5c02",
+   "source": "docs/api/examples/v0.4/queue-no-consumer.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "BOT",
+       "displayName": "client-1"
+      },
+      {
+       "id": "broker-1",
+       "type": "BROKER",
+       "displayName": "broker-1",
+       "destinations": [
+        {
+         "name": "orders",
+         "kind": "QUEUE"
+        }
+       ],
+       "subscriptions": []
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "broker-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "orders"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "MESSAGE_PUBLISH",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "destinationName": "orders",
+     "publishCount": 1
+    }
+   }
+  },
+  {
+   "id": "53b32619e7ce",
+   "source": "docs/api/examples/v0.4/queue-two-consumers.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "BOT",
+       "displayName": "client-1"
+      },
+      {
+       "id": "broker-1",
+       "type": "BROKER",
+       "displayName": "broker-1",
+       "destinations": [
+        {
+         "name": "orders",
+         "kind": "QUEUE"
+        }
+       ],
+       "subscriptions": [
+        {
+         "destinationName": "orders",
+         "consumerComponentId": "api-1",
+         "connectionId": "conn-consumer-1"
+        },
+        {
+         "destinationName": "orders",
+         "consumerComponentId": "api-2",
+         "connectionId": "conn-consumer-2"
+        }
+       ]
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      },
+      {
+       "id": "api-2",
+       "type": "API",
+       "displayName": "api-2"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "broker-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "orders"
+       }
+      },
+      {
+       "id": "conn-consumer-1",
+       "sourceId": "broker-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "orders"
+       }
+      },
+      {
+       "id": "conn-consumer-2",
+       "sourceId": "broker-1",
+       "targetId": "api-2",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "orders"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "MESSAGE_PUBLISH",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "destinationName": "orders",
+     "publishCount": 1
+    }
+   }
+  },
+  {
+   "id": "780aaaebbaa1",
+   "source": "docs/api/examples/v0.4/soap-http.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "WEB_BROWSER",
+       "displayName": "client-1"
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "SOAP_HTTP",
+        "soapVersion": "1.2",
+        "operation": "GetOrder",
+        "action": "urn:GetOrder"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "REQUEST_RESPONSE",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "apiExecutions": []
+    }
+   }
+  },
+  {
+   "id": "bd76b7561b7d",
+   "source": "docs/api/examples/v0.4/topic-two-subscribers.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "BOT",
+       "displayName": "client-1"
+      },
+      {
+       "id": "broker-1",
+       "type": "BROKER",
+       "displayName": "broker-1",
+       "destinations": [
+        {
+         "name": "order-events",
+         "kind": "TOPIC"
+        }
+       ],
+       "subscriptions": [
+        {
+         "destinationName": "order-events",
+         "consumerComponentId": "api-1",
+         "connectionId": "conn-consumer-1"
+        },
+        {
+         "destinationName": "order-events",
+         "consumerComponentId": "api-2",
+         "connectionId": "conn-consumer-2"
+        }
+       ]
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      },
+      {
+       "id": "api-2",
+       "type": "API",
+       "displayName": "api-2"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "broker-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "TOPIC",
+        "topic": "order-events"
+       }
+      },
+      {
+       "id": "conn-consumer-1",
+       "sourceId": "broker-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "TOPIC",
+        "topic": "order-events"
+       }
+      },
+      {
+       "id": "conn-consumer-2",
+       "sourceId": "broker-1",
+       "targetId": "api-2",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "TOPIC",
+        "topic": "order-events"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "MESSAGE_PUBLISH",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry",
+     "destinationName": "order-events",
+     "publishCount": 1
+    }
+   }
+  },
+  {
+   "id": "9071b16fc0d7",
+   "source": "docs/api/examples/v0.4/websocket-session.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "MOBILE_APP",
+       "displayName": "client-1"
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "WEBSOCKET",
+        "path": "/events",
+        "connectTimeoutMs": 5000,
+        "idleTimeoutMs": null,
+        "closeMode": "AUTOMATIC",
+        "messages": [
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0,
+          "payload": "subscribe"
+         },
+         {
+          "sender": "TARGET",
+          "intervalMs": 25,
+          "payload": "event-1"
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "WEBSOCKET_SESSION",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry"
+    }
+   }
+  },
+  {
+   "id": "cadb0c3029f7",
+   "source": "docs/api/examples/v0.4/websocket-too-many-messages.invalid.json",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-1",
+       "type": "MOBILE_APP",
+       "displayName": "client-1"
+      },
+      {
+       "id": "api-1",
+       "type": "API",
+       "displayName": "api-1"
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-entry",
+       "sourceId": "client-1",
+       "targetId": "api-1",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "WEBSOCKET",
+        "path": "/events",
+        "connectTimeoutMs": 5000,
+        "idleTimeoutMs": null,
+        "closeMode": "AUTOMATIC",
+        "messages": [
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         },
+         {
+          "sender": "SOURCE",
+          "intervalMs": 0
+         }
+        ]
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "WEBSOCKET_SESSION",
+     "entryComponentId": "client-1",
+     "entryConnectionId": "conn-entry"
+    }
+   }
+  },
+  {
+   "id": "730a37bcb540",
+   "source": "openapi-v2:components.examples.simulationRequest",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-web",
+       "type": "CLIENT",
+       "displayName": "Aplicação Web"
+      },
+      {
+       "id": "api-pedidos",
+       "type": "API",
+       "displayName": "API de Pedidos",
+       "preProcessingMs": 20,
+       "postProcessingMs": 10
+      },
+      {
+       "id": "api-estoque",
+       "type": "API",
+       "displayName": "API de Estoque",
+       "preProcessingMs": 30,
+       "postProcessingMs": 10
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-1",
+       "sourceId": "client-web",
+       "targetId": "api-pedidos",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/pedidos",
+         "headers": {},
+         "body": "{\"produtoId\":123}"
+        },
+        "response": {
+         "statusCode": 201,
+         "headers": {},
+         "body": "{\"pedidoId\":456}"
+        }
+       }
+      },
+      {
+       "id": "conn-2",
+       "sourceId": "api-pedidos",
+       "targetId": "api-estoque",
+       "latencyMs": 5,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/estoque/123"
+        },
+        "response": {
+         "statusCode": 200,
+         "body": "{\"disponivel\":true}"
+        }
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entryComponentId": "client-web",
+     "entryConnectionId": "conn-1",
+     "apiExecutions": [
+      {
+       "componentId": "api-pedidos",
+       "dependencyConnectionId": "conn-2"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "46ffb85831de",
+   "source": "openapi:components.examples.architecture",
+   "body": {
+    "components": [
+     {
+      "id": "client-web",
+      "type": "CLIENT",
+      "displayName": "Aplicação Web"
+     },
+     {
+      "id": "api-pedidos",
+      "type": "API",
+      "displayName": "API de Pedidos",
+      "preProcessingMs": 20,
+      "postProcessingMs": 10
+     },
+     {
+      "id": "api-estoque",
+      "type": "API",
+      "displayName": "API de Estoque",
+      "preProcessingMs": 30,
+      "postProcessingMs": 10
+     }
+    ],
+    "connections": [
+     {
+      "id": "conn-1",
+      "sourceId": "client-web",
+      "targetId": "api-pedidos",
+      "latencyMs": 10,
+      "integration": {
+       "kind": "HTTP_REST",
+       "request": {
+        "method": "POST",
+        "path": "/pedidos",
+        "headers": {},
+        "body": "{\"produtoId\":123}"
+       },
+       "response": {
+        "statusCode": 201,
+        "headers": {},
+        "body": "{\"pedidoId\":456}"
+       }
+      }
+     },
+     {
+      "id": "conn-2",
+      "sourceId": "api-pedidos",
+      "targetId": "api-estoque",
+      "latencyMs": 5,
+      "integration": {
+       "kind": "HTTP_REST",
+       "request": {
+        "method": "GET",
+        "path": "/estoque/123"
+       },
+       "response": {
+        "statusCode": 200,
+        "body": "{\"disponivel\":true}"
+       }
+      }
+     }
+    ]
+   }
+  },
+  {
+   "id": "19c913263ece",
+   "source": "openapi:components.examples.mixedCommunicationRequest",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "browser",
+       "type": "WEB_BROWSER",
+       "displayName": "Navegador"
+      },
+      {
+       "id": "orders-api",
+       "type": "API",
+       "displayName": "API Pedidos",
+       "behaviors": [
+        {
+         "id": "handle-create-order",
+         "trigger": "REQUEST_RECEIVED",
+         "match": {
+          "operation": "POST /pedidos"
+         },
+         "actions": [
+          {
+           "id": "publish",
+           "kind": "PUBLISH",
+           "connectionId": "orders-broker",
+           "destinationName": "pedidos"
+          },
+          {
+           "id": "respond",
+           "kind": "RESPOND",
+           "statusCode": 201,
+           "dependsOn": [
+            "publish"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "broker",
+       "type": "BROKER",
+       "displayName": "Broker",
+       "destinations": [
+        {
+         "name": "pedidos",
+         "kind": "QUEUE"
+        }
+       ],
+       "subscriptions": [
+        {
+         "destinationName": "pedidos",
+         "consumerComponentId": "notifications",
+         "connectionId": "broker-notifications"
+        }
+       ]
+      },
+      {
+       "id": "notifications",
+       "type": "API",
+       "displayName": "API Notificações",
+       "behaviors": [
+        {
+         "id": "handle-delivery",
+         "trigger": "MESSAGE_CONSUMED",
+         "match": {
+          "destinationName": "pedidos"
+         },
+         "actions": [
+          {
+           "id": "send",
+           "kind": "WS_SEND",
+           "sessionAlias": "notifications-session",
+           "payload": "Pedido criado",
+           "sender": "TARGET"
+          }
+         ]
+        }
+       ]
+      }
+     ],
+     "connections": [
+      {
+       "id": "browser-orders",
+       "sourceId": "browser",
+       "targetId": "orders-api",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/pedidos"
+        },
+        "response": {
+         "statusCode": 201
+        }
+       }
+      },
+      {
+       "id": "orders-broker",
+       "sourceId": "orders-api",
+       "targetId": "broker",
+       "latencyMs": 5,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "pedidos"
+       }
+      },
+      {
+       "id": "broker-notifications",
+       "sourceId": "broker",
+       "targetId": "notifications",
+       "latencyMs": 5,
+       "integration": {
+        "kind": "QUEUE",
+        "queueName": "pedidos"
+       }
+      },
+      {
+       "id": "notifications-websocket",
+       "sourceId": "browser",
+       "targetId": "notifications",
+       "latencyMs": 5,
+       "integration": {
+        "kind": "WEBSOCKET",
+        "path": "/notificacoes",
+        "closeMode": "AUTOMATIC"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "browser",
+      "connectionId": "browser-orders",
+      "operation": "POST /pedidos"
+     },
+     "sessionSetup": [
+      {
+       "connectionId": "notifications-websocket",
+       "sessionAlias": "notifications-session",
+       "autoCloseAtEnd": true
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "3295c3b34a25",
+   "source": "openapi:components.examples.simulationRequest",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "client-web",
+       "type": "CLIENT",
+       "displayName": "Aplicação Web"
+      },
+      {
+       "id": "api-pedidos",
+       "type": "API",
+       "displayName": "API de Pedidos",
+       "preProcessingMs": 20,
+       "postProcessingMs": 10
+      },
+      {
+       "id": "api-estoque",
+       "type": "API",
+       "displayName": "API de Estoque",
+       "preProcessingMs": 30,
+       "postProcessingMs": 10
+      }
+     ],
+     "connections": [
+      {
+       "id": "conn-1",
+       "sourceId": "client-web",
+       "targetId": "api-pedidos",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "POST",
+         "path": "/pedidos",
+         "headers": {},
+         "body": "{\"produtoId\":123}"
+        },
+        "response": {
+         "statusCode": 201,
+         "headers": {},
+         "body": "{\"pedidoId\":456}"
+        }
+       }
+      },
+      {
+       "id": "conn-2",
+       "sourceId": "api-pedidos",
+       "targetId": "api-estoque",
+       "latencyMs": 5,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/estoque/123"
+        },
+        "response": {
+         "statusCode": 200,
+         "body": "{\"disponivel\":true}"
+        }
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "kind": "REQUEST_RESPONSE",
+     "entryComponentId": "client-web",
+     "entryConnectionId": "conn-1",
+     "apiExecutions": [
+      {
+       "componentId": "api-pedidos",
+       "dependencyConnectionId": "conn-2"
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "737580d4ef1a",
+   "source": "openapi:components.examples.v5CacheBranchScenario",
+   "body": {
+    "architecture": {
+     "components": [
+      {
+       "id": "browser",
+       "type": "WEB_BROWSER",
+       "displayName": "Web Browser"
+      },
+      {
+       "id": "orders",
+       "type": "SERVICE",
+       "displayName": "Serviço de Pedidos",
+       "behaviors": [
+        {
+         "id": "read-order",
+         "trigger": "REQUEST_RECEIVED",
+         "match": {
+          "operation": "GET /pedidos"
+         },
+         "actions": [
+          {
+           "id": "cache-read",
+           "kind": "CACHE_GET",
+           "connectionId": "orders-cache",
+           "key": "order-1",
+           "outputRef": "cache-result"
+          },
+          {
+           "id": "choose",
+           "kind": "BRANCH",
+           "dependsOn": [
+            "cache-read"
+           ],
+           "resultRef": "cache-result",
+           "cases": [
+            {
+             "equals": "HIT",
+             "actionIds": [
+              "respond-hit"
+             ]
+            },
+            {
+             "equals": "MISS",
+             "actionIds": [
+              "db-read",
+              "respond-miss"
+             ]
+            }
+           ]
+          },
+          {
+           "id": "db-read",
+           "kind": "CALL",
+           "connectionId": "orders-database",
+           "dependsOn": [
+            "choose"
+           ]
+          },
+          {
+           "id": "respond-miss",
+           "kind": "RESPOND",
+           "statusCode": 200,
+           "dependsOn": [
+            "db-read"
+           ]
+          },
+          {
+           "id": "respond-hit",
+           "kind": "RESPOND",
+           "statusCode": 200,
+           "dependsOn": [
+            "choose"
+           ]
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "id": "cache",
+       "type": "CACHE",
+       "displayName": "Cache Pedidos",
+       "defaultTtlMs": 30000
+      },
+      {
+       "id": "database",
+       "type": "DATABASE",
+       "displayName": "Banco de Dados",
+       "processingMs": 10
+      }
+     ],
+     "connections": [
+      {
+       "id": "browser-orders",
+       "sourceId": "browser",
+       "targetId": "orders",
+       "latencyMs": 5,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/pedidos"
+        }
+       }
+      },
+      {
+       "id": "orders-cache",
+       "sourceId": "orders",
+       "targetId": "cache",
+       "latencyMs": 1,
+       "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+         "method": "GET",
+         "path": "/cache/orders"
+        }
+       }
+      },
+      {
+       "id": "orders-database",
+       "sourceId": "orders",
+       "targetId": "database",
+       "latencyMs": 10,
+       "integration": {
+        "kind": "DATABASE_QUERY"
+       }
+      }
+     ]
+    },
+    "scenario": {
+     "entry": {
+      "componentId": "browser",
+      "connectionId": "browser-orders",
+      "operation": "GET /pedidos"
+     }
+    }
+   }
+  }
+ ]
+}
