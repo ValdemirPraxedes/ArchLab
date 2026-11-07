@@ -21,9 +21,9 @@ const actions = ['DB_SELECT','DB_INSERT','DB_UPDATE','DB_DELETE','DB_GET','DB_PU
 const pascal = s => s.toLowerCase().split('_').map(w => w[0].toUpperCase() + w.slice(1)).join('') + 'ActionV6';
 for (const t of types) assert('Component discriminator ' + t, Boolean(schemas.Component.discriminator.mapping[t]));
 for (const a of actions) assert('Action discriminator ' + a, schemas.BehaviorAction.discriminator.mapping[a] === '#/components/schemas/' + pascal(a));
-assert('New architecture does not advertise generic DATABASE as creatable', document.info.version.startsWith('0.6.') && Boolean(schemas.Component.discriminator.mapping.DATABASE));
-// DATABASE is accepted for legacy decoding only; the backend/editor must reject it as a *new* node.
-// This distinction cannot be enforced solely by the shared oneOf validation schema.
+assert('Legacy DATABASE remains decodable', Boolean(schemas.Component.discriminator.mapping.DATABASE));
+// Component currently accepts DATABASE for both legacy input and new payloads. This
+// validator cannot claim that canonical creation rejects it until separate schemas exist.
 const relational = load('relational-insert-select.json');
 assert('Relational request schema', validate('SimulationRequest', relational), JSON.stringify(ajv.getSchema('#/components/schemas/SimulationRequest').errors));
 const kv = load('key-value-actions.json');
