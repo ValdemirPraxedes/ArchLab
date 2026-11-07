@@ -1562,6 +1562,7 @@ components:
       - $ref: '#/components/schemas/BOTClient'
       - $ref: '#/components/schemas/EMBEDDED_SYSTEMClient'
       - $ref: '#/components/schemas/Api' # DEPRECATED: apenas importação de arquitetura histórica; reexportar SERVICE
+      - $ref: '#/components/schemas/Database' # DEPRECATED: entrada legada apenas; novas arquiteturas usam tipos P0 de dados
       - $ref: '#/components/schemas/Broker'
       - $ref: '#/components/schemas/ServiceV5'
       - $ref: '#/components/schemas/ApiGatewayV5'
@@ -1594,6 +1595,7 @@ components:
           BOT: '#/components/schemas/BOTClient'
           EMBEDDED_SYSTEM: '#/components/schemas/EMBEDDED_SYSTEMClient'
           API: '#/components/schemas/Api' # deprecated legacy import only
+          DATABASE: '#/components/schemas/Database' # deprecated legacy import only; migração explícita
           BROKER: '#/components/schemas/Broker'
           SERVICE: '#/components/schemas/ServiceV5'
           API_GATEWAY: '#/components/schemas/ApiGatewayV5'
