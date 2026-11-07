@@ -1,0 +1,45 @@
+{
+  "component": {
+    "id": "kv",
+    "displayName": "Key Value",
+    "type": "KEY_VALUE_STORE",
+    "dataProperties": {
+      "initialRecordCount": 0,
+      "averageRecordBytes": 128,
+      "readLatencyMs": 1,
+      "writeLatencyMs": 2,
+      "maxConcurrentOperations": 1,
+      "connectionPoolSize": 1,
+      "queueCapacity": 5
+    }
+  },
+  "actions": [
+    {
+      "id": "get-before",
+      "kind": "DB_GET",
+      "connectionId": "svc-kv",
+      "key": "session-1",
+      "outputRef": "before"
+    },
+    {
+      "id": "put",
+      "kind": "DB_PUT",
+      "connectionId": "svc-kv",
+      "key": "session-1",
+      "dependsOn": [
+        "get-before"
+      ],
+      "outputRef": "stored"
+    },
+    {
+      "id": "get-after",
+      "kind": "DB_GET",
+      "connectionId": "svc-kv",
+      "key": "session-1",
+      "dependsOn": [
+        "put"
+      ],
+      "outputRef": "after"
+    }
+  ]
+}
