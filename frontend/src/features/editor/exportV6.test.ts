@@ -9,6 +9,7 @@ describe('exportação canônica v0.6',()=>{
     const database=createArchitectureNode('RELATIONAL_DATABASE',{x:1,y:1});
     const edge=createArchitectureEdge(service.id,database.id,'TCP',2);
     const exported=exportArchitectureV6([service,database],[edge]);
+    expect(JSON.parse(exported)).toMatchObject({schemaVersion:'0.6'});
     expect(exported).not.toContain('"type": "DATABASE"');
     const imported=prepareArchitectureImportV6(JSON.parse(exported) as unknown);
     expect(imported.databaseIds).toEqual([]);

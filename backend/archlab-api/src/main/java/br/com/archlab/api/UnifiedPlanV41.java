@@ -86,12 +86,12 @@ final class UnifiedPlanV41 {
                         case "TRANSFORM" -> only(action,"id","kind","dependsOn","connectionId","metadata","outputRef");
                         case "DB_SELECT", "DB_INSERT", "DB_UPDATE", "DB_DELETE", "DB_GET", "DB_PUT",
                                 "DB_FIND", "DB_BULK_INSERT" -> only(action,"id","kind","dependsOn",
-                                "connectionId","outputRef","inputRef","collection","key","recordCount",
+                                "connectionId","timeoutMs","outputRef","inputRef","collection","key","recordCount",
                                 "averageRecordBytes","field","equals","limit");
                         case "ETL_EXTRACT", "ETL_LOAD" -> only(action,"id","kind","dependsOn",
                                 "connectionId","outputRef","inputRef","batchSize","maxRecords","transform");
                         case "ETL_TRANSFORM" -> only(action,"id","kind","dependsOn",
-                                "outputRef","inputRef","batchSize","maxRecords","transform");
+                                "connectionId","simulateFailure","outputRef","inputRef","batchSize","maxRecords","transform");
                         default -> throw new IllegalArgumentException("Unknown action kind");
                     }
                     List<String> dependencies = new ArrayList<>(), actionIds = new ArrayList<>();
@@ -215,6 +215,16 @@ final class UnifiedPlanV41 {
                                         && action.dependsOn().contains(other.id()));
                         if (!source) error("DATA_OUTPUT_REF_INVALID",actionPath+".inputRef",
                                 "ETL inputRef must name an output of a direct dependency");
+                    }
+                    if ("ETL_TRANSFORM".equals(action.kind()) && action.connectionId()!=null) {
+                        ConnectionV2 transformEdge=connections.get(action.connectionId());
+                        if (transformEdge==null || !componentId.equals(transformEdge.sourceId())
+                                || !(components.get(transformEdge.targetId()) instanceof DataProcessorV6 processor)
+                                || processor.type()!=ComponentTypeV2.DATA_TRANSFORMER
+                                || transformEdge.integration().kind().isMessaging()
+                                || transformEdge.integration().kind()==IntegrationKindV2.DATABASE_QUERY)
+                            error("DATA_CONNECTION_INVALID",actionPath+".connectionId",
+                                    "ETL_TRANSFORM connection must target a Data Transformer");
                     }
                     ConnectionV2 connection=connections.get(action.connectionId());
                     if (Set.of("CALL","PUBLISH","OPEN_SESSION").contains(action.kind())) {

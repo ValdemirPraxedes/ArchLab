@@ -17,7 +17,9 @@ public class V2RequestMapper {
     }
 
     private ArchitectureV2 architecture(JsonNode node, boolean canonical) {
-        object(node,"components","connections");
+        object(node,"schemaVersion","components","connections");
+        boolean v6=has(node,"schemaVersion");
+        if (v6 && !"0.6".equals(text(node,"schemaVersion"))) throw invalid("Unsupported schemaVersion");
         List<ComponentV2> components=new ArrayList<>();
         for(JsonNode c:array(node,"components")) {
             String type=text(c,"type");
@@ -30,7 +32,8 @@ public class V2RequestMapper {
                     components.add(new ClientV2(text(c,"id"),text(c,"displayName"),
                             ComponentTypeV2.valueOf(type)));
                 }
-                case "API" -> { object(c,"id","type","displayName","preProcessingMs","postProcessingMs","behaviors");
+                case "API" -> { if (v6) throw invalid("API requires explicit legacy migration");
+                    object(c,"id","type","displayName","preProcessingMs","postProcessingMs","behaviors");
                     components.add(new ApiV2(text(c,"id"),text(c,"displayName"),
                             canonical ? numberOrZero(c,"preProcessingMs") : number(c,"preProcessingMs"),
                             canonical ? numberOrZero(c,"postProcessingMs") : number(c,"postProcessingMs"))); }
@@ -86,7 +89,8 @@ public class V2RequestMapper {
                             numberOrZero(c,"postProcessingMs"),numberOrZero(c,"defaultTtlMs"),
                             schedules,routes,rules,optionalText(c,"defaultDecision")));
                 }
-                case "DATABASE" -> { object(c,"id","type","displayName","processingMs");
+                case "DATABASE" -> { if (v6) throw invalid("DATABASE requires explicit legacy migration");
+                    object(c,"id","type","displayName","processingMs");
                     components.add(new DatabaseV2(text(c,"id"),text(c,"displayName"),number(c,"processingMs"))); }
                 case "RELATIONAL_DATABASE", "DOCUMENT_DATABASE", "KEY_VALUE_STORE" -> {
                     if (!canonical) throw invalid("Unsupported component type");

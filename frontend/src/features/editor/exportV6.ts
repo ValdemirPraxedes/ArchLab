@@ -6,5 +6,5 @@ export function exportArchitectureV6(nodes:ArchitectureNode[],edges:Architecture
   if (nodes.some(node=>node.data.componentType==='DATABASE' || node.data.componentType==='API'))
     throw new Error('Migre os componentes históricos antes de exportar a arquitetura canônica.');
   const architecture=toArchitectureV1(nodes,edges);
-  return JSON.stringify(architecture,null,2)+'\n';
+  return JSON.stringify({schemaVersion:'0.6',...architecture},null,2)+'\n';
 }
