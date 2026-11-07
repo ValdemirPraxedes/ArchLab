@@ -1,0 +1,34 @@
+{
+  "architecture": {
+    "components": [
+      {"id": "browser", "type": "WEB_BROWSER", "displayName": "Browser"},
+      {"id": "etl", "type": "ETL_PIPELINE", "displayName": "ETL", "batchSize": 100, "maxBatches": 1,
+        "behaviors": [{"id": "run", "trigger": "REQUEST_RECEIVED", "actions": [
+          {"id": "extract", "kind": "ETL_EXTRACT", "connectionId": "source-edge", "maxRecords": 100, "outputRef": "raw"},
+          {"id": "transform", "kind": "ETL_TRANSFORM", "connectionId": "transform-edge", "inputRef": "raw",
+            "transform": "IDENTITY", "dependsOn": ["extract"], "outputRef": "clean"},
+          {"id": "load", "kind": "ETL_LOAD", "connectionId": "target-edge", "inputRef": "clean",
+            "dependsOn": ["transform"]}
+        ]}]},
+      {"id": "source", "type": "DOCUMENT_DATABASE", "displayName": "Source", "dataProperties": {
+        "initialRecordCount": 100, "averageRecordBytes": 128, "readLatencyMs": 2,
+        "writeLatencyMs": 3, "maxConcurrentOperations": 1, "connectionPoolSize": 1, "queueCapacity": 2}},
+      {"id": "transformer", "type": "DATA_TRANSFORMER", "displayName": "Transformer",
+        "transformCostPerRecordMs": 2},
+      {"id": "target", "type": "RELATIONAL_DATABASE", "displayName": "Target", "dataProperties": {
+        "initialRecordCount": 0, "averageRecordBytes": 128, "readLatencyMs": 2,
+        "writeLatencyMs": 3, "maxConcurrentOperations": 1, "connectionPoolSize": 1, "queueCapacity": 2}}
+    ],
+    "connections": [
+      {"id": "entry", "sourceId": "browser", "targetId": "etl", "latencyMs": 1,
+        "integration": {"kind": "HTTP_REST"}},
+      {"id": "source-edge", "sourceId": "etl", "targetId": "source", "latencyMs": 1,
+        "integration": {"kind": "DATABASE_QUERY"}},
+      {"id": "transform-edge", "sourceId": "etl", "targetId": "transformer", "latencyMs": 1,
+        "integration": {"kind": "HTTP_REST"}},
+      {"id": "target-edge", "sourceId": "etl", "targetId": "target", "latencyMs": 1,
+        "integration": {"kind": "DATABASE_QUERY"}}
+    ]
+  },
+  "scenario": {"entry": {"componentId": "browser", "connectionId": "entry"}}
+}

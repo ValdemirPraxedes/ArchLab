@@ -32,6 +32,8 @@ for (const a of kv.actions) assert('KV action ' + a.kind, validate('BehaviorActi
 const etl = load('etl-actions.json');
 assert('ETL component schema', validate('Component', etl.component));
 for (const a of etl.actions) assert('ETL action ' + a.kind, validate('BehaviorAction', a), JSON.stringify(ajv.getSchema('#/components/schemas/BehaviorAction').errors));
+assert('ETL identity simulation schema', validate('SimulationRequest', load('etl-identity-simulation.json')),
+  JSON.stringify(ajv.getSchema('#/components/schemas/SimulationRequest').errors));
 const invalid = load('invalid-action.invalid.json');
 assert('Invalid example is structurally valid (semantic rejection belongs to backend)', validate('BehaviorAction', invalid.actions[0]));
 assert('Invalid action is rejected by capability matrix', invalid.component.type === 'KEY_VALUE_STORE' && invalid.actions[0].kind === 'DB_SELECT' && invalid.expectedError === 'DATA_ACTION_INCOMPATIBLE');
