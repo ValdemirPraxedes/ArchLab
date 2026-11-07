@@ -2,9 +2,84 @@
 
 > Registro de handoff entre agentes. Complementa (não substitui) `V6-INTEGRATION-STATUS.md`,
 > `V6-CONTRACT-GATE-AUDIT.md`, `V6-LIMIT-EVIDENCE.md` e `V6-REGRESSION-EVIDENCE.md`.
-> Última atualização: 2026-11-06 (America/Sao_Paulo), Claude, auditoria de retomada após o Codex.
+> Última atualização: 2026-11-07 (America/Sao_Paulo), Claude — sessão 2 (implementação, com build e testes executados).
+> A sessão 1 (2026-11-06) fez apenas a auditoria; seu texto está preservado nas seções 1–6. A seção 0 abaixo prevalece onde houver diferença.
 
-## 1. Estado encontrado
+## 0. Sessão 2 — 2026-11-07 (Claude): estado atual
+
+### 0.1 Ambiente e Git
+
+| Item | Valor |
+| --- | --- |
+| Branch de trabalho | `feat/v0.6-data-ops-completion`, criada a partir de `origin/develop` @ `1cf1648` |
+| Inclui | o commit de handoff `459af5a` (`docs/v0.6-progress-handoff`, cherry-pick) — o PR de handoff, se aberto, fica redundante |
+| Clone local (`C:\Users\valde\Documents\GitHub\ArchLab`) | em `develop` atualizado; os 58 arquivos "modificados" eram **somente LF→CRLF** (`git diff --ignore-cr-at-eol --ignore-all-space` vazio). Não foram tocados nem descartados. |
+| Toolchain usada | Temurin JDK 25.0.5, Maven Wrapper 3.9.11, Node 22. Os processos em segundo plano da VM não sobrevivem entre chamadas; tudo rodou em primeiro plano. |
+| Push/PR | Esta sessão não tem credenciais GitHub: commits feitos localmente, **push e PR ficam com o responsável** |
+| Trello | Sem atualização de cartões nesta sessão |
+
+### 0.2 Commits desta sessão (em ordem)
+
+| Commit | Tarefa | Resumo |
+| --- | --- | --- |
+| `fix(frontend): include required simulateFailure…` | Regressão | **`npm run build` estava quebrado na `develop`** (`tsc -b`: fixture de `ETL_TRANSFORM` sem `simulateFailure`, obrigatório no tipo gerado). Vitest e lint passavam, mascarando o erro. |
+| `feat(v0.6): partition ETL into finite logical batches…` | V6-12, V6-02, V6-09 | Lotes reais: `ceil(registros / batchSize)`, `batchSize` da Action > `batchSize` do pipeline; acima de `maxBatches` → `LIMIT_EXCEEDED`/`ETL_BATCH_LIMIT_EXCEEDED`, LOAD `SKIPPED`, sem truncamento. Estouro de orçamento vira outcome `ETL_RECORD_BUDGET_EXCEEDED` (antes: `IllegalArgumentException` no loop de eventos). `batchCount`/`batchSize` opcionais em `DataOperationOutcomeV6` (OpenAPI aditivo). `DB_UPDATE` preserva atributos não declarados (antes, o documento atualizado sumia do `DB_FIND`). |
+| `test(v0.6): cover full type x action matrix…` | V6-01, V6-06, V6-09, V6-10, V6-11, V6-12 | Matriz 3 tipos × 8 Actions DB (24 combinações); Document GET/UPDATE/DELETE/FIND + `limit`; KV DELETE e ausência de TTL após 10 min virtuais (`ttlMs` rejeitado na decodificação); `DATA_QUEUE_FULL` com pool 1/fila 2; lotes e limite de lotes. |
+| `fix(v0.6): report ambiguous legacy DATABASE migration…` | V6-14, V6-03, CT-6-08 | `migrate-v6` agora responde 400 `DATA_MIGRATION_AMBIGUOUS` com `violations[0].path` e `details.reason` (`HISTORICAL_QUERY_TEXT`, `NON_QUERY_CONNECTION`, `HISTORICAL_CALL`) em vez de `INVALID_REQUEST` genérico. Status HTTP inalterado; `Problem` já permite campos extras. |
+| `test(v0.6): add replayable CT-6-01..10…` | V6-21 | `docs/api/examples/v0.6/ct/CT-6-01..10.json` (13 casos) + `Ct6FixtureReplayTest` (executa e repete cada caso, exige resposta idêntica) + validação estrutural em `validate.cjs`. |
+| `feat(frontend): show ETL batches…` | V6-19 | Playback mostra `lotes N × tamanho` e `normalizados N`. |
+
+### 0.3 Testes executados nesta sessão (branch `feat/v0.6-data-ops-completion`)
+
+| Gate | Resultado |
+| --- | --- |
+| `cd backend && ./mvnw test` | **SUCCESS** — core 121 testes, API 114 testes (eram 95 na `develop`), 0 falhas |
+| `cd frontend && npm test` | **31 arquivos / 186 testes** passando |
+| `npm run lint` | sem erros |
+| `npm run build` (inclui `typegen` + `tsc -b`) | **SUCCESS** (falhava na `develop`) |
+| `cd docs/api/examples/v0.6 && npm run validate` | **48 PASS, 0 FAIL** (inclui os 13 casos CT-6) |
+| Redocly lint do OpenAPI | não executado nesta sessão |
+
+### 0.4 Status das 24 tarefas após a sessão 2
+
+| Tarefa | Status | Evidência | Próxima ação |
+| --- | --- | --- | --- |
+| V6-01 Matriz | Parcial → aguarda aprovação | `fullTypeByActionMatrixIsEnforcedBeforeExecution` (24 combinações) | Aprovar divergência: DM-V6-001 marca "Batch: Sim" para KV, mas `DB_BULK_INSERT` em KV é rejeitado (lote não tem chave exata única) |
+| V6-02 Budgets/atomicidade | Parcial | Lotes, `ETL_BATCH_LIMIT_EXCEEDED`, `ETL_RECORD_BUDGET_EXCEEDED`, API-V6-001 atualizado | Decisão 3 (bulk parcial × rejeição total) |
+| V6-03 Política de migração | Parcial | Diagnóstico tipado + CT-6-07/08 | Decisão 2 (escolha manual para `queryText`/`CALL`) |
+| V6-04 OpenAPI | Parcial | `batchCount`/`batchSize`; fixtures CT validadas | Decisão 1 (`Component.oneOf` × `DATABASE`); Redocly lint |
+| V6-05 TS × DTOs | Parcial | build com `typegen` verde | Reconciliar tipos manuais (`archlabV2Client`) com o gerado |
+| V6-06 Capabilities | **Pronta para revisão** | matriz completa + `DATA_ACTION_INCOMPATIBLE` | Fechar junto com V6-01 |
+| V6-07 Estado por execução | Pronta para revisão | CT-6-09 (3 replays idênticos, `DB_INSERT` de mesma chave nunca colide) | — |
+| V6-08 Relational | Pronta para revisão | CT-6-01, CT-6-09, testes CRUD/duplicidade | Ver limitação 4.3 (bulk sem chaves) |
+| V6-09 Document | **Pronta para revisão** | `documentGetUpdateDeleteAndFindReflectVirtualState`, CT-6-02 | A ordenação é observável só pela sequência de outcomes; FIND retorna contagem, não lista |
+| V6-10 Key-Value | **Pronta para revisão** | `keyValueDeleteHasNoImplicitTtl`, CT-6-03 | — |
+| V6-11 Pool/fila/timeout | **Pronta para revisão** | `fullDataQueueRejectsWithDataQueueFull`, CT-6-04, testes de timeout | — |
+| V6-12 ETL | **Pronta para revisão** | lotes reais, CT-6-05/06/10 | — |
+| V6-13 `dataOutcomes` | Parcial (funcional) | campos aditivos, regressão Java verde | Teste de correlação outcome ↔ trace |
+| V6-14 Adaptador legado | Parcial | diagnóstico tipado, CT-6-07/08 | Equivalência de simulação antes/depois; fluxo de escolha (decisão 2) |
+| V6-15 Paleta/ícones | Parcial (funcional) | sem mudança | Conferir ícones contra UI-V6-001 |
+| V6-16 Formulários | Parcial | sem mudança | Validação contextual de limites |
+| V6-17 Editor de Actions/ETL | Parcial | build corrigido | Teste de filtragem de combinações e `inputRef` |
+| V6-18 Prévia de migração | Parcial | backend agora devolve `path`/`reason` | Mostrar `violations[0]` do `DATA_MIGRATION_AMBIGUOUS` na prévia |
+| V6-19 Playback | Parcial (funcional) | lotes/normalizados + teste | Correlação por operação |
+| V6-20 Export canônico | Parcial (funcional) | sem mudança | Round-trip integrado com backend |
+| V6-21 Fixtures CT-6 | **Pronta para revisão** | `ct/` + `Ct6FixtureReplayTest` + `validate.cjs` | Usar no roteiro de homologação |
+| V6-22 Regressão v0.1–v0.5 | Parcial | suíte Java completa verde (inclui `V1PublicContractRegressionTest`, migrações v5) | Evidência manual v0.1–v0.3 no frontend |
+| V6-23 Performance | Parcial | sem mudança | Limiares de aceite (decisão 4) |
+| V6-24 DoD | Pendente | — | Depende de V6-22/23 e das decisões |
+
+"Pronta para revisão" = aceite do TASKS-V6-001 coberto por teste automatizado; só vira **Concluída** após revisão/merge do PR e aprovação do responsável.
+
+### 0.5 Próximos passos recomendados
+
+1. Responsável: fazer push de `feat/v0.6-data-ops-completion`, abrir PR para `develop` e responder às decisões da seção 3.
+2. V6-18: exibir no frontend o diagnóstico `DATA_MIGRATION_AMBIGUOUS` (`path`, `reason`) — hoje a prévia local (`migrationV6.ts`) bloqueia por conta própria.
+3. V6-13/V6-19: teste de correlação `dataOutcomes[].operationId` ↔ `trace[].operationId`.
+4. V6-05: reconciliar `archlabV2Client` (tipos manuais) com `schema.d.ts`.
+5. V6-22/V6-23: evidência v0.1–v0.3 e limiares de performance.
+
+## 1. Estado encontrado (sessão 1, 2026-11-06)
 
 | Item | Valor |
 | --- | --- |
@@ -59,14 +134,14 @@ Legenda: **Concluída** = aceite do TASKS-V6-001 atendido com teste; **Parcial**
 ## 4. Problemas conhecidos
 
 - `Component.oneOf` no OpenAPI ainda aceita `DATABASE` para qualquer requisição (comentário não é regra de schema).
-- `batchSize`/`maxBatches` de `ETL_PIPELINE` são validados mas não particionam a execução.
+- ~~`batchSize`/`maxBatches` de `ETL_PIPELINE` são validados mas não particionam a execução.~~ Resolvido na sessão 2.
 - Initial dataset e bulk são contagens lógicas; `DB_GET`/`DB_FIND` só encontram registros gravados com chave/campo explícitos.
-- `etlAction` usa `IllegalArgumentException` para orçamento > 1M registros em runtime em vez de outcome `LIMIT_EXCEEDED`.
+- ~~`etlAction` usa `IllegalArgumentException` para orçamento > 1M registros.~~ Resolvido na sessão 2 (`ETL_RECORD_BUDGET_EXCEEDED`).
 
 ## 5. Ambiente desta sessão (Claude)
 
 - Sem credenciais GitHub (somente leitura anônima): não foi possível abrir PRs nem fazer push.
-- Sem acesso ao Maven Central/npm e sem JDK 25: **não foi possível compilar nem executar testes**. Por isso nenhuma alteração de runtime foi feita — apenas este registro.
+- (Sessão 1) Sem acesso ao Maven Central/npm e sem JDK 25: não foi possível compilar nem executar testes. A sessão 2 executou todos os gates (seção 0.3). Por isso nenhuma alteração de runtime foi feita — apenas este registro.
 - Comandos de verificação local (Windows, como o Codex usou):
 
 ```text
