@@ -91,4 +91,21 @@ class Ct6FixtureReplayTest {
                 .header("Content-Type","application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(body)).build(),HttpResponse.BodyHandlers.ofString());
     }
+
+    /** V6-20: the canonical frontend export (golden, also checked by exportV6.test.ts) is accepted and executable. */
+    @org.junit.jupiter.api.Test void canonicalFrontendExportIsValidAndSimulates() throws Exception {
+        String golden=Files.readString(FIXTURES.getParent().resolve("canonical-export-p0.json"));
+        JsonNode architecture=json.readTree(golden);
+        assertEquals("0.6",architecture.get("schemaVersion").asText());
+        assertFalse(golden.contains("\"DATABASE\""),"canonical export must not contain DATABASE");
+        var validation=post("/api/v1/architectures/validate",golden);
+        assertEquals(200,validation.statusCode(),validation.body());
+        assertTrue(json.readTree(validation.body()).get("valid").asBoolean(),validation.body());
+        String request="{\"architecture\":"+golden+",\"scenario\":{\"entry\":{\"componentId\":\"client\",\"connectionId\":\"entry\"}}}";
+        var simulation=post("/api/v1/simulations",request);
+        assertEquals(200,simulation.statusCode(),simulation.body());
+        JsonNode outcomes=json.readTree(simulation.body()).get("dataOutcomes");
+        assertEquals("LOADED",outcomes.get(outcomes.size()-1).get("resultCode").asText(),simulation.body());
+        assertEquals(simulation.body(),post("/api/v1/simulations",request).body());
+    }
 }

@@ -3,6 +3,10 @@ import react from '@vitejs/plugin-react';
 
 export default defineConfig({
   plugins: [react()],
-  server: { proxy: { '/api': { target: 'http://localhost:8080', changeOrigin: true } } },
+  server: {
+    proxy: { '/api': { target: 'http://localhost:8080', changeOrigin: true } },
+    // Shared contract fixtures (golden export) are read by tests; nothing else outside the app is served.
+    fs: { allow: ['.', '../docs/api/examples'] },
+  },
   test: { environment: 'jsdom', setupFiles: ['./src/test/setup.ts'], clearMocks: true },
 });

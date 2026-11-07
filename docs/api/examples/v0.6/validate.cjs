@@ -61,5 +61,11 @@ for (const file of ctFiles) {
       JSON.stringify(ajv.getSchema('#/components/schemas/' + schema).errors));
   }
 }
+// V6-20: canonical frontend export (golden shared with exportV6.test.ts and Ct6FixtureReplayTest)
+const golden = load('canonical-export-p0.json');
+assert('Canonical P0 export matches Architecture', validate('Architecture', golden),
+  JSON.stringify(ajv.getSchema('#/components/schemas/Architecture').errors));
+assert('Canonical P0 export has no legacy DATABASE/API', golden.schemaVersion === '0.6'
+  && !golden.components.some((c) => c.type === 'DATABASE' || c.type === 'API'));
 console.log('NOTE: semantic validation, OpenAPI lint, TS generation, Java DTOs and backend execution are separate gates.');
 process.exitCode = failed ? 1 : 0;
