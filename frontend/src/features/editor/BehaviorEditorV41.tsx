@@ -74,6 +74,7 @@ function defaults(kind: Kind, edges: ArchitectureEdge[]): BehaviorActionV41 {
     case 'UNREGISTER_SERVICE': return {id:actionId,kind,connectionId:connection,serviceName:'service',instanceId:'instance'};
     case 'DISCOVER_SERVICE': return {id:actionId,kind,connectionId:connection,serviceName:'service'};
     case 'EVALUATE_RULE': return {id:actionId,kind,connectionId:connection};
+    default: throw new Error(`Action ${kind} ainda não suportada pelo editor de comportamentos v0.5`);
   }
 }
 function compatible(kind: Kind, edge: ArchitectureEdge): boolean {
