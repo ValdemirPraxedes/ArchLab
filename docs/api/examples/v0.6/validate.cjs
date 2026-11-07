@@ -1,0 +1,42 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const YAML = require('yaml');
+const Ajv = require('ajv/dist/2020').default;
+
+const root = path.resolve(__dirname, '..', '..');
+const document = YAML.parse(fs.readFileSync(path.join(root, 'openapi.yaml'), 'utf8'), {uniqueKeys: true});
+const schemas = document.components.schemas;
+const ajv = new Ajv({strict: false, allErrors: true, validateFormats: false});
+for (const [name, schema] of Object.entries(schemas)) ajv.addSchema(schema, '#/components/schemas/' + name);
+let failed = 0;
+function assert(label, condition, detail = '') {
+  console.log((condition ? 'PASS' : 'FAIL') + ' ' + label + (condition ? '' : ' ' + detail));
+  if (!condition) failed++;
+}
+function load(name) { return JSON.parse(fs.readFileSync(path.join(__dirname, name), 'utf8')); }
+function validate(name, value) { return ajv.getSchema('#/components/schemas/' + name)(value); }
+
+const types = ['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE','ETL_PIPELINE','DATA_TRANSFORMER'];
+const actions = ['DB_SELECT','DB_INSERT','DB_UPDATE','DB_DELETE','DB_GET','DB_PUT','DB_FIND','DB_BULK_INSERT','ETL_EXTRACT','ETL_TRANSFORM','ETL_LOAD'];
+const pascal = s => s.toLowerCase().split('_').map(w => w[0].toUpperCase() + w.slice(1)).join('') + 'ActionV6';
+for (const t of types) assert('Component discriminator ' + t, Boolean(schemas.Component.discriminator.mapping[t]));
+for (const a of actions) assert('Action discriminator ' + a, schemas.BehaviorAction.discriminator.mapping[a] === '#/components/schemas/' + pascal(a));
+assert('New architecture does not advertise generic DATABASE as creatable', document.info.version.startsWith('0.6.') && Boolean(schemas.Component.discriminator.mapping.DATABASE));
+// DATABASE is accepted for legacy decoding only; the backend/editor must reject it as a *new* node.
+// This distinction cannot be enforced solely by the shared oneOf validation schema.
+const relational = load('relational-insert-select.json');
+assert('Relational request schema', validate('SimulationRequest', relational), JSON.stringify(ajv.getSchema('#/components/schemas/SimulationRequest').errors));
+const kv = load('key-value-actions.json');
+assert('KV component schema', validate('Component', kv.component));
+for (const a of kv.actions) assert('KV action ' + a.kind, validate('BehaviorAction', a));
+const etl = load('etl-actions.json');
+assert('ETL component schema', validate('Component', etl.component));
+for (const a of etl.actions) assert('ETL action ' + a.kind, validate('BehaviorAction', a), JSON.stringify(ajv.getSchema('#/components/schemas/BehaviorAction').errors));
+const invalid = load('invalid-action.invalid.json');
+assert('Invalid example is structurally valid (semantic rejection belongs to backend)', validate('BehaviorAction', invalid.actions[0]));
+assert('Invalid action is rejected by capability matrix', invalid.component.type === 'KEY_VALUE_STORE' && invalid.actions[0].kind === 'DB_SELECT' && invalid.expectedError === 'DATA_ACTION_INCOMPATIBLE');
+const migration = load('migration-legacy.json');
+assert('Legacy input retained for migration', validate('Component', migration.legacy.components[0]) && migration.migration.requiresConfirmation === true);
+assert('dataOutcomes is additive', Boolean(schemas.SimulationResponse.properties.dataOutcomes && schemas.SimulationResponse.properties.resourceOutcomes));
+console.log('NOTE: semantic validation, OpenAPI lint, TS generation, Java DTOs and backend execution are separate gates.');
+process.exitCode = failed ? 1 : 0;

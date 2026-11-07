@@ -1,0 +1,25 @@
+{
+  "component": {
+    "id": "kv",
+    "displayName": "Key Value",
+    "type": "KEY_VALUE_STORE",
+    "dataProperties": {
+      "initialRecordCount": 0,
+      "averageRecordBytes": 128,
+      "readLatencyMs": 1,
+      "writeLatencyMs": 1,
+      "maxConcurrentOperations": 1,
+      "connectionPoolSize": 1,
+      "queueCapacity": 1
+    }
+  },
+  "actions": [
+    {
+      "id": "select",
+      "kind": "DB_SELECT",
+      "connectionId": "svc-kv",
+      "collection": "orders"
+    }
+  ],
+  "expectedError": "DATA_ACTION_INCOMPATIBLE"
+}
