@@ -129,18 +129,18 @@ describe('Editor visual', () => {
     render(<App/>);
     fireEvent.click(screen.getByRole('button',{name:'Service'}));
     const document={components:[
-      {id:'svc',type:'SERVICE',displayName:'Legacy Service',behaviors:[]},
+      {id:'svc',type:'SERVICE',displayName:'Legacy Service',behaviors:[{id:'h',trigger:'REQUEST_RECEIVED',actions:[
+        {id:'read',kind:'CALL',connectionId:'q',timeoutMs:5}]}]},
       {id:'old-db',type:'DATABASE',displayName:'Legacy DB',processingMs:5}],
-      connections:[{id:'q',sourceId:'svc',targetId:'old-db',latencyMs:1,
-        integration:{kind:'DATABASE_QUERY',queryText:'SELECT * FROM orders'}}]};
+      connections:[{id:'q',sourceId:'svc',targetId:'old-db',latencyMs:1,integration:{kind:'DATABASE_QUERY'}}]};
     const file=new File([JSON.stringify(document)],'ambiguous.json',{type:'application/json'});
     Object.defineProperty(file,'text',{value:async()=>JSON.stringify(document)});
     fireEvent.change(screen.getByLabelText('Arquivo de arquitetura'),{target:{files:[file]}});
     expect(await screen.findByText(/Importação cancelada; o canvas original foi preservado/)).toBeInTheDocument();
     const result=screen.getByRole('region',{name:'Resultado da validação'});
     expect(result).toHaveTextContent('DATA_MIGRATION_AMBIGUOUS');
-    expect(result).toHaveTextContent('connections[0].integration');
-    expect(result).toHaveTextContent('HISTORICAL_QUERY_TEXT');
+    expect(result).toHaveTextContent('components[0].behaviors[0].actions[0]');
+    expect(result).toHaveTextContent('HISTORICAL_CALL_TIMEOUT');
     expect(screen.queryByRole('region',{name:'Prévia de migração DATABASE'})).not.toBeInTheDocument();
     expect(screen.getByRole('button',{name:'Nó: Service 1'})).toBeInTheDocument();
     expect(screen.queryByRole('button',{name:'Nó: Legacy DB'})).not.toBeInTheDocument();
