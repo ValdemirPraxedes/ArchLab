@@ -1,0 +1,120 @@
+{
+  "id": "M6-04",
+  "title": "Dois DATABASEs em sequência, com dependências e processamento local entre as chamadas.",
+  "legacy": {
+    "architecture": {
+      "components": [
+        {
+          "id": "client",
+          "type": "WEB_BROWSER",
+          "displayName": "Client"
+        },
+        {
+          "id": "service",
+          "type": "SERVICE",
+          "displayName": "service",
+          "behaviors": [
+            {
+              "id": "handle",
+              "trigger": "REQUEST_RECEIVED",
+              "actions": [
+                {
+                  "id": "users",
+                  "kind": "CALL",
+                  "connectionId": "u"
+                },
+                {
+                  "id": "think",
+                  "kind": "PROCESS",
+                  "durationMs": 5,
+                  "dependsOn": [
+                    "users"
+                  ]
+                },
+                {
+                  "id": "orders",
+                  "kind": "CALL",
+                  "connectionId": "o",
+                  "dependsOn": [
+                    "think"
+                  ]
+                },
+                {
+                  "id": "respond",
+                  "kind": "RESPOND",
+                  "dependsOn": [
+                    "orders"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "users-db",
+          "type": "DATABASE",
+          "displayName": "users-db",
+          "processingMs": 3
+        },
+        {
+          "id": "orders-db",
+          "type": "DATABASE",
+          "displayName": "orders-db",
+          "processingMs": 8
+        }
+      ],
+      "connections": [
+        {
+          "id": "entry",
+          "sourceId": "client",
+          "targetId": "service",
+          "latencyMs": 1,
+          "integration": {
+            "kind": "HTTP_REST"
+          }
+        },
+        {
+          "id": "u",
+          "sourceId": "service",
+          "targetId": "users-db",
+          "latencyMs": 1,
+          "integration": {
+            "kind": "DATABASE_QUERY"
+          }
+        },
+        {
+          "id": "o",
+          "sourceId": "service",
+          "targetId": "orders-db",
+          "latencyMs": 4,
+          "integration": {
+            "kind": "DATABASE_QUERY"
+          }
+        }
+      ]
+    },
+    "scenario": {
+      "entry": {
+        "componentId": "client",
+        "connectionId": "entry"
+      }
+    }
+  },
+  "expectedReport": {
+    "databaseIds": [
+      "users-db",
+      "orders-db"
+    ],
+    "notesContain": [
+      "service/handle/users CALL -> DB_SELECT",
+      "service/handle/orders CALL -> DB_SELECT"
+    ]
+  },
+  "equivalence": [
+    "execution.status",
+    "execution.mainStatus",
+    "execution.totalDurationMs",
+    "execution.responseStatusCode",
+    "timeline: kind, componentId, connectionId, startMs, endMs (phase name excluded)"
+  ]
+}

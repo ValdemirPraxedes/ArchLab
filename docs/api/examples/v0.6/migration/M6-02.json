@@ -1,0 +1,94 @@
+{
+  "id": "M6-02",
+  "title": "Duas chamadas concorrentes ao mesmo DATABASE: o legado não tinha fila, e a migração mantém a concorrência (pool 1000).",
+  "legacy": {
+    "architecture": {
+      "components": [
+        {
+          "id": "client",
+          "type": "WEB_BROWSER",
+          "displayName": "Client"
+        },
+        {
+          "id": "service",
+          "type": "SERVICE",
+          "displayName": "service",
+          "behaviors": [
+            {
+              "id": "handle",
+              "trigger": "REQUEST_RECEIVED",
+              "actions": [
+                {
+                  "id": "a",
+                  "kind": "CALL",
+                  "connectionId": "data"
+                },
+                {
+                  "id": "b",
+                  "kind": "CALL",
+                  "connectionId": "data"
+                },
+                {
+                  "id": "respond",
+                  "kind": "RESPOND",
+                  "dependsOn": [
+                    "a",
+                    "b"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "orders",
+          "type": "DATABASE",
+          "displayName": "orders",
+          "processingMs": 10
+        }
+      ],
+      "connections": [
+        {
+          "id": "entry",
+          "sourceId": "client",
+          "targetId": "service",
+          "latencyMs": 1,
+          "integration": {
+            "kind": "HTTP_REST"
+          }
+        },
+        {
+          "id": "data",
+          "sourceId": "service",
+          "targetId": "orders",
+          "latencyMs": 2,
+          "integration": {
+            "kind": "DATABASE_QUERY"
+          }
+        }
+      ]
+    },
+    "scenario": {
+      "entry": {
+        "componentId": "client",
+        "connectionId": "entry"
+      }
+    }
+  },
+  "expectedReport": {
+    "databaseIds": [
+      "orders"
+    ],
+    "notesContain": [
+      "service/handle/a CALL -> DB_SELECT",
+      "service/handle/b CALL -> DB_SELECT"
+    ]
+  },
+  "equivalence": [
+    "execution.status",
+    "execution.mainStatus",
+    "execution.totalDurationMs",
+    "execution.responseStatusCode",
+    "timeline: kind, componentId, connectionId, startMs, endMs (phase name excluded)"
+  ]
+}
