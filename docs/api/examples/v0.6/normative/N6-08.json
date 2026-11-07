@@ -1,0 +1,471 @@
+{
+  "id": "N6-08",
+  "title": "ETL: custo = latência × registros (EXTRACT/LOAD) e transformCostPerRecordMs × registros (TRANSFORM); contagem inválida falha o TRANSFORM e o LOAD fica SKIPPED; batchSize × maxBatches ≤ 1.000.000.",
+  "cases": [
+    {
+      "name": "etl-cost-and-conservation",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "etl",
+              "type": "ETL_PIPELINE",
+              "displayName": "ETL",
+              "batchSize": 10,
+              "maxBatches": 10,
+              "behaviors": [
+                {
+                  "id": "run",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "extract",
+                      "kind": "ETL_EXTRACT",
+                      "connectionId": "source-edge",
+                      "outputRef": "raw"
+                    },
+                    {
+                      "id": "transform",
+                      "kind": "ETL_TRANSFORM",
+                      "connectionId": "transform-edge",
+                      "inputRef": "raw",
+                      "dependsOn": [
+                        "extract"
+                      ],
+                      "outputRef": "clean",
+                      "simulateFailure": false,
+                      "transform": "FILTER_VALID",
+                      "invalidRecordCount": 3
+                    },
+                    {
+                      "id": "load",
+                      "kind": "ETL_LOAD",
+                      "connectionId": "target-edge",
+                      "inputRef": "clean",
+                      "dependsOn": [
+                        "transform"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "source",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "source",
+              "dataProperties": {
+                "initialRecordCount": 10,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 1,
+                "writeLatencyMs": 1,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            },
+            {
+              "id": "transformer",
+              "type": "DATA_TRANSFORMER",
+              "displayName": "Transformer",
+              "transformCostPerRecordMs": 2
+            },
+            {
+              "id": "target",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "target",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 1,
+                "writeLatencyMs": 1,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "etl",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "source-edge",
+              "sourceId": "etl",
+              "targetId": "source",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            },
+            {
+              "id": "transform-edge",
+              "sourceId": "etl",
+              "targetId": "transformer",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "target-edge",
+              "sourceId": "etl",
+              "targetId": "target",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "extract",
+            "readCount": 10,
+            "processingMs": 10,
+            "batchCount": 1
+          },
+          {
+            "actionId": "transform",
+            "readCount": 10,
+            "writtenCount": 7,
+            "rejectedCount": 3,
+            "processingMs": 20
+          },
+          {
+            "actionId": "load",
+            "writtenCount": 7,
+            "processingMs": 7,
+            "resultCode": "LOADED"
+          }
+        ]
+      }
+    },
+    {
+      "name": "invalid-count-above-input",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "etl",
+              "type": "ETL_PIPELINE",
+              "displayName": "ETL",
+              "batchSize": 10,
+              "maxBatches": 10,
+              "behaviors": [
+                {
+                  "id": "run",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "extract",
+                      "kind": "ETL_EXTRACT",
+                      "connectionId": "source-edge",
+                      "outputRef": "raw"
+                    },
+                    {
+                      "id": "transform",
+                      "kind": "ETL_TRANSFORM",
+                      "connectionId": "transform-edge",
+                      "inputRef": "raw",
+                      "dependsOn": [
+                        "extract"
+                      ],
+                      "outputRef": "clean",
+                      "simulateFailure": false,
+                      "transform": "FILTER_VALID",
+                      "invalidRecordCount": 11
+                    },
+                    {
+                      "id": "load",
+                      "kind": "ETL_LOAD",
+                      "connectionId": "target-edge",
+                      "inputRef": "clean",
+                      "dependsOn": [
+                        "transform"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "source",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "source",
+              "dataProperties": {
+                "initialRecordCount": 10,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 1,
+                "writeLatencyMs": 1,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            },
+            {
+              "id": "transformer",
+              "type": "DATA_TRANSFORMER",
+              "displayName": "Transformer",
+              "transformCostPerRecordMs": 2
+            },
+            {
+              "id": "target",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "target",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 1,
+                "writeLatencyMs": 1,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "etl",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "source-edge",
+              "sourceId": "etl",
+              "targetId": "source",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            },
+            {
+              "id": "transform-edge",
+              "sourceId": "etl",
+              "targetId": "transformer",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "target-edge",
+              "sourceId": "etl",
+              "targetId": "target",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "transform",
+            "status": "FAILED",
+            "errorCode": "ETL_INVALID_REJECTION_COUNT",
+            "writtenCount": 0
+          },
+          {
+            "actionId": "load",
+            "status": "SKIPPED",
+            "errorCode": "ETL_UPSTREAM_FAILED",
+            "writtenCount": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "pipeline-budget-above-1M",
+      "endpoint": "/api/v1/scenarios/validate",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "etl",
+              "type": "ETL_PIPELINE",
+              "displayName": "ETL",
+              "batchSize": 100000,
+              "maxBatches": 11,
+              "behaviors": [
+                {
+                  "id": "run",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "extract",
+                      "kind": "ETL_EXTRACT",
+                      "connectionId": "source-edge",
+                      "outputRef": "raw"
+                    },
+                    {
+                      "id": "transform",
+                      "kind": "ETL_TRANSFORM",
+                      "connectionId": "transform-edge",
+                      "inputRef": "raw",
+                      "dependsOn": [
+                        "extract"
+                      ],
+                      "outputRef": "clean",
+                      "simulateFailure": false,
+                      "transform": "IDENTITY"
+                    },
+                    {
+                      "id": "load",
+                      "kind": "ETL_LOAD",
+                      "connectionId": "target-edge",
+                      "inputRef": "clean",
+                      "dependsOn": [
+                        "transform"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "source",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "source",
+              "dataProperties": {
+                "initialRecordCount": 10,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 1,
+                "writeLatencyMs": 1,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            },
+            {
+              "id": "transformer",
+              "type": "DATA_TRANSFORMER",
+              "displayName": "Transformer",
+              "transformCostPerRecordMs": 2
+            },
+            {
+              "id": "target",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "target",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 1,
+                "writeLatencyMs": 1,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "etl",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "source-edge",
+              "sourceId": "etl",
+              "targetId": "source",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            },
+            {
+              "id": "transform-edge",
+              "sourceId": "etl",
+              "targetId": "transformer",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "target-edge",
+              "sourceId": "etl",
+              "targetId": "target",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "fields": {
+          "/valid": false,
+          "/violations/0/code": "DATA_LIMIT_EXCEEDED",
+          "/violations/0/path": "components[1]"
+        },
+        "bodyContains": [
+          "ETL batch budget exceeded"
+        ]
+      }
+    }
+  ]
+}

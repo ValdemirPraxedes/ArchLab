@@ -1,0 +1,214 @@
+{
+  "id": "N6-05",
+  "title": "Timeouts virtuais: o prazo conta fila + processamento; operação expirada não grava nada.",
+  "cases": [
+    {
+      "name": "processing-timeout-no-commit",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "slow",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "key": "k",
+                      "timeoutMs": 2
+                    },
+                    {
+                      "id": "idle",
+                      "kind": "PROCESS",
+                      "durationMs": 10
+                    },
+                    {
+                      "id": "check",
+                      "kind": "DB_GET",
+                      "connectionId": "data",
+                      "key": "k",
+                      "dependsOn": [
+                        "idle"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "KEY_VALUE_STORE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 5,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "slow",
+            "status": "TIMED_OUT",
+            "resultCode": "TIMED_OUT",
+            "errorCode": "DATA_TIMEOUT",
+            "processingMs": 2,
+            "writtenCount": 0
+          },
+          {
+            "actionId": "check",
+            "resultCode": "NOT_FOUND"
+          }
+        ]
+      }
+    },
+    {
+      "name": "queue-timeout-before-start",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "holder",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "1"
+                    },
+                    {
+                      "id": "waiter",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "2",
+                      "timeoutMs": 1
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 10,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "waiter",
+            "status": "TIMED_OUT",
+            "errorCode": "DATA_TIMEOUT",
+            "queueWaitMs": 1,
+            "writtenCount": 0
+          },
+          {
+            "actionId": "holder",
+            "status": "SUCCEEDED",
+            "resultCode": "INSERTED"
+          }
+        ]
+      }
+    }
+  ]
+}

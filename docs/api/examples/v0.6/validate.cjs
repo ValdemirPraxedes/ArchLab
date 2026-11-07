@@ -61,6 +61,20 @@ for (const file of ctFiles) {
       JSON.stringify(ajv.getSchema('#/components/schemas/' + schema).errors));
   }
 }
+// V6-02: normative budget / atomicity / result-state examples (docs/architecture/DATA-BUDGETS-V6-001.md)
+const normDir = path.join(__dirname, 'normative');
+const normFiles = fs.readdirSync(normDir).filter((f) => /^N6-\d\d\.json$/.test(f)).sort();
+assert('N6-01..08 normative examples present', normFiles.length === 8, normFiles.join(','));
+for (const file of normFiles) {
+  const fixture = JSON.parse(fs.readFileSync(path.join(normDir, file), 'utf8'));
+  for (const c of fixture.cases) {
+    const expected = c.schemaValid !== false;
+    assert(fixture.id + ' ' + c.name + ' request ' + (expected ? 'matches' : 'is rejected by') + ' SimulationRequest',
+      validate('SimulationRequest', c.request) === expected,
+      JSON.stringify(ajv.getSchema('#/components/schemas/SimulationRequest').errors));
+  }
+}
+
 // V6-20: canonical frontend export (golden shared with exportV6.test.ts and Ct6FixtureReplayTest)
 const golden = load('canonical-export-p0.json');
 assert('Canonical P0 export matches Architecture', validate('Architecture', golden),
