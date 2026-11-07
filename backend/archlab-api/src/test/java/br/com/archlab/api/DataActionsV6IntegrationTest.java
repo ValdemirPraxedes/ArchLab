@@ -275,4 +275,168 @@ class DataActionsV6IntegrationTest {
                 "\"kind\":\"DATABASE_QUERY\"","\"kind\":\"DATABASE_QUERY\",\"queryText\":\"SELECT 1\""));
         assertEquals(400,ambiguous.statusCode(),ambiguous.body());
     }
+
+    // ---- v0.6 continuation (Claude): V6-01, V6-09, V6-10, V6-11, V6-12 ----
+    private static final java.util.Map<String,java.util.Set<String>> MATRIX=java.util.Map.of(
+            "RELATIONAL_DATABASE",java.util.Set.of("DB_SELECT","DB_INSERT","DB_UPDATE","DB_DELETE","DB_BULK_INSERT"),
+            "DOCUMENT_DATABASE",java.util.Set.of("DB_GET","DB_PUT","DB_FIND","DB_UPDATE","DB_DELETE","DB_BULK_INSERT"),
+            "KEY_VALUE_STORE",java.util.Set.of("DB_GET","DB_PUT","DB_DELETE"));
+    private static String minimalAction(String kind) {
+        String required=switch(kind) {
+            case "DB_SELECT" -> "\"collection\":\"c\"";
+            case "DB_FIND" -> "\"field\":\"f\",\"equals\":\"v\"";
+            case "DB_BULK_INSERT" -> "\"recordCount\":2";
+            default -> "\"key\":\"k\"";
+        };
+        return "[{\"id\":\"a\",\"kind\":\""+kind+"\",\"connectionId\":\"data\","+required+"}]";
+    }
+    @Test void fullTypeByActionMatrixIsEnforcedBeforeExecution() throws Exception {
+        java.util.List<String> kinds=java.util.List.of("DB_SELECT","DB_INSERT","DB_UPDATE","DB_DELETE",
+                "DB_GET","DB_PUT","DB_FIND","DB_BULK_INSERT");
+        for (var entry:MATRIX.entrySet()) for (String kind:kinds) {
+            var response=post("/api/v1/scenarios/validate",scenario(entry.getKey(),minimalAction(kind)));
+            assertEquals(200,response.statusCode(),response.body());
+            boolean rejected=response.body().contains("DATA_ACTION_INCOMPATIBLE");
+            assertEquals(!entry.getValue().contains(kind),rejected,entry.getKey()+" x "+kind+": "+response.body());
+            if (!rejected) assertTrue(json.readTree(response.body()).get("valid").asBoolean(),
+                    entry.getKey()+" x "+kind+": "+response.body());
+        }
+    }
+    @Test void documentGetUpdateDeleteAndFindReflectVirtualState() throws Exception {
+        String body=scenario("DOCUMENT_DATABASE","""
+            [{"id":"p2","kind":"DB_PUT","connectionId":"data","key":"doc-2","field":"category","equals":"a"},
+             {"id":"p1","kind":"DB_PUT","connectionId":"data","key":"doc-1","field":"category","equals":"a","dependsOn":["p2"]},
+             {"id":"p3","kind":"DB_PUT","connectionId":"data","key":"doc-3","field":"category","equals":"b","dependsOn":["p1"]},
+             {"id":"find1","kind":"DB_FIND","connectionId":"data","field":"category","equals":"a","dependsOn":["p3"]},
+             {"id":"get","kind":"DB_GET","connectionId":"data","key":"doc-1","dependsOn":["find1"]},
+             {"id":"update","kind":"DB_UPDATE","connectionId":"data","key":"doc-1","dependsOn":["get"]},
+             {"id":"delete","kind":"DB_DELETE","connectionId":"data","key":"doc-2","dependsOn":["update"]},
+             {"id":"find2","kind":"DB_FIND","connectionId":"data","field":"category","equals":"a","dependsOn":["delete"]},
+             {"id":"limited","kind":"DB_FIND","connectionId":"data","field":"category","equals":"a","limit":1,"dependsOn":["find2"]},
+             {"id":"gone","kind":"DB_GET","connectionId":"data","key":"doc-2","dependsOn":["limited"]},
+             {"id":"missingUpdate","kind":"DB_UPDATE","connectionId":"data","key":"doc-9","dependsOn":["gone"]}]
+            """);
+        var response=post("/api/v1/simulations",body);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode o=json.readTree(response.body()).get("dataOutcomes");
+        assertEquals(11,o.size(),response.body());
+        assertEquals(2,o.get(3).get("readCount").asInt());
+        assertEquals("FOUND",o.get(4).get("resultCode").asText());
+        assertEquals("UPDATED",o.get(5).get("resultCode").asText());
+        assertEquals("DELETED",o.get(6).get("resultCode").asText());
+        // update without a field keeps doc-1 findable; doc-2 was removed
+        assertEquals(1,o.get(7).get("readCount").asInt(),response.body());
+        assertEquals(1,o.get(8).get("readCount").asInt());
+        assertEquals("NOT_FOUND",o.get(9).get("resultCode").asText());
+        assertEquals("NOT_FOUND",o.get(10).get("resultCode").asText());
+        assertEquals(0,o.get(10).get("writtenCount").asInt());
+        for (int i=1;i<o.size();i++)
+            assertTrue(o.get(i).get("timestampMs").asLong()>=o.get(i-1).get("timestampMs").asLong(),"ordered outcomes");
+        assertEquals(response.body(),post("/api/v1/simulations",body).body());
+    }
+    @Test void keyValueDeleteHasNoImplicitTtl() throws Exception {
+        String body=scenario("KEY_VALUE_STORE","""
+            [{"id":"put","kind":"DB_PUT","connectionId":"data","key":"k"},
+             {"id":"idle","kind":"PROCESS","durationMs":600000,"dependsOn":["put"]},
+             {"id":"still","kind":"DB_GET","connectionId":"data","key":"k","dependsOn":["idle"]},
+             {"id":"delete","kind":"DB_DELETE","connectionId":"data","key":"k","dependsOn":["still"]},
+             {"id":"after","kind":"DB_GET","connectionId":"data","key":"k","dependsOn":["delete"]},
+             {"id":"again","kind":"DB_DELETE","connectionId":"data","key":"k","dependsOn":["after"]}]
+            """);
+        var response=post("/api/v1/simulations",body);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode o=json.readTree(response.body()).get("dataOutcomes");
+        assertEquals("STORED",o.get(0).get("resultCode").asText());
+        assertEquals("FOUND",o.get(1).get("resultCode").asText(),"no implicit TTL after 10 virtual minutes");
+        assertEquals("DELETED",o.get(2).get("resultCode").asText());
+        assertEquals(1,o.get(2).get("writtenCount").asInt());
+        assertEquals("NOT_FOUND",o.get(3).get("resultCode").asText());
+        assertEquals("NOT_FOUND",o.get(4).get("resultCode").asText());
+        var ttl=post("/api/v1/scenarios/validate",scenario("KEY_VALUE_STORE","""
+            [{"id":"put","kind":"DB_PUT","connectionId":"data","key":"k","ttlMs":10}]
+            """));
+        // ttlMs belongs to CACHE (v0.5); a KEY_VALUE_STORE Action carrying it is rejected at decode time
+        assertEquals(400,ttl.statusCode(),"ttlMs is not a KEY_VALUE_STORE property: "+ttl.body());
+        assertTrue(ttl.body().contains("INVALID_REQUEST"),ttl.body());
+    }
+    @Test void fullDataQueueRejectsWithDataQueueFull() throws Exception {
+        // pool 1 + queueCapacity 2: one active, two waiting, the fourth is rejected deterministically
+        String body=scenario("RELATIONAL_DATABASE","""
+            [{"id":"w1","kind":"DB_INSERT","connectionId":"data","key":"1"},
+             {"id":"w2","kind":"DB_INSERT","connectionId":"data","key":"2"},
+             {"id":"w3","kind":"DB_INSERT","connectionId":"data","key":"3"},
+             {"id":"w4","kind":"DB_INSERT","connectionId":"data","key":"4"},
+             {"id":"count","kind":"DB_SELECT","connectionId":"data","collection":"default","dependsOn":["w1","w2","w3"]}]
+            """);
+        var response=post("/api/v1/simulations",body);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode o=json.readTree(response.body()).get("dataOutcomes");
+        JsonNode rejected=null; int inserted=0;
+        for (JsonNode outcome:o) {
+            if ("DATA_QUEUE_FULL".equals(outcome.path("errorCode").asText())) rejected=outcome;
+            if ("INSERTED".equals(outcome.get("resultCode").asText())) inserted++;
+        }
+        assertNotNull(rejected,response.body());
+        assertEquals("w4",rejected.get("actionId").asText());
+        assertEquals("REJECTED",rejected.get("status").asText());
+        assertEquals(0,rejected.get("writtenCount").asInt());
+        assertEquals(3,inserted,response.body());
+        assertEquals(response.body(),post("/api/v1/simulations",body).body());
+    }
+    private String etl(int initial,int batchSize,int maxBatches,String extraExtract) {
+        return """
+            {"architecture":{"components":[
+              {"id":"browser","type":"WEB_BROWSER","displayName":"Browser"},
+              {"id":"etl","type":"ETL_PIPELINE","displayName":"ETL","batchSize":%d,"maxBatches":%d,
+               "behaviors":[{"id":"run","trigger":"REQUEST_RECEIVED","actions":[
+                 {"id":"extract","kind":"ETL_EXTRACT","connectionId":"source-edge","outputRef":"raw"%s},
+                 {"id":"transform","kind":"ETL_TRANSFORM","connectionId":"transform-edge","inputRef":"raw",
+                  "transform":"IDENTITY","dependsOn":["extract"],"outputRef":"clean"},
+                 {"id":"load","kind":"ETL_LOAD","connectionId":"target-edge","inputRef":"clean","dependsOn":["transform"]}]}]},
+              {"id":"source","type":"DOCUMENT_DATABASE","displayName":"Source","dataProperties":{
+                "initialRecordCount":%d,"averageRecordBytes":64,"readLatencyMs":1,"writeLatencyMs":1,
+                "maxConcurrentOperations":1,"connectionPoolSize":1,"queueCapacity":2}},
+              {"id":"transformer","type":"DATA_TRANSFORMER","displayName":"Transformer","transformCostPerRecordMs":1},
+              {"id":"target","type":"RELATIONAL_DATABASE","displayName":"Target","dataProperties":{
+                "initialRecordCount":0,"averageRecordBytes":64,"readLatencyMs":1,"writeLatencyMs":1,
+                "maxConcurrentOperations":1,"connectionPoolSize":1,"queueCapacity":2}}
+            ],"connections":[
+              {"id":"entry","sourceId":"browser","targetId":"etl","latencyMs":1,"integration":{"kind":"HTTP_REST"}},
+              {"id":"source-edge","sourceId":"etl","targetId":"source","latencyMs":1,"integration":{"kind":"DATABASE_QUERY"}},
+              {"id":"transform-edge","sourceId":"etl","targetId":"transformer","latencyMs":1,"integration":{"kind":"HTTP_REST"}},
+              {"id":"target-edge","sourceId":"etl","targetId":"target","latencyMs":1,"integration":{"kind":"DATABASE_QUERY"}}
+            ]},"scenario":{"entry":{"componentId":"browser","connectionId":"entry"}}}
+            """.formatted(batchSize,maxBatches,extraExtract,initial);
+    }
+    @Test void etlPartitionsRecordsIntoFiniteBatches() throws Exception {
+        var response=post("/api/v1/simulations",etl(25,10,3,""));
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode o=json.readTree(response.body()).get("dataOutcomes");
+        assertEquals(3,o.size(),response.body());
+        for (JsonNode outcome:o) assertEquals(3,outcome.get("batchCount").asInt(),response.body());
+        assertEquals(10,o.get(0).get("batchSize").asInt());
+        assertEquals(25,o.get(0).get("readCount").asInt());
+        assertEquals("LOADED",o.get(2).get("resultCode").asText());
+        assertEquals(25,o.get(2).get("writtenCount").asInt());
+        // Action-level batchSize overrides the pipeline property
+        JsonNode override=json.readTree(post("/api/v1/simulations",etl(25,10,3,",\"batchSize\":25")).body())
+                .get("dataOutcomes");
+        assertEquals(1,override.get(0).get("batchCount").asInt());
+        assertEquals(25,override.get(2).get("writtenCount").asInt());
+    }
+    @Test void etlAboveMaxBatchesFailsControlledAndSkipsLoad() throws Exception {
+        String body=etl(25,10,2,"");
+        var response=post("/api/v1/simulations",body);
+        assertEquals(200,response.statusCode(),response.body());
+        JsonNode o=json.readTree(response.body()).get("dataOutcomes");
+        assertEquals("LIMIT_EXCEEDED",o.get(0).get("resultCode").asText(),response.body());
+        assertEquals("FAILED",o.get(0).get("status").asText());
+        assertEquals("ETL_BATCH_LIMIT_EXCEEDED",o.get(0).get("errorCode").asText());
+        assertEquals(0,o.get(0).get("batchCount").asInt());
+        JsonNode last=o.get(o.size()-1);
+        assertEquals("load",last.get("actionId").asText(),response.body());
+        assertEquals("SKIPPED",last.get("status").asText());
+        assertEquals(0,last.get("writtenCount").asInt());
+        assertEquals(response.body(),post("/api/v1/simulations",body).body());
+    }
 }
