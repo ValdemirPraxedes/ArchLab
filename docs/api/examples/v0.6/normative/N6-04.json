@@ -1,0 +1,241 @@
+{
+  "id": "N6-04",
+  "title": "Estados de resultado: NOT_FOUND é sucesso sem efeito e não bloqueia dependentes; DUPLICATE_KEY é falha e propaga DEPENDENCY_FAILED.",
+  "cases": [
+    {
+      "name": "not-found-is-success",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "update",
+                      "kind": "DB_UPDATE",
+                      "connectionId": "data",
+                      "key": "missing"
+                    },
+                    {
+                      "id": "delete",
+                      "kind": "DB_DELETE",
+                      "connectionId": "data",
+                      "key": "missing",
+                      "dependsOn": [
+                        "update"
+                      ]
+                    },
+                    {
+                      "id": "after",
+                      "kind": "DB_SELECT",
+                      "connectionId": "data",
+                      "collection": "default",
+                      "key": "missing",
+                      "dependsOn": [
+                        "delete"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "update",
+            "status": "SUCCEEDED",
+            "resultCode": "NOT_FOUND",
+            "writtenCount": 0
+          },
+          {
+            "actionId": "delete",
+            "status": "SUCCEEDED",
+            "resultCode": "NOT_FOUND",
+            "writtenCount": 0
+          },
+          {
+            "actionId": "after",
+            "status": "SUCCEEDED",
+            "resultCode": "NOT_FOUND",
+            "readCount": 0
+          }
+        ]
+      }
+    },
+    {
+      "name": "duplicate-key-fails-dependents",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "first",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k"
+                    },
+                    {
+                      "id": "dup",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k",
+                      "dependsOn": [
+                        "first"
+                      ]
+                    },
+                    {
+                      "id": "blocked",
+                      "kind": "DB_SELECT",
+                      "connectionId": "data",
+                      "collection": "default",
+                      "key": "k",
+                      "dependsOn": [
+                        "dup"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "first",
+            "status": "SUCCEEDED",
+            "resultCode": "INSERTED"
+          },
+          {
+            "actionId": "dup",
+            "status": "FAILED",
+            "resultCode": "FAILED",
+            "errorCode": "DUPLICATE_KEY",
+            "rejectedCount": 1,
+            "writtenCount": 0
+          }
+        ],
+        "dataOutcomeCount": 2,
+        "bodyContains": [
+          "DEPENDENCY_FAILED"
+        ]
+      }
+    }
+  ]
+}

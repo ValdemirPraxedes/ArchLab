@@ -1,0 +1,124 @@
+{
+  "id": "N6-02",
+  "title": "Limite de registros (1.000.000): DB_BULK_INSERT é atômico — acima do espaço livre nada é gravado; o espaço exato é aceito. 'over' e 'exact' são independentes e executam em ordem FIFO no pool 1; uma Action que depende de outra que falhou não executa (DEPENDENCY_FAILED, ver N6-04).",
+  "cases": [
+    {
+      "name": "bulk-atomic-at-record-limit",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "over",
+                      "kind": "DB_BULK_INSERT",
+                      "connectionId": "data",
+                      "recordCount": 51
+                    },
+                    {
+                      "id": "exact",
+                      "kind": "DB_BULK_INSERT",
+                      "connectionId": "data",
+                      "recordCount": 50
+                    },
+                    {
+                      "id": "full",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "one-more",
+                      "dependsOn": [
+                        "exact"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 999950,
+                "averageRecordBytes": 1,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 0,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "over",
+            "status": "FAILED",
+            "resultCode": "LIMIT_EXCEEDED",
+            "errorCode": "DATA_LIMIT_EXCEEDED",
+            "writtenCount": 0,
+            "rejectedCount": 51,
+            "logicalBytes": 0
+          },
+          {
+            "actionId": "exact",
+            "status": "SUCCEEDED",
+            "resultCode": "INSERTED",
+            "writtenCount": 50
+          },
+          {
+            "actionId": "full",
+            "status": "FAILED",
+            "resultCode": "LIMIT_EXCEEDED",
+            "writtenCount": 0,
+            "rejectedCount": 1
+          }
+        ]
+      }
+    }
+  ]
+}

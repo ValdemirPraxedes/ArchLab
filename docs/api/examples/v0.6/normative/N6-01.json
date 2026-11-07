@@ -1,0 +1,130 @@
+{
+  "id": "N6-01",
+  "title": "Custo virtual: processingMs = latência de leitura/escrita do recurso × registros; a rede soma latencyMs por mensagem.",
+  "cases": [
+    {
+      "name": "read-write-bulk-cost",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "insert",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k"
+                    },
+                    {
+                      "id": "bulk",
+                      "kind": "DB_BULK_INSERT",
+                      "connectionId": "data",
+                      "recordCount": 50,
+                      "dependsOn": [
+                        "insert"
+                      ]
+                    },
+                    {
+                      "id": "select",
+                      "kind": "DB_SELECT",
+                      "connectionId": "data",
+                      "collection": "default",
+                      "key": "k",
+                      "dependsOn": [
+                        "bulk"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "insert",
+            "processingMs": 3,
+            "startedAtMs": 2,
+            "completedAtMs": 5,
+            "writtenCount": 1,
+            "logicalBytes": 128
+          },
+          {
+            "actionId": "bulk",
+            "processingMs": 150,
+            "startedAtMs": 7,
+            "completedAtMs": 157,
+            "writtenCount": 50,
+            "logicalBytes": 6400
+          },
+          {
+            "actionId": "select",
+            "processingMs": 2,
+            "startedAtMs": 159,
+            "completedAtMs": 161,
+            "readCount": 1,
+            "logicalBytes": 128
+          }
+        ]
+      }
+    }
+  ]
+}

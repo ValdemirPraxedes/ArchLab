@@ -27,11 +27,20 @@ class Ct6FixtureReplayTest {
     private final JsonMapper json=new JsonMapper();
 
     @TestFactory Stream<DynamicTest> ctFixturesReplayAsDocumented() throws Exception {
+        return replay(FIXTURES,"CT-6-\\d\\d\\.json",10);
+    }
+
+    /** V6-02: normative budget, virtual-cost, atomicity and result-state examples (docs/architecture/DATA-BUDGETS-V6-001.md). */
+    @TestFactory Stream<DynamicTest> normativeBudgetExamplesReplayAsDocumented() throws Exception {
+        return replay(FIXTURES.getParent().resolve("normative"),"N6-\\d\\d\\.json",8);
+    }
+
+    private Stream<DynamicTest> replay(Path directory,String pattern,int expected) throws Exception {
         List<Path> files;
-        try (Stream<Path> listing=Files.list(FIXTURES)) {
-            files=listing.filter(p -> p.getFileName().toString().matches("CT-6-\\d\\d\\.json")).sorted().toList();
+        try (Stream<Path> listing=Files.list(directory)) {
+            files=listing.filter(p -> p.getFileName().toString().matches(pattern)).sorted().toList();
         }
-        assertEquals(10,files.size(),"CT-6-01..10 fixtures must all exist: "+files);
+        assertEquals(expected,files.size(),"fixtures in "+directory+": "+files);
         List<DynamicTest> tests=new ArrayList<>();
         for (Path file:files) {
             JsonNode fixture=json.readTree(Files.readString(file));
@@ -63,6 +72,8 @@ class Ct6FixtureReplayTest {
             assertEquals(field.getValue(),body.at(field.getKey()),field.getKey()+" in "+context);
         for (JsonNode text:expect.path("documentNotContains"))
             assertFalse(body.get("document").toString().contains(text.asText()),"unexpected "+text+" in "+context);
+        if (expect.has("dataOutcomeCount"))
+            assertEquals(expect.get("dataOutcomeCount").asInt(),body.get("dataOutcomes").size(),context);
         if (expect.has("dataOutcomes")) {
             JsonNode outcomes=body.get("dataOutcomes");
             assertNotNull(outcomes,context);
