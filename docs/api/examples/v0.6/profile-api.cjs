@@ -60,4 +60,8 @@ async function batch(count, record) {
     elapsedMs: Number(elapsedMs.toFixed(2)), requestsPerSecond: Number((iterations * 1000 / elapsedMs).toFixed(2)),
     latencyMs: {p50: percentile(.5), p95: percentile(.95), max: percentile(1)},
     deterministic: true, outcome: profile.codes}, null, 2));
+  // V6-23 / decision 4: optional acceptance ceiling (PERFORMANCE-V6-001 uses 100 ms at concurrency 32).
+  const ceiling = process.env.ARCHLAB_PROFILE_MAX_P95_MS;
+  if (ceiling !== undefined && percentile(.95) > Number(ceiling))
+    throw new Error(`p95 ${percentile(.95)} ms exceeds ARCHLAB_PROFILE_MAX_P95_MS=${ceiling}`);
 })().catch(error => {console.error(error); process.exitCode = 1;});

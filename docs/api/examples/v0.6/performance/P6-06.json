@@ -1,0 +1,692 @@
+{
+  "id": "P6-06",
+  "title": "Pior caso de fila: 100 operações concorrentes num pool 1 com fila de 10.000 são servidas em FIFO.",
+  "cases": [
+    {
+      "name": "hundred-concurrent-operations",
+      "endpoint": "/api/v1/simulations",
+      "maxWallMs": 2000,
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "svc",
+              "type": "SERVICE",
+              "displayName": "svc",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "w0",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k0"
+                    },
+                    {
+                      "id": "w1",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k1"
+                    },
+                    {
+                      "id": "w2",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k2"
+                    },
+                    {
+                      "id": "w3",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k3"
+                    },
+                    {
+                      "id": "w4",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k4"
+                    },
+                    {
+                      "id": "w5",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k5"
+                    },
+                    {
+                      "id": "w6",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k6"
+                    },
+                    {
+                      "id": "w7",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k7"
+                    },
+                    {
+                      "id": "w8",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k8"
+                    },
+                    {
+                      "id": "w9",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k9"
+                    },
+                    {
+                      "id": "w10",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k10"
+                    },
+                    {
+                      "id": "w11",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k11"
+                    },
+                    {
+                      "id": "w12",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k12"
+                    },
+                    {
+                      "id": "w13",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k13"
+                    },
+                    {
+                      "id": "w14",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k14"
+                    },
+                    {
+                      "id": "w15",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k15"
+                    },
+                    {
+                      "id": "w16",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k16"
+                    },
+                    {
+                      "id": "w17",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k17"
+                    },
+                    {
+                      "id": "w18",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k18"
+                    },
+                    {
+                      "id": "w19",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k19"
+                    },
+                    {
+                      "id": "w20",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k20"
+                    },
+                    {
+                      "id": "w21",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k21"
+                    },
+                    {
+                      "id": "w22",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k22"
+                    },
+                    {
+                      "id": "w23",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k23"
+                    },
+                    {
+                      "id": "w24",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k24"
+                    },
+                    {
+                      "id": "w25",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k25"
+                    },
+                    {
+                      "id": "w26",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k26"
+                    },
+                    {
+                      "id": "w27",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k27"
+                    },
+                    {
+                      "id": "w28",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k28"
+                    },
+                    {
+                      "id": "w29",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k29"
+                    },
+                    {
+                      "id": "w30",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k30"
+                    },
+                    {
+                      "id": "w31",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k31"
+                    },
+                    {
+                      "id": "w32",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k32"
+                    },
+                    {
+                      "id": "w33",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k33"
+                    },
+                    {
+                      "id": "w34",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k34"
+                    },
+                    {
+                      "id": "w35",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k35"
+                    },
+                    {
+                      "id": "w36",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k36"
+                    },
+                    {
+                      "id": "w37",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k37"
+                    },
+                    {
+                      "id": "w38",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k38"
+                    },
+                    {
+                      "id": "w39",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k39"
+                    },
+                    {
+                      "id": "w40",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k40"
+                    },
+                    {
+                      "id": "w41",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k41"
+                    },
+                    {
+                      "id": "w42",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k42"
+                    },
+                    {
+                      "id": "w43",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k43"
+                    },
+                    {
+                      "id": "w44",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k44"
+                    },
+                    {
+                      "id": "w45",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k45"
+                    },
+                    {
+                      "id": "w46",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k46"
+                    },
+                    {
+                      "id": "w47",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k47"
+                    },
+                    {
+                      "id": "w48",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k48"
+                    },
+                    {
+                      "id": "w49",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k49"
+                    },
+                    {
+                      "id": "w50",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k50"
+                    },
+                    {
+                      "id": "w51",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k51"
+                    },
+                    {
+                      "id": "w52",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k52"
+                    },
+                    {
+                      "id": "w53",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k53"
+                    },
+                    {
+                      "id": "w54",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k54"
+                    },
+                    {
+                      "id": "w55",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k55"
+                    },
+                    {
+                      "id": "w56",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k56"
+                    },
+                    {
+                      "id": "w57",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k57"
+                    },
+                    {
+                      "id": "w58",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k58"
+                    },
+                    {
+                      "id": "w59",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k59"
+                    },
+                    {
+                      "id": "w60",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k60"
+                    },
+                    {
+                      "id": "w61",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k61"
+                    },
+                    {
+                      "id": "w62",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k62"
+                    },
+                    {
+                      "id": "w63",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k63"
+                    },
+                    {
+                      "id": "w64",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k64"
+                    },
+                    {
+                      "id": "w65",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k65"
+                    },
+                    {
+                      "id": "w66",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k66"
+                    },
+                    {
+                      "id": "w67",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k67"
+                    },
+                    {
+                      "id": "w68",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k68"
+                    },
+                    {
+                      "id": "w69",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k69"
+                    },
+                    {
+                      "id": "w70",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k70"
+                    },
+                    {
+                      "id": "w71",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k71"
+                    },
+                    {
+                      "id": "w72",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k72"
+                    },
+                    {
+                      "id": "w73",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k73"
+                    },
+                    {
+                      "id": "w74",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k74"
+                    },
+                    {
+                      "id": "w75",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k75"
+                    },
+                    {
+                      "id": "w76",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k76"
+                    },
+                    {
+                      "id": "w77",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k77"
+                    },
+                    {
+                      "id": "w78",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k78"
+                    },
+                    {
+                      "id": "w79",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k79"
+                    },
+                    {
+                      "id": "w80",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k80"
+                    },
+                    {
+                      "id": "w81",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k81"
+                    },
+                    {
+                      "id": "w82",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k82"
+                    },
+                    {
+                      "id": "w83",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k83"
+                    },
+                    {
+                      "id": "w84",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k84"
+                    },
+                    {
+                      "id": "w85",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k85"
+                    },
+                    {
+                      "id": "w86",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k86"
+                    },
+                    {
+                      "id": "w87",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k87"
+                    },
+                    {
+                      "id": "w88",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k88"
+                    },
+                    {
+                      "id": "w89",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k89"
+                    },
+                    {
+                      "id": "w90",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k90"
+                    },
+                    {
+                      "id": "w91",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k91"
+                    },
+                    {
+                      "id": "w92",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k92"
+                    },
+                    {
+                      "id": "w93",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k93"
+                    },
+                    {
+                      "id": "w94",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k94"
+                    },
+                    {
+                      "id": "w95",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k95"
+                    },
+                    {
+                      "id": "w96",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k96"
+                    },
+                    {
+                      "id": "w97",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k97"
+                    },
+                    {
+                      "id": "w98",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k98"
+                    },
+                    {
+                      "id": "w99",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k99"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 1,
+                "readLatencyMs": 0,
+                "writeLatencyMs": 1,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 10000
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "svc",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "svc",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomeCount": 100,
+        "dataOutcomes": [
+          {
+            "actionId": "w0",
+            "queueWaitMs": 0
+          },
+          {
+            "actionId": "w99",
+            "resultCode": "INSERTED",
+            "queueWaitMs": 99
+          }
+        ]
+      }
+    }
+  ]
+}

@@ -27,5 +27,8 @@
     <properties>
         <java.version>25</java.version>
         <maven.compiler.release>25</maven.compiler.release>
+        <!-- V6-23 / decision 4: every test JVM runs with a 256 MiB heap, so the worst-case
+             envelopes (docs/api/examples/v0.6/performance) are proven under that cap on each build. -->
+        <argLine>-Xmx256m</argLine>
     </properties>
 </project>

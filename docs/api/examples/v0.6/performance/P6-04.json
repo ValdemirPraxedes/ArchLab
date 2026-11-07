@@ -1,0 +1,1904 @@
+{
+  "id": "P6-04",
+  "title": "Pior caso de eventos: fan-out 99 × 99 × 99 excede 50.000 eventos; a simulação termina com 422 EXECUTION_LIMIT_EXCEEDED.",
+  "cases": [
+    {
+      "name": "event-budget-exhausted",
+      "endpoint": "/api/v1/simulations",
+      "maxWallMs": 2000,
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "a",
+              "type": "SERVICE",
+              "displayName": "a",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "b0",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b1",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b2",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b3",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b4",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b5",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b6",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b7",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b8",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b9",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b10",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b11",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b12",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b13",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b14",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b15",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b16",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b17",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b18",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b19",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b20",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b21",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b22",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b23",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b24",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b25",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b26",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b27",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b28",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b29",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b30",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b31",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b32",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b33",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b34",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b35",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b36",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b37",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b38",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b39",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b40",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b41",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b42",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b43",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b44",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b45",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b46",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b47",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b48",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b49",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b50",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b51",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b52",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b53",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b54",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b55",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b56",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b57",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b58",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b59",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b60",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b61",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b62",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b63",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b64",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b65",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b66",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b67",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b68",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b69",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b70",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b71",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b72",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b73",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b74",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b75",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b76",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b77",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b78",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b79",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b80",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b81",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b82",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b83",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b84",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b85",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b86",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b87",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b88",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b89",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b90",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b91",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b92",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b93",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b94",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b95",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b96",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b97",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "b98",
+                      "kind": "CALL",
+                      "connectionId": "ab"
+                    },
+                    {
+                      "id": "respond",
+                      "kind": "RESPOND",
+                      "dependsOn": [
+                        "b0",
+                        "b1",
+                        "b2",
+                        "b3",
+                        "b4",
+                        "b5",
+                        "b6",
+                        "b7",
+                        "b8",
+                        "b9",
+                        "b10",
+                        "b11",
+                        "b12",
+                        "b13",
+                        "b14",
+                        "b15",
+                        "b16",
+                        "b17",
+                        "b18",
+                        "b19",
+                        "b20",
+                        "b21",
+                        "b22",
+                        "b23",
+                        "b24",
+                        "b25",
+                        "b26",
+                        "b27",
+                        "b28",
+                        "b29",
+                        "b30",
+                        "b31",
+                        "b32",
+                        "b33",
+                        "b34",
+                        "b35",
+                        "b36",
+                        "b37",
+                        "b38",
+                        "b39",
+                        "b40",
+                        "b41",
+                        "b42",
+                        "b43",
+                        "b44",
+                        "b45",
+                        "b46",
+                        "b47",
+                        "b48",
+                        "b49",
+                        "b50",
+                        "b51",
+                        "b52",
+                        "b53",
+                        "b54",
+                        "b55",
+                        "b56",
+                        "b57",
+                        "b58",
+                        "b59",
+                        "b60",
+                        "b61",
+                        "b62",
+                        "b63",
+                        "b64",
+                        "b65",
+                        "b66",
+                        "b67",
+                        "b68",
+                        "b69",
+                        "b70",
+                        "b71",
+                        "b72",
+                        "b73",
+                        "b74",
+                        "b75",
+                        "b76",
+                        "b77",
+                        "b78",
+                        "b79",
+                        "b80",
+                        "b81",
+                        "b82",
+                        "b83",
+                        "b84",
+                        "b85",
+                        "b86",
+                        "b87",
+                        "b88",
+                        "b89",
+                        "b90",
+                        "b91",
+                        "b92",
+                        "b93",
+                        "b94",
+                        "b95",
+                        "b96",
+                        "b97",
+                        "b98"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "b",
+              "type": "SERVICE",
+              "displayName": "b",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "c0",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c1",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c2",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c3",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c4",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c5",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c6",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c7",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c8",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c9",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c10",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c11",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c12",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c13",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c14",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c15",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c16",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c17",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c18",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c19",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c20",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c21",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c22",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c23",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c24",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c25",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c26",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c27",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c28",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c29",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c30",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c31",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c32",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c33",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c34",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c35",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c36",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c37",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c38",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c39",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c40",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c41",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c42",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c43",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c44",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c45",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c46",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c47",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c48",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c49",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c50",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c51",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c52",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c53",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c54",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c55",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c56",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c57",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c58",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c59",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c60",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c61",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c62",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c63",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c64",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c65",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c66",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c67",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c68",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c69",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c70",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c71",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c72",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c73",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c74",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c75",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c76",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c77",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c78",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c79",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c80",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c81",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c82",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c83",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c84",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c85",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c86",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c87",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c88",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c89",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c90",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c91",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c92",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c93",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c94",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c95",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c96",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c97",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "c98",
+                      "kind": "CALL",
+                      "connectionId": "bc"
+                    },
+                    {
+                      "id": "respond",
+                      "kind": "RESPOND",
+                      "dependsOn": [
+                        "c0",
+                        "c1",
+                        "c2",
+                        "c3",
+                        "c4",
+                        "c5",
+                        "c6",
+                        "c7",
+                        "c8",
+                        "c9",
+                        "c10",
+                        "c11",
+                        "c12",
+                        "c13",
+                        "c14",
+                        "c15",
+                        "c16",
+                        "c17",
+                        "c18",
+                        "c19",
+                        "c20",
+                        "c21",
+                        "c22",
+                        "c23",
+                        "c24",
+                        "c25",
+                        "c26",
+                        "c27",
+                        "c28",
+                        "c29",
+                        "c30",
+                        "c31",
+                        "c32",
+                        "c33",
+                        "c34",
+                        "c35",
+                        "c36",
+                        "c37",
+                        "c38",
+                        "c39",
+                        "c40",
+                        "c41",
+                        "c42",
+                        "c43",
+                        "c44",
+                        "c45",
+                        "c46",
+                        "c47",
+                        "c48",
+                        "c49",
+                        "c50",
+                        "c51",
+                        "c52",
+                        "c53",
+                        "c54",
+                        "c55",
+                        "c56",
+                        "c57",
+                        "c58",
+                        "c59",
+                        "c60",
+                        "c61",
+                        "c62",
+                        "c63",
+                        "c64",
+                        "c65",
+                        "c66",
+                        "c67",
+                        "c68",
+                        "c69",
+                        "c70",
+                        "c71",
+                        "c72",
+                        "c73",
+                        "c74",
+                        "c75",
+                        "c76",
+                        "c77",
+                        "c78",
+                        "c79",
+                        "c80",
+                        "c81",
+                        "c82",
+                        "c83",
+                        "c84",
+                        "c85",
+                        "c86",
+                        "c87",
+                        "c88",
+                        "c89",
+                        "c90",
+                        "c91",
+                        "c92",
+                        "c93",
+                        "c94",
+                        "c95",
+                        "c96",
+                        "c97",
+                        "c98"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "c",
+              "type": "SERVICE",
+              "displayName": "c",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "p0",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p1",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p2",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p3",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p4",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p5",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p6",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p7",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p8",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p9",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p10",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p11",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p12",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p13",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p14",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p15",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p16",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p17",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p18",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p19",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p20",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p21",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p22",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p23",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p24",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p25",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p26",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p27",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p28",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p29",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p30",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p31",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p32",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p33",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p34",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p35",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p36",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p37",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p38",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p39",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p40",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p41",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p42",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p43",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p44",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p45",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p46",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p47",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p48",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p49",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p50",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p51",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p52",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p53",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p54",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p55",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p56",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p57",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p58",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p59",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p60",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p61",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p62",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p63",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p64",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p65",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p66",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p67",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p68",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p69",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p70",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p71",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p72",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p73",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p74",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p75",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p76",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p77",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p78",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p79",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p80",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p81",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p82",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p83",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p84",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p85",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p86",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p87",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p88",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p89",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p90",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p91",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p92",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p93",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p94",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p95",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p96",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p97",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "p98",
+                      "kind": "PROCESS",
+                      "durationMs": 1
+                    },
+                    {
+                      "id": "respond",
+                      "kind": "RESPOND",
+                      "dependsOn": [
+                        "p0",
+                        "p1",
+                        "p2",
+                        "p3",
+                        "p4",
+                        "p5",
+                        "p6",
+                        "p7",
+                        "p8",
+                        "p9",
+                        "p10",
+                        "p11",
+                        "p12",
+                        "p13",
+                        "p14",
+                        "p15",
+                        "p16",
+                        "p17",
+                        "p18",
+                        "p19",
+                        "p20",
+                        "p21",
+                        "p22",
+                        "p23",
+                        "p24",
+                        "p25",
+                        "p26",
+                        "p27",
+                        "p28",
+                        "p29",
+                        "p30",
+                        "p31",
+                        "p32",
+                        "p33",
+                        "p34",
+                        "p35",
+                        "p36",
+                        "p37",
+                        "p38",
+                        "p39",
+                        "p40",
+                        "p41",
+                        "p42",
+                        "p43",
+                        "p44",
+                        "p45",
+                        "p46",
+                        "p47",
+                        "p48",
+                        "p49",
+                        "p50",
+                        "p51",
+                        "p52",
+                        "p53",
+                        "p54",
+                        "p55",
+                        "p56",
+                        "p57",
+                        "p58",
+                        "p59",
+                        "p60",
+                        "p61",
+                        "p62",
+                        "p63",
+                        "p64",
+                        "p65",
+                        "p66",
+                        "p67",
+                        "p68",
+                        "p69",
+                        "p70",
+                        "p71",
+                        "p72",
+                        "p73",
+                        "p74",
+                        "p75",
+                        "p76",
+                        "p77",
+                        "p78",
+                        "p79",
+                        "p80",
+                        "p81",
+                        "p82",
+                        "p83",
+                        "p84",
+                        "p85",
+                        "p86",
+                        "p87",
+                        "p88",
+                        "p89",
+                        "p90",
+                        "p91",
+                        "p92",
+                        "p93",
+                        "p94",
+                        "p95",
+                        "p96",
+                        "p97",
+                        "p98"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "a",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "ab",
+              "sourceId": "a",
+              "targetId": "b",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "bc",
+              "sourceId": "b",
+              "targetId": "c",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 422,
+        "bodyContains": [
+          "EXECUTION_LIMIT_EXCEEDED"
+        ]
+      }
+    }
+  ]
+}

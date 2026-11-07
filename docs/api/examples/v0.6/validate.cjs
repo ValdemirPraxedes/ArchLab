@@ -87,6 +87,18 @@ for (const file of migFiles) {
     && fixture.expectedReport.notesContain.length > 0);
 }
 
+// V6-23: worst-case envelopes (replayed with -Xmx256m by Ct6FixtureReplayTest; timed by profile-limits.cjs)
+const perfDir = path.join(__dirname, 'performance');
+const perfFiles = fs.readdirSync(perfDir).filter((f) => /^P6-\d\d\.json$/.test(f)).sort();
+assert('P6-01..06 worst-case envelopes present', perfFiles.length === 6, perfFiles.join(','));
+for (const file of perfFiles) {
+  const fixture = JSON.parse(fs.readFileSync(path.join(perfDir, file), 'utf8'));
+  for (const c of fixture.cases)
+    assert(fixture.id + ' ' + c.name + ' request matches SimulationRequest and declares maxWallMs',
+      validate('SimulationRequest', c.request) && Number.isInteger(c.maxWallMs) && c.maxWallMs <= 2000,
+      JSON.stringify(ajv.getSchema('#/components/schemas/SimulationRequest').errors));
+}
+
 // V6-20: canonical frontend export (golden shared with exportV6.test.ts and Ct6FixtureReplayTest)
 const golden = load('canonical-export-p0.json');
 assert('Canonical P0 export matches Architecture', validate('Architecture', golden),
