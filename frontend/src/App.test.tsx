@@ -93,6 +93,23 @@ describe('Editor visual', () => {
     fireEvent.click(screen.getByRole('button',{name:'Confirmar migração'}));
     expect(screen.getByRole('button',{name:'Nó: Legacy DB'})).toHaveAttribute('data-component-type','RELATIONAL_DATABASE');
   });
+  it.each([
+    ['Relational Database','RELATIONAL_DATABASE','table2','Dados'],
+    ['Document Database','DOCUMENT_DATABASE','file-json2','Dados'],
+    ['Key-Value Store','KEY_VALUE_STORE','key-round','Dados'],
+    ['ETL Pipeline','ETL_PIPELINE','list-filter','Processamento de dados'],
+    ['Data Transformer','DATA_TRANSFORMER','replace','Processamento de dados'],
+  ])('cria %s pela paleta (ícone Lucide do UI-V6-001 na paleta) com o tipo P0',(name,type,icon,region)=>{
+    render(<App/>);
+    const palette=screen.getByRole('region',{name:region});
+    const button=screen.getByRole('button',{name});
+    expect(palette).toContainElement(button);
+    fireEvent.click(button);
+    const node=screen.getByRole('button',{name:`Nó: ${name} 1`});
+    expect(node).toHaveAttribute('data-component-type',type);
+    expect(button.querySelector(`svg.lucide-${icon}`)).not.toBeNull();
+    expect(screen.queryByRole('button',{name:'Database'})).not.toBeInTheDocument();
+  });
   it('valida no formulário os limites de dados do contrato e mostra a concorrência efetiva',()=>{
     render(<App/>);
     fireEvent.click(screen.getByRole('button',{name:'Relational Database'}));
