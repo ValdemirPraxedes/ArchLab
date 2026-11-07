@@ -1,0 +1,25 @@
+{
+  "id": "CAPABILITY-MATRIX-V6",
+  "description": "Normative P0 matrix: which data Action may target which component type through a directed connection. Any combination not listed is rejected with DATA_ACTION_INCOMPATIBLE before execution. Read by DataActionsV6IntegrationTest (backend) and dataCapabilitiesV6.test.ts (editor).",
+  "connectionKind": "DATABASE_QUERY",
+  "transformConnectionKinds": ["HTTP_REST", "local"],
+  "actions": {
+    "DB_SELECT": ["RELATIONAL_DATABASE"],
+    "DB_INSERT": ["RELATIONAL_DATABASE"],
+    "DB_UPDATE": ["RELATIONAL_DATABASE", "DOCUMENT_DATABASE"],
+    "DB_DELETE": ["RELATIONAL_DATABASE", "DOCUMENT_DATABASE", "KEY_VALUE_STORE"],
+    "DB_GET": ["DOCUMENT_DATABASE", "KEY_VALUE_STORE"],
+    "DB_PUT": ["DOCUMENT_DATABASE", "KEY_VALUE_STORE"],
+    "DB_FIND": ["DOCUMENT_DATABASE"],
+    "DB_BULK_INSERT": ["RELATIONAL_DATABASE", "DOCUMENT_DATABASE"],
+    "ETL_EXTRACT": ["RELATIONAL_DATABASE", "DOCUMENT_DATABASE", "KEY_VALUE_STORE"],
+    "ETL_TRANSFORM": ["DATA_TRANSFORMER"],
+    "ETL_LOAD": ["RELATIONAL_DATABASE", "DOCUMENT_DATABASE", "KEY_VALUE_STORE"]
+  },
+  "documentedRejections": [
+    {"action": "DB_SELECT", "type": "KEY_VALUE_STORE", "reason": "Key-value access is by exact key only (DB_GET)."},
+    {"action": "DB_FIND", "type": "RELATIONAL_DATABASE", "reason": "Relational reads use DB_SELECT."},
+    {"action": "DB_BULK_INSERT", "type": "KEY_VALUE_STORE", "reason": "A logical batch has no single exact key. Product decision 5 (2026-11-07): no bulk insert on KEY_VALUE_STORE in P0; use ETL_LOAD for batch loads."},
+    {"action": "DB_UPDATE", "type": "KEY_VALUE_STORE", "reason": "Key-value writes replace the value with DB_PUT."}
+  ]
+}

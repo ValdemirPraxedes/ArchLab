@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: ArchLab Simulation API (unificada /api/v1)
-  version: 0.5.0-contract-draft
+  version: 0.6.0-contract-draft
   description: Contrato canônico v1 com cenário unificado e formatos anteriores; simulação semântica determinística sem protocolos de rede reais.
 servers:
 - url: /
@@ -16,6 +16,41 @@ tags:
 - name: Simulations
   description: Execução determinística e resultados completos.
 paths:
+  /api/v1/architectures/migrate-v6:
+    post:
+      tags: [Architectures]
+      operationId: migrateLegacyArchitectureV6
+      summary: Prévia explícita da migração de API e DATABASE legados
+      description: "Converte uma cópia (decisão 2, MIGRATION-V6-001): DATABASE vira RELATIONAL_DATABASE com latências = processingMs e concorrência 1000; CALL para ele vira DB_SELECT com o mesmo tempo virtual; queryText/responseText permanecem na conexão. Bloqueia com 400 DATA_MIGRATION_AMBIGUOUS uma conexão não DATABASE_QUERY (NON_QUERY_CONNECTION) e um CALL com timeoutMs (HISTORICAL_CALL_TIMEOUT). Valida o grafo e os Behaviors resultantes. A entrada original não é alterada."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Architecture'
+      responses:
+        '200':
+          description: Documento convertido e relatório para confirmação pelo usuário.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [document, report]
+                properties:
+                  document: {$ref: '#/components/schemas/Architecture'}
+                  report:
+                    type: object
+                    additionalProperties: false
+                    required: [apiIds, databaseIds, notes]
+                    properties:
+                      apiIds: {type: array, items: {$ref: '#/components/schemas/Identifier'}}
+                      databaseIds: {type: array, items: {$ref: '#/components/schemas/Identifier'}}
+                      notes: {type: array, items: {type: string}}
+        '400': {$ref: '#/components/responses/BadRequest'}
+        '413': {$ref: '#/components/responses/PayloadTooLarge'}
+        '415': {$ref: '#/components/responses/UnsupportedMediaType'}
+        '500': {$ref: '#/components/responses/InternalError'}
   /api/v1/architectures/validate:
     post:
       tags:
@@ -515,6 +550,8 @@ components:
       - type
       - displayName
     Database:
+      description: 'DEPRECATED v0.6: tipo histórico aceito somente em documentos sem schemaVersion (leitura v0.1–v0.5) e convertido apenas por POST /api/v1/architectures/migrate-v6 (MIGRATION-V6-001). Novos modelos usam RELATIONAL_DATABASE, DOCUMENT_DATABASE ou KEY_VALUE_STORE.'
+      deprecated: true
       type: object
       additionalProperties: false
       properties:
@@ -640,6 +677,17 @@ components:
       - $ref: '#/components/schemas/EvaluateRuleActionV5'
       - $ref: '#/components/schemas/ScheduleTriggerActionV5'
       - $ref: '#/components/schemas/TransformActionV5'
+      - $ref: '#/components/schemas/DbSelectActionV6'
+      - $ref: '#/components/schemas/DbInsertActionV6'
+      - $ref: '#/components/schemas/DbUpdateActionV6'
+      - $ref: '#/components/schemas/DbDeleteActionV6'
+      - $ref: '#/components/schemas/DbGetActionV6'
+      - $ref: '#/components/schemas/DbPutActionV6'
+      - $ref: '#/components/schemas/DbFindActionV6'
+      - $ref: '#/components/schemas/DbBulkInsertActionV6'
+      - $ref: '#/components/schemas/EtlExtractActionV6'
+      - $ref: '#/components/schemas/EtlTransformActionV6'
+      - $ref: '#/components/schemas/EtlLoadActionV6'
       discriminator:
         propertyName: kind
         mapping:
@@ -668,6 +716,17 @@ components:
           EVALUATE_RULE: '#/components/schemas/EvaluateRuleActionV5'
           SCHEDULE_TRIGGER: '#/components/schemas/ScheduleTriggerActionV5'
           TRANSFORM: '#/components/schemas/TransformActionV5'
+          DB_SELECT: '#/components/schemas/DbSelectActionV6'
+          DB_INSERT: '#/components/schemas/DbInsertActionV6'
+          DB_UPDATE: '#/components/schemas/DbUpdateActionV6'
+          DB_DELETE: '#/components/schemas/DbDeleteActionV6'
+          DB_GET: '#/components/schemas/DbGetActionV6'
+          DB_PUT: '#/components/schemas/DbPutActionV6'
+          DB_FIND: '#/components/schemas/DbFindActionV6'
+          DB_BULK_INSERT: '#/components/schemas/DbBulkInsertActionV6'
+          ETL_EXTRACT: '#/components/schemas/EtlExtractActionV6'
+          ETL_TRANSFORM: '#/components/schemas/EtlTransformActionV6'
+          ETL_LOAD: '#/components/schemas/EtlLoadActionV6'
     ProcessAction:
       type: object
       additionalProperties: false
@@ -1261,7 +1320,304 @@ components:
           type: object
           maxProperties: 32
           additionalProperties: {type: string, maxLength: 256}
+    DataResourcePropertiesV6:
+      type: object
+      additionalProperties: false
+      required: [initialRecordCount, averageRecordBytes, readLatencyMs, writeLatencyMs, maxConcurrentOperations, connectionPoolSize, queueCapacity]
+      properties:
+        initialRecordCount: {type: integer, minimum: 0, maximum: 1000000}
+        averageRecordBytes: {type: integer, minimum: 1, maximum: 1048576}
+        readLatencyMs: {$ref: '#/components/schemas/DurationMs'}
+        writeLatencyMs: {$ref: '#/components/schemas/DurationMs'}
+        maxConcurrentOperations: {type: integer, minimum: 1, maximum: 1000}
+        connectionPoolSize: {type: integer, minimum: 1, maximum: 1000}
+        queueCapacity: {type: integer, minimum: 0, maximum: 10000}
+    DataOperationOutcomeV6:
+      type: object
+      additionalProperties: false
+      required: [operationId, actionId, componentId, resourceComponentId, connectionId, timestampMs, status, resultCode, readCount, writtenCount, rejectedCount, logicalBytes]
+      properties:
+        operationId: {$ref: '#/components/schemas/Identifier'}
+        parentOperationId: {$ref: '#/components/schemas/Identifier'}
+        actionId: {$ref: '#/components/schemas/Identifier'}
+        componentId: {$ref: '#/components/schemas/Identifier'}
+        resourceComponentId: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        timestampMs: {$ref: '#/components/schemas/DurationMs'}
+        startedAtMs: {$ref: '#/components/schemas/DurationMs'}
+        completedAtMs: {$ref: '#/components/schemas/DurationMs'}
+        queueWaitMs: {$ref: '#/components/schemas/DurationMs'}
+        processingMs: {$ref: '#/components/schemas/DurationMs'}
+        status: {type: string, enum: [SUCCEEDED, FAILED, TIMED_OUT, REJECTED, SKIPPED]}
+        resultCode: {type: string, enum: [FOUND, NOT_FOUND, INSERTED, UPDATED, DELETED, STORED, EXTRACTED, TRANSFORMED, LOADED, PARTIAL, FAILED, TIMED_OUT, LIMIT_EXCEEDED]}
+        readCount: {type: integer, minimum: 0, maximum: 1000000}
+        writtenCount: {type: integer, minimum: 0, maximum: 1000000}
+        rejectedCount: {type: integer, minimum: 0, maximum: 1000000}
+        normalizedCount: {type: integer, minimum: 0, maximum: 1000000}
+        transform: {type: string, enum: [IDENTITY, FILTER_VALID, NORMALIZE_METADATA]}
+        batchCount: {type: integer, minimum: 0, maximum: 1000, description: Logical ETL batches processed (ceil(records / batchSize)); additive in v0.6.}
+        batchSize: {type: integer, minimum: 1, maximum: 100000, description: Effective logical ETL batch size (Action override or ETL_PIPELINE property).}
+        logicalBytes: {type: integer, format: int64, minimum: 0, maximum: 1073741824}
+        errorCode: {type: string, maxLength: 128}
+    RelationalDatabaseV6:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type, dataProperties]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: RELATIONAL_DATABASE}
+        dataProperties: {$ref: '#/components/schemas/DataResourcePropertiesV6'}
+    DocumentDatabaseV6:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type, dataProperties]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: DOCUMENT_DATABASE}
+        dataProperties: {$ref: '#/components/schemas/DataResourcePropertiesV6'}
+    KeyValueStoreV6:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type, dataProperties]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: KEY_VALUE_STORE}
+        dataProperties: {$ref: '#/components/schemas/DataResourcePropertiesV6'}
+    EtlPipelineV6:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: ETL_PIPELINE}
+        batchSize: {type: integer, minimum: 1, maximum: 100000}
+        maxBatches: {type: integer, minimum: 1, maximum: 1000}
+        behaviors: {type: array, maxItems: 100, items: {$ref: '#/components/schemas/Behavior'}}
+    DataTransformerV6:
+      type: object
+      additionalProperties: false
+      required: [id, displayName, type]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        displayName: {$ref: '#/components/schemas/DisplayName'}
+        type: {type: string, const: DATA_TRANSFORMER}
+        transformCostPerRecordMs: {$ref: '#/components/schemas/DurationMs'}
+        behaviors: {type: array, maxItems: 100, items: {$ref: '#/components/schemas/Behavior'}}
+    DbSelectActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, collection]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: DB_SELECT}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+        collection: {type: string, minLength: 1, maxLength: 128}
+        key: {type: string, minLength: 1, maxLength: 256}
+        recordCount: {type: integer, minimum: 1, maximum: 100000}
+        averageRecordBytes: {type: integer, minimum: 1, maximum: 1048576}
+        field: {type: string, minLength: 1, maxLength: 128}
+        equals: {type: string, maxLength: 1024}
+        limit: {type: integer, minimum: 1, maximum: 100000}
+    DbInsertActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, key]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: DB_INSERT}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+        collection: {type: string, minLength: 1, maxLength: 128}
+        key: {type: string, minLength: 1, maxLength: 256}
+        recordCount: {type: integer, minimum: 1, maximum: 100000}
+        averageRecordBytes: {type: integer, minimum: 1, maximum: 1048576}
+        field: {type: string, minLength: 1, maxLength: 128}
+        equals: {type: string, maxLength: 1024}
+        limit: {type: integer, minimum: 1, maximum: 100000}
+    DbUpdateActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, key]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: DB_UPDATE}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+        collection: {type: string, minLength: 1, maxLength: 128}
+        key: {type: string, minLength: 1, maxLength: 256}
+        recordCount: {type: integer, minimum: 1, maximum: 100000}
+        averageRecordBytes: {type: integer, minimum: 1, maximum: 1048576}
+        field: {type: string, minLength: 1, maxLength: 128}
+        equals: {type: string, maxLength: 1024}
+        limit: {type: integer, minimum: 1, maximum: 100000}
+    DbDeleteActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, key]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: DB_DELETE}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+        collection: {type: string, minLength: 1, maxLength: 128}
+        key: {type: string, minLength: 1, maxLength: 256}
+        recordCount: {type: integer, minimum: 1, maximum: 100000}
+        averageRecordBytes: {type: integer, minimum: 1, maximum: 1048576}
+        field: {type: string, minLength: 1, maxLength: 128}
+        equals: {type: string, maxLength: 1024}
+        limit: {type: integer, minimum: 1, maximum: 100000}
+    DbGetActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, key]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: DB_GET}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+        collection: {type: string, minLength: 1, maxLength: 128}
+        key: {type: string, minLength: 1, maxLength: 256}
+        recordCount: {type: integer, minimum: 1, maximum: 100000}
+        averageRecordBytes: {type: integer, minimum: 1, maximum: 1048576}
+        field: {type: string, minLength: 1, maxLength: 128}
+        equals: {type: string, maxLength: 1024}
+        limit: {type: integer, minimum: 1, maximum: 100000}
+    DbPutActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, key]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: DB_PUT}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+        collection: {type: string, minLength: 1, maxLength: 128}
+        key: {type: string, minLength: 1, maxLength: 256}
+        recordCount: {type: integer, minimum: 1, maximum: 100000}
+        averageRecordBytes: {type: integer, minimum: 1, maximum: 1048576}
+        field: {type: string, minLength: 1, maxLength: 128}
+        equals: {type: string, maxLength: 1024}
+        limit: {type: integer, minimum: 1, maximum: 100000}
+    DbFindActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, field, equals]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: DB_FIND}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+        collection: {type: string, minLength: 1, maxLength: 128}
+        key: {type: string, minLength: 1, maxLength: 256}
+        recordCount: {type: integer, minimum: 1, maximum: 100000}
+        averageRecordBytes: {type: integer, minimum: 1, maximum: 1048576}
+        field: {type: string, minLength: 1, maxLength: 128}
+        equals: {type: string, maxLength: 1024}
+        limit: {type: integer, minimum: 1, maximum: 100000}
+    DbBulkInsertActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, recordCount]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: DB_BULK_INSERT}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        timeoutMs: {$ref: '#/components/schemas/DurationMs'}
+        collection: {type: string, minLength: 1, maxLength: 128}
+        key: {type: string, minLength: 1, maxLength: 256}
+        recordCount: {type: integer, minimum: 1, maximum: 100000}
+        averageRecordBytes: {type: integer, minimum: 1, maximum: 1048576}
+        field: {type: string, minLength: 1, maxLength: 128}
+        equals: {type: string, maxLength: 1024}
+        limit: {type: integer, minimum: 1, maximum: 100000}
+    EtlExtractActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: ETL_EXTRACT}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        batchSize: {type: integer, minimum: 1, maximum: 100000}
+        maxRecords: {type: integer, minimum: 1, maximum: 1000000}
+        transform: {type: string, enum: [IDENTITY, FILTER_VALID, NORMALIZE_METADATA]}
+    EtlTransformActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, inputRef, transform]
+      allOf:
+      - if:
+          properties:
+            transform: {const: FILTER_VALID}
+          required: [transform]
+        then:
+          required: [invalidRecordCount]
+          properties:
+            invalidRecordCount: {type: integer, minimum: 0, maximum: 1000000}
+        else:
+          properties:
+            invalidRecordCount: false
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: ETL_TRANSFORM}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        simulateFailure: {type: boolean, default: false}
+        invalidRecordCount: {type: integer, minimum: 0, maximum: 1000000, description: Required for FILTER_VALID; number of invalid records discarded from the input batch.}
+        batchSize: {type: integer, minimum: 1, maximum: 100000}
+        maxRecords: {type: integer, minimum: 1, maximum: 1000000}
+        transform: {type: string, enum: [IDENTITY, FILTER_VALID, NORMALIZE_METADATA]}
+    EtlLoadActionV6:
+      type: object
+      additionalProperties: false
+      required: [id, kind, connectionId, inputRef]
+      properties:
+        id: {$ref: '#/components/schemas/Identifier'}
+        kind: {type: string, const: ETL_LOAD}
+        dependsOn: {$ref: '#/components/schemas/ActionDependencies'}
+        outputRef: {$ref: '#/components/schemas/Identifier'}
+        inputRef: {$ref: '#/components/schemas/Identifier'}
+        connectionId: {$ref: '#/components/schemas/Identifier'}
+        batchSize: {type: integer, minimum: 1, maximum: 100000}
+        maxRecords: {type: integer, minimum: 1, maximum: 1000000}
+        transform: {type: string, enum: [IDENTITY, FILTER_VALID, NORMALIZE_METADATA]}
     Component:
+      description: União de leitura de /api/v1. Contém os tipos canônicos v0.6 (CanonicalComponentV6) e os históricos API e DATABASE (deprecated). A fronteira é o marcador Architecture.schemaVersion — com "0.6" somente CanonicalComponentV6 é aceito; sem marcador o documento é histórico (compatibilidade v0.1–v0.5) e a conversão é explícita via migrate-v6.
       oneOf:
       - $ref: '#/components/schemas/Client'
       - $ref: '#/components/schemas/WEB_BROWSERClient'
@@ -1270,7 +1626,7 @@ components:
       - $ref: '#/components/schemas/CLIClient'
       - $ref: '#/components/schemas/BOTClient'
       - $ref: '#/components/schemas/EMBEDDED_SYSTEMClient'
-      - $ref: '#/components/schemas/Api' # DEPRECATED: apenas importação de arquitetura histórica; reexportar SERVICE
+      - $ref: '#/components/schemas/Api'
       - $ref: '#/components/schemas/Database'
       - $ref: '#/components/schemas/Broker'
       - $ref: '#/components/schemas/ServiceV5'
@@ -1288,6 +1644,11 @@ components:
       - $ref: '#/components/schemas/SearchEngineV5'
       - $ref: '#/components/schemas/ServiceRegistryV5'
       - $ref: '#/components/schemas/RulesEngineV5'
+      - $ref: '#/components/schemas/RelationalDatabaseV6'
+      - $ref: '#/components/schemas/DocumentDatabaseV6'
+      - $ref: '#/components/schemas/KeyValueStoreV6'
+      - $ref: '#/components/schemas/EtlPipelineV6'
+      - $ref: '#/components/schemas/DataTransformerV6'
       discriminator:
         propertyName: type
         mapping:
@@ -1298,7 +1659,7 @@ components:
           CLI: '#/components/schemas/CLIClient'
           BOT: '#/components/schemas/BOTClient'
           EMBEDDED_SYSTEM: '#/components/schemas/EMBEDDED_SYSTEMClient'
-          API: '#/components/schemas/Api' # deprecated legacy import only
+          API: '#/components/schemas/Api'
           DATABASE: '#/components/schemas/Database'
           BROKER: '#/components/schemas/Broker'
           SERVICE: '#/components/schemas/ServiceV5'
@@ -1316,6 +1677,73 @@ components:
           SEARCH_ENGINE: '#/components/schemas/SearchEngineV5'
           SERVICE_REGISTRY: '#/components/schemas/ServiceRegistryV5'
           RULES_ENGINE: '#/components/schemas/RulesEngineV5'
+          RELATIONAL_DATABASE: '#/components/schemas/RelationalDatabaseV6'
+          DOCUMENT_DATABASE: '#/components/schemas/DocumentDatabaseV6'
+          KEY_VALUE_STORE: '#/components/schemas/KeyValueStoreV6'
+          ETL_PIPELINE: '#/components/schemas/EtlPipelineV6'
+          DATA_TRANSFORMER: '#/components/schemas/DataTransformerV6'
+    CanonicalComponentV6:
+      description: Componentes aceitos em uma Architecture com schemaVersion "0.6" (decisão 1, 2026-11-07). Exclui os tipos históricos API e DATABASE, que só aparecem em documentos sem schemaVersion e devem passar por migrate-v6.
+      oneOf:
+      - $ref: '#/components/schemas/Client'
+      - $ref: '#/components/schemas/WEB_BROWSERClient'
+      - $ref: '#/components/schemas/MOBILE_APPClient'
+      - $ref: '#/components/schemas/DESKTOP_APPClient'
+      - $ref: '#/components/schemas/CLIClient'
+      - $ref: '#/components/schemas/BOTClient'
+      - $ref: '#/components/schemas/EMBEDDED_SYSTEMClient'
+      - $ref: '#/components/schemas/Broker'
+      - $ref: '#/components/schemas/ServiceV5'
+      - $ref: '#/components/schemas/ApiGatewayV5'
+      - $ref: '#/components/schemas/BffV5'
+      - $ref: '#/components/schemas/WorkerV5'
+      - $ref: '#/components/schemas/SchedulerV5'
+      - $ref: '#/components/schemas/AuthenticationServiceV5'
+      - $ref: '#/components/schemas/WebhookReceiverV5'
+      - $ref: '#/components/schemas/OrchestratorServiceV5'
+      - $ref: '#/components/schemas/IntegrationBusV5'
+      - $ref: '#/components/schemas/CacheV5'
+      - $ref: '#/components/schemas/ObjectStorageV5'
+      - $ref: '#/components/schemas/NotificationServiceV5'
+      - $ref: '#/components/schemas/SearchEngineV5'
+      - $ref: '#/components/schemas/ServiceRegistryV5'
+      - $ref: '#/components/schemas/RulesEngineV5'
+      - $ref: '#/components/schemas/RelationalDatabaseV6'
+      - $ref: '#/components/schemas/DocumentDatabaseV6'
+      - $ref: '#/components/schemas/KeyValueStoreV6'
+      - $ref: '#/components/schemas/EtlPipelineV6'
+      - $ref: '#/components/schemas/DataTransformerV6'
+      discriminator:
+        propertyName: type
+        mapping:
+          CLIENT: '#/components/schemas/Client'
+          WEB_BROWSER: '#/components/schemas/WEB_BROWSERClient'
+          MOBILE_APP: '#/components/schemas/MOBILE_APPClient'
+          DESKTOP_APP: '#/components/schemas/DESKTOP_APPClient'
+          CLI: '#/components/schemas/CLIClient'
+          BOT: '#/components/schemas/BOTClient'
+          EMBEDDED_SYSTEM: '#/components/schemas/EMBEDDED_SYSTEMClient'
+          BROKER: '#/components/schemas/Broker'
+          SERVICE: '#/components/schemas/ServiceV5'
+          API_GATEWAY: '#/components/schemas/ApiGatewayV5'
+          BFF: '#/components/schemas/BffV5'
+          WORKER: '#/components/schemas/WorkerV5'
+          SCHEDULER: '#/components/schemas/SchedulerV5'
+          AUTHENTICATION_SERVICE: '#/components/schemas/AuthenticationServiceV5'
+          WEBHOOK_RECEIVER: '#/components/schemas/WebhookReceiverV5'
+          ORCHESTRATOR_SERVICE: '#/components/schemas/OrchestratorServiceV5'
+          INTEGRATION_BUS: '#/components/schemas/IntegrationBusV5'
+          CACHE: '#/components/schemas/CacheV5'
+          OBJECT_STORAGE: '#/components/schemas/ObjectStorageV5'
+          NOTIFICATION_SERVICE: '#/components/schemas/NotificationServiceV5'
+          SEARCH_ENGINE: '#/components/schemas/SearchEngineV5'
+          SERVICE_REGISTRY: '#/components/schemas/ServiceRegistryV5'
+          RULES_ENGINE: '#/components/schemas/RulesEngineV5'
+          RELATIONAL_DATABASE: '#/components/schemas/RelationalDatabaseV6'
+          DOCUMENT_DATABASE: '#/components/schemas/DocumentDatabaseV6'
+          KEY_VALUE_STORE: '#/components/schemas/KeyValueStoreV6'
+          ETL_PIPELINE: '#/components/schemas/EtlPipelineV6'
+          DATA_TRANSFORMER: '#/components/schemas/DataTransformerV6'
     ApiProcessingOverride:
       type: object
       additionalProperties: false
@@ -1358,7 +1786,18 @@ components:
     Architecture:
       type: object
       additionalProperties: false
+      allOf:
+      - if:
+          properties:
+            schemaVersion: {const: '0.6'}
+          required: [schemaVersion]
+        then:
+          properties:
+            components:
+              items:
+                $ref: '#/components/schemas/CanonicalComponentV6'
       properties:
+        schemaVersion: {type: string, const: '0.6'}
         components:
           type: array
           maxItems: 1000
@@ -1372,7 +1811,7 @@ components:
       required:
       - components
       - connections
-      description: Candidata à validação, podendo estar incompleta. Para criação v0.5 usar SERVICE (não API). Entrada histórica type API é tolerada somente pelo adaptador explícito de migração. Regras de topologia/ciclo aplicadas no
+      description: Candidata à validação, podendo estar incompleta. Para criação v0.6 usar SERVICE (não API) e bancos concretos P0 (não DATABASE). API e DATABASE históricos exigem adaptador explícito, fora do schema canônico. Regras de topologia/ciclo aplicadas no
         domínio.
     ApiExecution:
       type: object
@@ -1510,6 +1949,12 @@ components:
           - INVALID_SESSION_REFERENCE
           - UNBOUNDED_EXECUTION
           - EXECUTION_LIMIT_EXCEEDED
+          - DATA_COMPONENT_UNSUPPORTED
+          - DATA_ACTION_INCOMPATIBLE
+          - DATA_CONNECTION_INVALID
+          - DATA_OUTPUT_REF_INVALID
+          - DATA_LIMIT_EXCEEDED
+          - DATA_MIGRATION_AMBIGUOUS
           - LEGACY_SCENARIO_MIGRATION_REQUIRED
           - INVALID_COMPONENT_CAPABILITY
           - INVALID_RESOURCE_CONNECTION
@@ -1775,6 +2220,18 @@ components:
           - UNREGISTER_SERVICE
           - DISCOVER_SERVICE
           - EVALUATE_RULE
+          # v0.6: DB_* / ETL_* request and response messages carry the Action kind as intent.
+          - DB_SELECT
+          - DB_INSERT
+          - DB_UPDATE
+          - DB_DELETE
+          - DB_GET
+          - DB_PUT
+          - DB_FIND
+          - DB_BULK_INSERT
+          - ETL_EXTRACT
+          - ETL_TRANSFORM
+          - ETL_LOAD
         correlation: {$ref: '#/components/schemas/Correlation'}
       required:
       - sequence
@@ -1816,6 +2273,11 @@ components:
           - DATABASE_PROCESSING
           - API_MESSAGE_PROCESSING
           - VIRTUAL_RESOURCE_PROCESSING
+          # v0.6 logical data processing on the unified virtual clock
+          - DATA_OPERATION
+          - ETL_EXTRACT
+          - ETL_TRANSFORM
+          - ETL_LOAD
         correlation: {$ref: '#/components/schemas/Correlation'}
       required:
       - sequence
@@ -1878,7 +2340,11 @@ components:
           - {type: 'null'}
         status: {type: string, enum: [STARTED, COMPLETED, FAILED, TIMED_OUT, SKIPPED]}
         cause: {type: string, minLength: 1, maxLength: 128}
-        outcome: {$ref: '#/components/schemas/ResourceOutcomeV5'}
+        outcome:
+          description: v0.5 virtual-resource outcome, or (v0.6) the same DataOperationOutcomeV6 published in dataOutcomes for DB_* and ETL_* Actions.
+          oneOf:
+          - {$ref: '#/components/schemas/ResourceOutcomeV5'}
+          - {$ref: '#/components/schemas/DataOperationOutcomeV6'}
         correlation: {$ref: '#/components/schemas/Correlation'}
     CommunicationActivity:
       type: object
@@ -1937,6 +2403,11 @@ components:
           - DATABASE_PROCESSING
           - API_MESSAGE_PROCESSING
           - VIRTUAL_RESOURCE_PROCESSING
+          # v0.6 logical data processing
+          - DATA_OPERATION
+          - ETL_EXTRACT
+          - ETL_TRANSFORM
+          - ETL_LOAD
         startMs: *id005
         endMs: *id006
         durationMs: *id007
@@ -2162,6 +2633,11 @@ components:
           maxItems: 1000
           default: []
           items: {$ref: '#/components/schemas/ResourceState'}
+        dataOutcomes:
+          type: array
+          maxItems: 50000
+          default: []
+          items: {$ref: '#/components/schemas/DataOperationOutcomeV6'}
         resourceOutcomes:
           type: array
           maxItems: 50000

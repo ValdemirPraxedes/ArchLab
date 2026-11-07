@@ -1,0 +1,133 @@
+{
+  "id": "CT-6-08",
+  "title": "Arquivo legado cuja conversão mudaria a semântica falha com diagnóstico; nada é convertido implicitamente e o canvas anterior não muda.",
+  "cases": [
+    {
+      "name": "call-with-timeout",
+      "endpoint": "/api/v1/architectures/migrate-v6",
+      "replay": true,
+      "request": {
+        "components": [
+          {
+            "id": "client",
+            "type": "CLIENT",
+            "displayName": "Client"
+          },
+          {
+            "id": "service",
+            "type": "SERVICE",
+            "displayName": "Service",
+            "behaviors": [
+              {
+                "id": "handle",
+                "trigger": "REQUEST_RECEIVED",
+                "actions": [
+                  {
+                    "id": "legacy-call",
+                    "kind": "CALL",
+                    "connectionId": "data",
+                    "timeoutMs": 5
+                  },
+                  {
+                    "id": "respond",
+                    "kind": "RESPOND",
+                    "dependsOn": [
+                      "legacy-call"
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "id": "db",
+            "type": "DATABASE",
+            "displayName": "Orders DB",
+            "processingMs": 3
+          }
+        ],
+        "connections": [
+          {
+            "id": "entry",
+            "sourceId": "client",
+            "targetId": "service",
+            "integration": {
+              "kind": "HTTP_REST"
+            }
+          },
+          {
+            "id": "data",
+            "sourceId": "service",
+            "targetId": "db",
+            "integration": {
+              "kind": "DATABASE_QUERY"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": 400,
+        "fields": {
+          "/code": "DATA_MIGRATION_AMBIGUOUS",
+          "/violations/0/path": "components[1].behaviors[0].actions[0]",
+          "/violations/0/details/componentId": "db",
+          "/violations/0/details/reason": "HISTORICAL_CALL_TIMEOUT"
+        },
+        "bodyContains": [
+          "data-migration-ambiguous"
+        ]
+      }
+    },
+    {
+      "name": "non-query-connection",
+      "endpoint": "/api/v1/architectures/migrate-v6",
+      "replay": true,
+      "request": {
+        "components": [
+          {
+            "id": "client",
+            "type": "CLIENT",
+            "displayName": "Client"
+          },
+          {
+            "id": "service",
+            "type": "SERVICE",
+            "displayName": "Service"
+          },
+          {
+            "id": "db",
+            "type": "DATABASE",
+            "displayName": "Orders DB",
+            "processingMs": 3
+          }
+        ],
+        "connections": [
+          {
+            "id": "entry",
+            "sourceId": "client",
+            "targetId": "service",
+            "integration": {
+              "kind": "HTTP_REST"
+            }
+          },
+          {
+            "id": "data",
+            "sourceId": "service",
+            "targetId": "db",
+            "integration": {
+              "kind": "HTTP_REST"
+            }
+          }
+        ]
+      },
+      "expect": {
+        "status": 400,
+        "fields": {
+          "/code": "DATA_MIGRATION_AMBIGUOUS",
+          "/violations/0/path": "connections[1].integration",
+          "/violations/0/details/reason": "NON_QUERY_CONNECTION"
+        }
+      }
+    }
+  ]
+}

@@ -33,6 +33,7 @@ public class ArchitectureController {
     private final SimulationResponseMapper responseMapper;
     private final V2RequestMapper canonicalMapper;
     private final V2ResponseMapper canonicalResponses;
+    private final ArchitectureMigrationServiceV6 migrationV6;
     private final ArchitectureValidator validator = new ArchitectureValidator();
     private final ArchitectureGraphValidatorV2 canonicalGraph = new ArchitectureGraphValidatorV2();
     private final ScenarioValidatorV2 canonicalScenarios = new ScenarioValidatorV2();
@@ -40,11 +41,18 @@ public class ArchitectureController {
     private final SimulationEngine engine = new SimulationEngine();
 
     public ArchitectureController(ArchitectureRequestMapper mapper, SimulationResponseMapper responseMapper,
-                                  V2RequestMapper canonicalMapper, V2ResponseMapper canonicalResponses) {
+                                  V2RequestMapper canonicalMapper, V2ResponseMapper canonicalResponses,
+                                  ArchitectureMigrationServiceV6 migrationV6) {
         this.mapper = mapper;
         this.responseMapper = responseMapper;
         this.canonicalMapper = canonicalMapper;
         this.canonicalResponses = canonicalResponses;
+        this.migrationV6 = migrationV6;
+    }
+
+    @PostMapping(path = "/architectures/migrate-v6", produces = MediaType.APPLICATION_JSON_VALUE)
+    public ArchitectureMigrationServiceV6.Result migrateV6(@RequestBody JsonNode input) {
+        return migrationV6.migrate(input);
     }
 
     @PostMapping(path = "/architectures/validate", produces = MediaType.APPLICATION_JSON_VALUE)

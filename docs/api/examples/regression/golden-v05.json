@@ -1,0 +1,1627 @@
+{
+ "id": "GOLDEN-V05",
+ "baseline": "origin/main 5e6ae09b (v0.5 release)",
+ "canonical": "recursively sorted keys, no whitespace",
+ "calls": [
+  {
+   "entry": "ac4964a91022",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "ac4964a91022",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "ac4964a91022",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "b49a4d053967c3ce2884080a4f447b8c47e62eb0ff1206c7ff08a80ea665854c"
+  },
+  {
+   "entry": "ac4964a91022",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "ac4964a91022",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "ac4964a91022",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "afff7938963a",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "afff7938963a",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "afff7938963a",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "b49a4d053967c3ce2884080a4f447b8c47e62eb0ff1206c7ff08a80ea665854c"
+  },
+  {
+   "entry": "afff7938963a",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "afff7938963a",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "afff7938963a",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "06799439feca",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "06799439feca",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "06799439feca",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "ed2be466928a5291a0b5f7e4dc0c0f4f023c804c229bfe3196950b394484ff15"
+  },
+  {
+   "entry": "06799439feca",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "06799439feca",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "06799439feca",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "eaa6fd494387",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "4d535f84330ffa0f7a1aa1f6d7a6cdb49b5c608dd110998116f6213712628eea"
+  },
+  {
+   "entry": "eaa6fd494387",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "eaa6fd494387",
+   "endpoint": "/api/v1/simulations",
+   "status": 422,
+   "sha256": "ad91dea6f4fc2315530f04175a618694c8cc3a2e1cac963016afaabd34707859"
+  },
+  {
+   "entry": "eaa6fd494387",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "eaa6fd494387",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "eaa6fd494387",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "998ca989df02",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "998ca989df02",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "998ca989df02",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "b49a4d053967c3ce2884080a4f447b8c47e62eb0ff1206c7ff08a80ea665854c"
+  },
+  {
+   "entry": "998ca989df02",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "998ca989df02",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "998ca989df02",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "8989d1bca3be",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "8989d1bca3be",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "8989d1bca3be",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "b49a4d053967c3ce2884080a4f447b8c47e62eb0ff1206c7ff08a80ea665854c"
+  },
+  {
+   "entry": "8989d1bca3be",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "8989d1bca3be",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "8989d1bca3be",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "dfb8f8287126",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "dfb8f8287126",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "dfb8f8287126",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "d3fe143ef56a24da78ab0f95fbb21c1c41a3165851f8594780815397040621cb"
+  },
+  {
+   "entry": "dfb8f8287126",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "dfb8f8287126",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "dfb8f8287126",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "fe97fa6d8ae1",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "fe97fa6d8ae1",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "fe97fa6d8ae1",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "e5dbfcedb14dfe73017a817ff0537f2f4eed55cf3d1bb5f3a740b7b9a9b24cc5"
+  },
+  {
+   "entry": "fe97fa6d8ae1",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "fe97fa6d8ae1",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "fe97fa6d8ae1",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "7b2e7f8399fc",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "7b2e7f8399fc",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "7b2e7f8399fc",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "1d73634a6ee1b76a2b2a43f92a15004ec0b0622a483ed2ae9a9c09363ed7198e"
+  },
+  {
+   "entry": "7b2e7f8399fc",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "7b2e7f8399fc",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "7b2e7f8399fc",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "cde21b2803f8",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "cde21b2803f8",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "cde21b2803f8",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "df3fdd4c4bae0c58169da3110055862a94e003cbeca3f1caac65b9e8018d2e30"
+  },
+  {
+   "entry": "cde21b2803f8",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "cde21b2803f8",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "cde21b2803f8",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "45d9ecb0140b",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "45d9ecb0140b",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "45d9ecb0140b",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "3c1f8c228243f120c50985fad36903634194aafdf1f81b127d9e66b4c4bdda1f"
+  },
+  {
+   "entry": "45d9ecb0140b",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "45d9ecb0140b",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "45d9ecb0140b",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "1f2d0a2c64f4",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "1f2d0a2c64f4",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "1f2d0a2c64f4",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "fd5bbe6ee40e3988fba6aadca7dcd96ee0ba87ef8adf30249590442f05993bfa"
+  },
+  {
+   "entry": "1f2d0a2c64f4",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "1f2d0a2c64f4",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "1f2d0a2c64f4",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "355a941f3715",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "355a941f3715",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "355a941f3715",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "53789cf2e23b4d8dbfc8fc754c1b6fec20978b8535fc2acf9463815896089608"
+  },
+  {
+   "entry": "355a941f3715",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "355a941f3715",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "355a941f3715",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "40e119cf187c",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "40e119cf187c",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "40e119cf187c",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "3f13f70ebd7d77afec74a3b9172bfb0c3bbf94e7402584bc94b47c2a2a23f065"
+  },
+  {
+   "entry": "40e119cf187c",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "40e119cf187c",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "40e119cf187c",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "da2e25bb5349",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "da2e25bb5349",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "da2e25bb5349",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "d8d3ffb6f21679da39ce3cf20cde8a6c513f91d0bcd8579d36ea0dcb7772118d"
+  },
+  {
+   "entry": "da2e25bb5349",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "da2e25bb5349",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "da2e25bb5349",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "6db15af14ce5",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "6db15af14ce5",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "6db15af14ce5",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "34a5889ae5090633c41cedf13d5370da4abce797dd75dbf235556fa6e115f6d4"
+  },
+  {
+   "entry": "6db15af14ce5",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "6db15af14ce5",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "6db15af14ce5",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "d21329fd8302",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "d21329fd8302",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "d21329fd8302",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "2b3a0b997ff7c7bd5b12a4a3c4144062b0f4dd05cb38b4843e8b1ac18801386c"
+  },
+  {
+   "entry": "d21329fd8302",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "d21329fd8302",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "d21329fd8302",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "bff34cf984f6",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "bff34cf984f6",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "bff34cf984f6",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "5502e3f4bf39d836d803c034427e91e8255661947d5f116f21cc00a095f82182"
+  },
+  {
+   "entry": "bff34cf984f6",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "bff34cf984f6",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "bff34cf984f6",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "f842d208ab5a",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "24f8c2d1303c819834e94b766b50466f679944eb7d4a39561d77ce519cdd0b73"
+  },
+  {
+   "entry": "f842d208ab5a",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "f842d208ab5a",
+   "endpoint": "/api/v1/simulations",
+   "status": 422,
+   "sha256": "53f1541ae4f96430dc90c19ed2993deefd2970223ea47bacfa02b3f9f73c889f"
+  },
+  {
+   "entry": "f842d208ab5a",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "f842d208ab5a",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "f842d208ab5a",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "ebd8c0be4385",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "ebd8c0be4385",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "ebd8c0be4385",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "b49a4d053967c3ce2884080a4f447b8c47e62eb0ff1206c7ff08a80ea665854c"
+  },
+  {
+   "entry": "ebd8c0be4385",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "ebd8c0be4385",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "ebd8c0be4385",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "9b0fa53df4bd",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "9b0fa53df4bd",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "9b0fa53df4bd",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "b49a4d053967c3ce2884080a4f447b8c47e62eb0ff1206c7ff08a80ea665854c"
+  },
+  {
+   "entry": "9b0fa53df4bd",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "9b0fa53df4bd",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "9b0fa53df4bd",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "8e4abd8bd7b2",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "8e4abd8bd7b2",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "8e4abd8bd7b2",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "b49a4d053967c3ce2884080a4f447b8c47e62eb0ff1206c7ff08a80ea665854c"
+  },
+  {
+   "entry": "8e4abd8bd7b2",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "8e4abd8bd7b2",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "8e4abd8bd7b2",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "f3b68cd30f85",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "9795ab8e498de9960fc85940e124eb3461e2dc63961c2292d3b3b1282aa710fa"
+  },
+  {
+   "entry": "f3b68cd30f85",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "f3b68cd30f85",
+   "endpoint": "/api/v1/simulations",
+   "status": 422,
+   "sha256": "e7b74e5ad434fe65820487060c66c8f585649f5d45ce0a742939758febfca45e"
+  },
+  {
+   "entry": "f3b68cd30f85",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "f3b68cd30f85",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "f3b68cd30f85",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "ff2581b76746",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "ff2581b76746",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "ff2581b76746",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "1a2629821389b75c572ebfe219f4688f0bb7fc99d5ab689453bb12c236fd75f7"
+  },
+  {
+   "entry": "ff2581b76746",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "ff2581b76746",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "ff2581b76746",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "6da7d870d92a",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "6da7d870d92a",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "6da7d870d92a",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "18af40f659399ae95ff1004c1fdbeecf04c15935d1dbb5fa175e2f749ed8ee5e"
+  },
+  {
+   "entry": "6da7d870d92a",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "6da7d870d92a",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "6da7d870d92a",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "3911cdffa0df",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "3911cdffa0df",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "3911cdffa0df",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "9c8020c93d923604d949f6b869dbce4e78c707d3f9a69be3fca445f89d0c07d5"
+  },
+  {
+   "entry": "3911cdffa0df",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "3911cdffa0df",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "3911cdffa0df",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "6277fae8e1a5",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "6277fae8e1a5",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "6277fae8e1a5",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "2c28c99a666f00dbe0caec2076e3eade7fe93ba2586d69ae093bcdb35f6d226a"
+  },
+  {
+   "entry": "6277fae8e1a5",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "6277fae8e1a5",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "6277fae8e1a5",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "a81739bc95e5",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "a81739bc95e5",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "a81739bc95e5",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "843063ca3056bad6259d1d133421885e4f3e6ea218bd8c6bf99310219425acba"
+  },
+  {
+   "entry": "a81739bc95e5",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "a81739bc95e5",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "a81739bc95e5",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "4aba6044773e",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "4aba6044773e",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "4aba6044773e",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "38ba47d8077227217880f272db5866a2a4df3bb5abf141e778fe5ec5cc1f525d"
+  },
+  {
+   "entry": "4aba6044773e",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "4aba6044773e",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "4aba6044773e",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "33c16b17b83e",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "33c16b17b83e",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "33c16b17b83e",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "5b396d1c1d20a2e5d620af8e5931642a66a59508e1814ecd9d8edf21f913526a"
+  },
+  {
+   "entry": "33c16b17b83e",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "33c16b17b83e",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "33c16b17b83e",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "f1ae39d06494",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "f1ae39d06494",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "f1ae39d06494",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "1782fd58d21eb6db8ec74d0cbe262c3d1ad5d262cd7e4a0d0882db5852b8b02b"
+  },
+  {
+   "entry": "f1ae39d06494",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "f1ae39d06494",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "f1ae39d06494",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "5f31cc1d4bcc",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "5f31cc1d4bcc",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "d9212aab39ac82428e468436c91a720a0b1f1f72b448a6492d33eed9ea2b4a20"
+  },
+  {
+   "entry": "5f31cc1d4bcc",
+   "endpoint": "/api/v1/simulations",
+   "status": 422,
+   "sha256": "ea85f0c23d45586a83d06833ee2eab8190281a1c579f00f7af947f4ba20a01cf"
+  },
+  {
+   "entry": "5f31cc1d4bcc",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "5f31cc1d4bcc",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "5f31cc1d4bcc",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "2d7bd0b87e5e",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "2d7bd0b87e5e",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "2d7bd0b87e5e",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "217abd54173d3ab0200b7eec1bc31d918dc8b9d436d695de8fe97285e59e12df"
+  },
+  {
+   "entry": "2d7bd0b87e5e",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "2d7bd0b87e5e",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "2d7bd0b87e5e",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "90b925bef209",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "90b925bef209",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "fa71a696b33fe092311102f5cb29d8082390ea052e64197de3518868485d9703"
+  },
+  {
+   "entry": "90b925bef209",
+   "endpoint": "/api/v1/simulations",
+   "status": 422,
+   "sha256": "5f0d494e620bf82ad2188768641a4d32daae345173cfa8954f3df148ef5c939a"
+  },
+  {
+   "entry": "90b925bef209",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "90b925bef209",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "90b925bef209",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "65b1684e5c02",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "65b1684e5c02",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "65b1684e5c02",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "8ff43df362c0f719b06d28dcd2e2dab3a98a9ca39eaa8daf7325cfb4d3276144"
+  },
+  {
+   "entry": "65b1684e5c02",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "65b1684e5c02",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "65b1684e5c02",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "53b32619e7ce",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "53b32619e7ce",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "53b32619e7ce",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "56483fc8f063e92c9bfdb011664c0eab186b537fa894ce0ac61b59ac113d3a90"
+  },
+  {
+   "entry": "53b32619e7ce",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "53b32619e7ce",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "53b32619e7ce",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "780aaaebbaa1",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "780aaaebbaa1",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "780aaaebbaa1",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "643e9bfcd29fa9c9a799e46807d06a2354a7ff34e2811360815b82aa2573b709"
+  },
+  {
+   "entry": "780aaaebbaa1",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "780aaaebbaa1",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "780aaaebbaa1",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "bd76b7561b7d",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "bd76b7561b7d",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "bd76b7561b7d",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "6bc247071061564547e761eb56ee3664a56cdf4121f25bb32f8c621d381b4be5"
+  },
+  {
+   "entry": "bd76b7561b7d",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "bd76b7561b7d",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "bd76b7561b7d",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "9071b16fc0d7",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "9071b16fc0d7",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "9071b16fc0d7",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "707d6abfc0d222f8f3fe8228f5fdd888c629e6b74a1c6632d1063c5b6ccbdcbb"
+  },
+  {
+   "entry": "9071b16fc0d7",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "9071b16fc0d7",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "9071b16fc0d7",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "cadb0c3029f7",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "cadb0c3029f7",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "cadb0c3029f7",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "b49a4d053967c3ce2884080a4f447b8c47e62eb0ff1206c7ff08a80ea665854c"
+  },
+  {
+   "entry": "cadb0c3029f7",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "cadb0c3029f7",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "cadb0c3029f7",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "730a37bcb540",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "730a37bcb540",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "09b3425749f85f87bc64a7e095c215ecb21cadc27cf486713ae5c61cb1a4bb98"
+  },
+  {
+   "entry": "730a37bcb540",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "ebb202f3b3aff0545c646ec184a1e1b704db862484366ae76e5e2f200c181ac8"
+  },
+  {
+   "entry": "730a37bcb540",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "730a37bcb540",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "730a37bcb540",
+   "endpoint": "/api/v2/simulations",
+   "status": 200,
+   "sha256": "ae18ac9147f83dd5901cbcace6c45d69e2025d84706daea8620d58956e169004"
+  },
+  {
+   "entry": "46ffb85831de",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "46ffb85831de",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 400,
+   "sha256": "7275a42840771a66d54928adaa5d1ce43b05953da07a408fb75d6d1fc6e34310"
+  },
+  {
+   "entry": "46ffb85831de",
+   "endpoint": "/api/v1/simulations",
+   "status": 400,
+   "sha256": "b49a4d053967c3ce2884080a4f447b8c47e62eb0ff1206c7ff08a80ea665854c"
+  },
+  {
+   "entry": "46ffb85831de",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "46ffb85831de",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "46ffb85831de",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "19c913263ece",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "19c913263ece",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "19c913263ece",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "33d8d5f684f13b56416f12f7786562b460ad4f3ee94a7fa64329bf59c4466801"
+  },
+  {
+   "entry": "19c913263ece",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "19c913263ece",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "19c913263ece",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "3295c3b34a25",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "3295c3b34a25",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "3295c3b34a25",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "ca903f7c3dded1ad07b52706d8f8b5d8b31805311c74891e183ac95229efde0d"
+  },
+  {
+   "entry": "3295c3b34a25",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "3295c3b34a25",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "3295c3b34a25",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  },
+  {
+   "entry": "737580d4ef1a",
+   "endpoint": "/api/v1/architectures/validate",
+   "status": 400,
+   "sha256": "7e1c45756dfadf67e48edfc6584884af7b4eacf3e56e376e39f633af18454353"
+  },
+  {
+   "entry": "737580d4ef1a",
+   "endpoint": "/api/v1/scenarios/validate",
+   "status": 200,
+   "sha256": "a3db1172e1f6ffbceb16375383c0947e936c9af226a82390ba93680481af5bc8"
+  },
+  {
+   "entry": "737580d4ef1a",
+   "endpoint": "/api/v1/simulations",
+   "status": 200,
+   "sha256": "3fa49492d4ee3bdeeb8e7a967d4b2aee6e7e6deef80d37e6b796dc9a3ed69c9f"
+  },
+  {
+   "entry": "737580d4ef1a",
+   "endpoint": "/api/v2/architectures/validate",
+   "status": 400,
+   "sha256": "5387969386183f1e95d363b4b29652e9c41db91adf871f9d9400d2192c76d62e"
+  },
+  {
+   "entry": "737580d4ef1a",
+   "endpoint": "/api/v2/scenarios/validate",
+   "status": 400,
+   "sha256": "cc949fbe054898b84a968c719ef4ed90e1b8b4fbcc2defaf4d0e40a34214a235"
+  },
+  {
+   "entry": "737580d4ef1a",
+   "endpoint": "/api/v2/simulations",
+   "status": 400,
+   "sha256": "0090ee9b37951450eaf55fe22cf3afb569fc1e5fd23d757e4e766c23a8315d22"
+  }
+ ]
+}

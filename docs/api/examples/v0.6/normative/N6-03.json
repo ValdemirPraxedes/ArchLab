@@ -1,0 +1,148 @@
+{
+  "id": "N6-03",
+  "title": "Limite de bytes lógicos (1 GiB): substituição libera os bytes anteriores; DELETE devolve espaço. 'over' e 'replace' dependem só de 'fill' e executam em ordem FIFO no pool 1.",
+  "cases": [
+    {
+      "name": "byte-limit-replace-delete",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "fill",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "key": "a"
+                    },
+                    {
+                      "id": "over",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "key": "b",
+                      "dependsOn": [
+                        "fill"
+                      ]
+                    },
+                    {
+                      "id": "replace",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "key": "a",
+                      "dependsOn": [
+                        "fill"
+                      ]
+                    },
+                    {
+                      "id": "free",
+                      "kind": "DB_DELETE",
+                      "connectionId": "data",
+                      "key": "a",
+                      "dependsOn": [
+                        "replace"
+                      ]
+                    },
+                    {
+                      "id": "again",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "key": "b",
+                      "dependsOn": [
+                        "free"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 1023,
+                "averageRecordBytes": 1048576,
+                "readLatencyMs": 0,
+                "writeLatencyMs": 0,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "fill",
+            "resultCode": "STORED",
+            "logicalBytes": 1048576
+          },
+          {
+            "actionId": "over",
+            "status": "FAILED",
+            "resultCode": "LIMIT_EXCEEDED",
+            "errorCode": "DATA_LIMIT_EXCEEDED",
+            "writtenCount": 0
+          },
+          {
+            "actionId": "replace",
+            "resultCode": "STORED"
+          },
+          {
+            "actionId": "free",
+            "resultCode": "DELETED",
+            "logicalBytes": 1048576
+          },
+          {
+            "actionId": "again",
+            "resultCode": "STORED"
+          }
+        ]
+      }
+    }
+  ]
+}

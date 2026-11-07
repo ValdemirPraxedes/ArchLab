@@ -1,0 +1,53 @@
+name: OpenAPI v0.6 Validation
+on:
+  pull_request:
+    paths:
+      - 'docs/api/**'
+      - 'frontend/**'
+      - '.github/workflows/openapi-v06-validation.yml'
+  push:
+    paths:
+      - 'docs/api/**'
+      - 'frontend/**'
+      - '.github/workflows/openapi-v06-validation.yml'
+  workflow_dispatch:
+
+jobs:
+  schema-fixtures:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Lint OpenAPI 3.1 contract (errors fail; 2 known warnings documented in API-V6-001)
+        run: npx --yes @redocly/cli@2.76.0 lint docs/api/openapi.yaml
+      - name: Install v0.6 fixture validator dependencies
+        working-directory: docs/api/examples/v0.6
+        run: npm install --no-audit --no-fund
+      - name: Validate v0.6 schemas and fixtures
+        working-directory: docs/api/examples/v0.6
+        run: npm run validate
+      - name: Install historical fixture validator
+        working-directory: docs/api/examples/v0.4
+        run: npm ci --no-audit --no-fund
+      - name: Validate historical fixtures
+        working-directory: docs/api/examples/v0.4
+        run: npm run validate
+
+  type-generation:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install frontend dependencies
+        working-directory: frontend
+        run: npm install --no-audit --no-fund
+      - name: Generate OpenAPI TypeScript clients
+        working-directory: frontend
+        run: npm run typegen
+      - name: Check TypeScript and build
+        working-directory: frontend
+        run: npm run build

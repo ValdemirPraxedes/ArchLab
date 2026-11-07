@@ -1,0 +1,270 @@
+{
+  "schemaVersion": "0.6",
+  "components": [
+    {
+      "id": "client",
+      "type": "WEB_BROWSER",
+      "displayName": "Client"
+    },
+    {
+      "id": "scheduler",
+      "type": "SCHEDULER",
+      "displayName": "Scheduler",
+      "schedules": [
+        {
+          "id": "nightly",
+          "firstAtMs": 5,
+          "intervalMs": 5,
+          "occurrenceCount": 1,
+          "behaviorId": "tick"
+        }
+      ],
+      "behaviors": [
+        {
+          "id": "start",
+          "trigger": "REQUEST_RECEIVED",
+          "actions": [
+            {
+              "id": "plan",
+              "kind": "SCHEDULE_TRIGGER",
+              "scheduleId": "nightly"
+            },
+            {
+              "id": "respond",
+              "kind": "RESPOND",
+              "dependsOn": [
+                "plan"
+              ],
+              "statusCode": 202
+            }
+          ]
+        },
+        {
+          "id": "tick",
+          "trigger": "SCHEDULED_TRIGGER",
+          "actions": [
+            {
+              "id": "call",
+              "kind": "CALL",
+              "connectionId": "scheduler-etl"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "etl",
+      "type": "ETL_PIPELINE",
+      "displayName": "ETL",
+      "batchSize": 5,
+      "maxBatches": 3,
+      "behaviors": [
+        {
+          "id": "run",
+          "trigger": "REQUEST_RECEIVED",
+          "actions": [
+            {
+              "id": "extract",
+              "kind": "ETL_EXTRACT",
+              "connectionId": "source-edge",
+              "outputRef": "raw"
+            },
+            {
+              "id": "transform",
+              "kind": "ETL_TRANSFORM",
+              "connectionId": "transform-edge",
+              "inputRef": "raw",
+              "dependsOn": [
+                "extract"
+              ],
+              "outputRef": "clean",
+              "simulateFailure": false,
+              "transform": "FILTER_VALID",
+              "invalidRecordCount": 2
+            },
+            {
+              "id": "load",
+              "kind": "ETL_LOAD",
+              "connectionId": "target-edge",
+              "inputRef": "clean",
+              "dependsOn": [
+                "transform"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "source",
+      "type": "DOCUMENT_DATABASE",
+      "displayName": "source",
+      "dataProperties": {
+        "initialRecordCount": 12,
+        "averageRecordBytes": 128,
+        "readLatencyMs": 2,
+        "writeLatencyMs": 3,
+        "maxConcurrentOperations": 1,
+        "connectionPoolSize": 1,
+        "queueCapacity": 2
+      }
+    },
+    {
+      "id": "transformer",
+      "type": "DATA_TRANSFORMER",
+      "displayName": "Transformer",
+      "transformCostPerRecordMs": 1,
+      "behaviors": []
+    },
+    {
+      "id": "target",
+      "type": "RELATIONAL_DATABASE",
+      "displayName": "target",
+      "dataProperties": {
+        "initialRecordCount": 0,
+        "averageRecordBytes": 128,
+        "readLatencyMs": 2,
+        "writeLatencyMs": 3,
+        "maxConcurrentOperations": 1,
+        "connectionPoolSize": 1,
+        "queueCapacity": 2
+      }
+    },
+    {
+      "id": "orders-api",
+      "type": "SERVICE",
+      "displayName": "Orders API",
+      "behaviors": [
+        {
+          "id": "handle",
+          "trigger": "REQUEST_RECEIVED",
+          "actions": [
+            {
+              "id": "cache-miss",
+              "kind": "DB_GET",
+              "connectionId": "orders-kv",
+              "key": "order:1"
+            },
+            {
+              "id": "insert",
+              "kind": "DB_INSERT",
+              "connectionId": "orders-target",
+              "dependsOn": [
+                "cache-miss"
+              ],
+              "collection": "orders",
+              "key": "order:1"
+            },
+            {
+              "id": "respond",
+              "kind": "RESPOND",
+              "dependsOn": [
+                "insert"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sessions",
+      "type": "KEY_VALUE_STORE",
+      "displayName": "Sessions",
+      "dataProperties": {
+        "initialRecordCount": 0,
+        "averageRecordBytes": 64,
+        "readLatencyMs": 1,
+        "writeLatencyMs": 1,
+        "maxConcurrentOperations": 4,
+        "connectionPoolSize": 4,
+        "queueCapacity": 8
+      }
+    }
+  ],
+  "connections": [
+    {
+      "id": "entry",
+      "sourceId": "client",
+      "targetId": "scheduler",
+      "latencyMs": 1,
+      "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+          "method": "POST",
+          "path": "/schedule"
+        },
+        "response": {
+          "statusCode": 202
+        }
+      }
+    },
+    {
+      "id": "scheduler-etl",
+      "sourceId": "scheduler",
+      "targetId": "etl",
+      "latencyMs": 1,
+      "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+          "method": "POST",
+          "path": "/etl/run"
+        },
+        "response": {
+          "statusCode": 200
+        }
+      }
+    },
+    {
+      "id": "source-edge",
+      "sourceId": "etl",
+      "targetId": "source",
+      "latencyMs": 1,
+      "integration": {
+        "kind": "DATABASE_QUERY"
+      }
+    },
+    {
+      "id": "transform-edge",
+      "sourceId": "etl",
+      "targetId": "transformer",
+      "latencyMs": 1,
+      "integration": {
+        "kind": "HTTP_REST",
+        "request": {
+          "method": "POST",
+          "path": "/transform"
+        },
+        "response": {
+          "statusCode": 200
+        }
+      }
+    },
+    {
+      "id": "target-edge",
+      "sourceId": "etl",
+      "targetId": "target",
+      "latencyMs": 1,
+      "integration": {
+        "kind": "DATABASE_QUERY"
+      }
+    },
+    {
+      "id": "orders-kv",
+      "sourceId": "orders-api",
+      "targetId": "sessions",
+      "latencyMs": 1,
+      "integration": {
+        "kind": "DATABASE_QUERY"
+      }
+    },
+    {
+      "id": "orders-target",
+      "sourceId": "orders-api",
+      "targetId": "target",
+      "latencyMs": 1,
+      "integration": {
+        "kind": "DATABASE_QUERY"
+      }
+    }
+  ]
+}

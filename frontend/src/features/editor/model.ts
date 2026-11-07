@@ -7,7 +7,9 @@ import type { ApiProcessingOverrideV2 } from '../../api/archlabV2Client';
 
 export const VISUAL_CLIENT_TYPES = ['WEB_BROWSER', 'MOBILE_APP', 'DESKTOP_APP', 'CLI', 'BOT', 'EMBEDDED_SYSTEM'] as const;
 export const V5_SERVICE_TYPES = ['SERVICE','API_GATEWAY','BFF','WORKER','SCHEDULER','AUTHENTICATION_SERVICE','WEBHOOK_RECEIVER','ORCHESTRATOR_SERVICE','INTEGRATION_BUS','CACHE','OBJECT_STORAGE','NOTIFICATION_SERVICE','SEARCH_ENGINE','SERVICE_REGISTRY','RULES_ENGINE'] as const;
-export const COMPONENT_TYPES = ['CLIENT', ...VISUAL_CLIENT_TYPES, 'API', 'DATABASE', 'BROKER', ...V5_SERVICE_TYPES] as const;
+export const V6_DATA_TYPES = ['RELATIONAL_DATABASE','DOCUMENT_DATABASE','KEY_VALUE_STORE'] as const;
+export const V6_PROCESSOR_TYPES = ['ETL_PIPELINE','DATA_TRANSFORMER'] as const;
+export const COMPONENT_TYPES = ['CLIENT', ...VISUAL_CLIENT_TYPES, 'API', 'DATABASE', 'BROKER', ...V5_SERVICE_TYPES, ...V6_DATA_TYPES, ...V6_PROCESSOR_TYPES] as const;
 export type ComponentType = (typeof COMPONENT_TYPES)[number];
 export type VisualClientType = (typeof VISUAL_CLIENT_TYPES)[number];
 export type Protocol = 'REST' | 'SOAP' | 'TCP' | 'HTTP_GENERIC' | 'GRAPHQL_HTTP' | 'GRPC_UNARY' | 'COAP' | 'WEBSOCKET' | 'QUEUE' | 'TOPIC' | 'MQTT';
@@ -27,6 +29,10 @@ export type ArchitectureNode = Node<{
   rules?: components['schemas']['DecisionRuleV5'][];
   defaultDecision?: 'ALLOW' | 'DENY' | 'REVIEW';
   defaultTtlMs?: number;
+  dataProperties?: components['schemas']['DataResourcePropertiesV6'];
+  batchSize?: number;
+  maxBatches?: number;
+  transformCostPerRecordMs?: number;
   importedComponent?: ArchitectureV1['components'][number];
 }>;
 export type ArchitectureEdge = Edge<{ protocol: Protocol; latencyMs: number; integration?: IntegrationV1; apiProcessingOverride?: ApiProcessingOverrideV2 }>;
@@ -37,11 +43,14 @@ export const COMPONENT_LABELS: Record<ComponentType, string> = {
   AUTHENTICATION_SERVICE:'Authentication Service', WEBHOOK_RECEIVER:'Webhook Receiver', ORCHESTRATOR_SERVICE:'Orchestrator Service',
   INTEGRATION_BUS:'Integration Bus / ESB', CACHE:'Cache', OBJECT_STORAGE:'Object Storage', NOTIFICATION_SERVICE:'Notification Service',
   SEARCH_ENGINE:'Search Engine', SERVICE_REGISTRY:'Service Registry', RULES_ENGINE:'Rules Engine',
+  RELATIONAL_DATABASE:'Relational Database', DOCUMENT_DATABASE:'Document Database', KEY_VALUE_STORE:'Key-Value Store',
+  ETL_PIPELINE:'ETL Pipeline', DATA_TRANSFORMER:'Data Transformer',
 };
 export const isV5ServiceType = (type: ComponentType): type is typeof V5_SERVICE_TYPES[number] =>
   V5_SERVICE_TYPES.some(value => value === type);
 export const isProcessorType = (type: ComponentType): boolean =>
-  ['API','SERVICE','API_GATEWAY','BFF','WORKER','SCHEDULER','AUTHENTICATION_SERVICE','WEBHOOK_RECEIVER','ORCHESTRATOR_SERVICE','INTEGRATION_BUS','NOTIFICATION_SERVICE'].includes(type);
+  ['API','SERVICE','API_GATEWAY','BFF','WORKER','SCHEDULER','AUTHENTICATION_SERVICE','WEBHOOK_RECEIVER','ORCHESTRATOR_SERVICE','INTEGRATION_BUS','NOTIFICATION_SERVICE',...V6_PROCESSOR_TYPES].includes(type);
+export const isV6DataType = (type: ComponentType): type is typeof V6_DATA_TYPES[number] => V6_DATA_TYPES.some(value=>value===type);
 
 export function isVisualClientType(type: ComponentType): type is VisualClientType {
   return VISUAL_CLIENT_TYPES.some((clientType) => clientType === type);
@@ -72,6 +81,10 @@ export function createArchitectureNode(type: ComponentType, position: { x: numbe
       ...(type === 'RULES_ENGINE' ? {rules:[],defaultDecision:'DENY' as const} : {}),
       ...(type === 'CACHE' ? {defaultTtlMs:0} : {}),
       ...(type === 'DATABASE' ? { processingMs: 0 } : {}),
+      ...(isV6DataType(type) ? {dataProperties:{initialRecordCount:0,averageRecordBytes:512,
+        readLatencyMs:1,writeLatencyMs:1,maxConcurrentOperations:1,connectionPoolSize:1,queueCapacity:10}} : {}),
+      ...(type === 'ETL_PIPELINE' ? {batchSize:100,maxBatches:1,behaviors:[]} : {}),
+      ...(type === 'DATA_TRANSFORMER' ? {transformCostPerRecordMs:0,behaviors:[]} : {}),
       ...(type === 'BROKER' ? { destinations: [], subscriptions: [] } : {}),
     },
   };
@@ -80,13 +93,13 @@ export function validDuration(value: number): boolean {
   return Number.isSafeInteger(value) && value >= 0;
 }
 export function allowedProtocols(source: ComponentType, target: ComponentType): Protocol[] {
-  const initiates = isClientType(source) || ['API','SERVICE','API_GATEWAY','BFF','WORKER','SCHEDULER','ORCHESTRATOR_SERVICE','WEBHOOK_RECEIVER','INTEGRATION_BUS','AUTHENTICATION_SERVICE'].includes(source);
-  const receives = ['API','SERVICE','API_GATEWAY','BFF','SCHEDULER','AUTHENTICATION_SERVICE','WEBHOOK_RECEIVER','ORCHESTRATOR_SERVICE','INTEGRATION_BUS','NOTIFICATION_SERVICE','CACHE','OBJECT_STORAGE','SEARCH_ENGINE','SERVICE_REGISTRY','RULES_ENGINE'].includes(target);
+  const initiates = isClientType(source) || ['API','SERVICE','API_GATEWAY','BFF','WORKER','SCHEDULER','ORCHESTRATOR_SERVICE','WEBHOOK_RECEIVER','INTEGRATION_BUS','AUTHENTICATION_SERVICE','ETL_PIPELINE'].includes(source);
+  const receives = ['API','SERVICE','API_GATEWAY','BFF','SCHEDULER','AUTHENTICATION_SERVICE','WEBHOOK_RECEIVER','ORCHESTRATOR_SERVICE','INTEGRATION_BUS','NOTIFICATION_SERVICE','CACHE','OBJECT_STORAGE','SEARCH_ENGINE','SERVICE_REGISTRY','RULES_ENGINE','ETL_PIPELINE','DATA_TRANSFORMER'].includes(target);
   if (initiates && receives && (!isClientType(source) || isProcessorType(target)))
     return (['API','SERVICE'].includes(source) && ['API','SERVICE'].includes(target)) || (isClientType(source) && ['API','SERVICE'].includes(target))
       ? ['REST','SOAP','HTTP_GENERIC','GRAPHQL_HTTP','GRPC_UNARY','COAP','WEBSOCKET']
       : ['REST','SOAP','HTTP_GENERIC','GRAPHQL_HTTP','GRPC_UNARY','COAP'];
-  if (initiates && !isClientType(source) && target === 'DATABASE') return ['TCP'];
+  if (initiates && !isClientType(source) && (target === 'DATABASE' || isV6DataType(target))) return ['TCP'];
   if ((isClientType(source) || ['API','SERVICE','WORKER','SCHEDULER','ORCHESTRATOR_SERVICE','WEBHOOK_RECEIVER','INTEGRATION_BUS','NOTIFICATION_SERVICE'].includes(source)) && target === 'BROKER') return ['QUEUE','TOPIC','MQTT'];
   if (source === 'BROKER' && ['API','SERVICE','WORKER','NOTIFICATION_SERVICE','ORCHESTRATOR_SERVICE','INTEGRATION_BUS'].includes(target)) return ['QUEUE','TOPIC','MQTT'];
   return [];

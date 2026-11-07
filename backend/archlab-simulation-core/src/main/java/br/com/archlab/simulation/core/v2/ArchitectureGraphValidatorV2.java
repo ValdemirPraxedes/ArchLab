@@ -88,6 +88,23 @@ public final class ArchitectureGraphValidatorV2 {
                 }
             } else if (component instanceof DatabaseV2 database) {
                 duration(database.processingMs(), path + ".processingMs", errors);
+            } else if (component instanceof DataResourceV6 data) {
+                duration(data.readLatencyMs(), path + ".dataProperties.readLatencyMs", errors);
+                duration(data.writeLatencyMs(), path + ".dataProperties.writeLatencyMs", errors);
+                if (data.initialRecordCount()<0 || data.initialRecordCount()>1_000_000
+                        || data.averageRecordBytes()<1 || data.averageRecordBytes()>1_048_576
+                        || (long)data.initialRecordCount()*data.averageRecordBytes()>1_073_741_824L
+                        || data.maxConcurrentOperations()<1 || data.maxConcurrentOperations()>1000
+                        || data.connectionPoolSize()<1 || data.connectionPoolSize()>1000
+                        || data.queueCapacity()<0 || data.queueCapacity()>10_000)
+                    add(errors,"DATA_LIMIT_EXCEEDED",path+".dataProperties",
+                            "Data resource properties exceed finite virtual budgets");
+            } else if (component instanceof DataProcessorV6 processor) {
+                if (processor.batchSize()<1 || processor.batchSize()>100_000
+                        || processor.maxBatches()<1 || processor.maxBatches()>1000
+                        || (long)processor.batchSize()*processor.maxBatches()>1_000_000L)
+                    add(errors,"DATA_LIMIT_EXCEEDED",path,"ETL batch budget exceeded");
+                duration(processor.transformCostPerRecordMs(),path+".transformCostPerRecordMs",errors);
             } else if (component instanceof BrokerV2 broker) {
                 if (broker.destinations().size() > MAX_CONNECTIONS || broker.subscriptions().size() > MAX_CONNECTIONS)
                     add(errors, "INVALID_TOPOLOGY", path, "Broker configuration exceeds limit");
@@ -140,9 +157,11 @@ public final class ArchitectureGraphValidatorV2 {
             // Include every resolvable edge in the directed graph, even if its type is invalid.
             // This catches cycles outside the selected execution path.
             graph.get(connection.sourceId()).add(connection.targetId());
-            boolean http = source.type().initiatesRequest() && target.type().receivesRequest()
+            boolean typedData = target instanceof DataResourceV6;
+            boolean http = !typedData && source.type().initiatesRequest() && target.type().receivesRequest()
                     && (!source.type().isClient() || target.type().isProcessor());
-            boolean db = source.type().initiatesRequest() && target.type() == ComponentTypeV2.DATABASE;
+            boolean db = source.type().initiatesRequest() &&
+                    (target.type() == ComponentTypeV2.DATABASE || typedData);
             boolean messaging = (source.type().publishesMessage()
                     && target.type() == ComponentTypeV2.BROKER)
                     || (source.type() == ComponentTypeV2.BROKER && target.type().consumesMessage());

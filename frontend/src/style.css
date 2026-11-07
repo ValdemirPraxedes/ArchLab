@@ -222,3 +222,8 @@ body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
 .playback section[aria-label="Fluxo correlacionado"]{flex:1 1 100%;max-height:180px;overflow:auto;border:1px solid var(--border);border-radius:7px;padding:8px 12px;background:var(--soft)}
 .playback section[aria-label="Fluxo correlacionado"] h3{margin:0 0 6px}
 .playback section[aria-label="Fluxo correlacionado"] ol{margin:0;padding-left:24px;font-size:.85rem;line-height:1.5}
+
+/* v0.6 data property validation */
+.field-error { display: block; color: #b42318; font-size: 0.8rem; margin-top: 2px; }
+.field-hint { color: #475467; font-size: 0.8rem; margin: 4px 0; }
+input[aria-invalid="true"] { border-color: #b42318; outline-color: #b42318; }

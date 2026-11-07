@@ -1,0 +1,93 @@
+{
+  "id": "P6-02",
+  "title": "Pior caso de bytes: 1 GiB lógico (1.024 registros de 1 MiB); a próxima escrita é rejeitada.",
+  "cases": [
+    {
+      "name": "fill-to-one-gibibyte",
+      "endpoint": "/api/v1/simulations",
+      "maxWallMs": 2000,
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "svc",
+              "type": "SERVICE",
+              "displayName": "svc",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "over",
+                      "kind": "DB_PUT",
+                      "connectionId": "data",
+                      "key": "k"
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "DOCUMENT_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 1024,
+                "averageRecordBytes": 1048576,
+                "readLatencyMs": 0,
+                "writeLatencyMs": 0,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "svc",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "svc",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "over",
+            "resultCode": "LIMIT_EXCEEDED",
+            "errorCode": "DATA_LIMIT_EXCEEDED"
+          }
+        ]
+      }
+    }
+  ]
+}

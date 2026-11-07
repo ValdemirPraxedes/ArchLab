@@ -1,0 +1,120 @@
+{
+  "id": "CT-6-09",
+  "title": "Mesmo input gera mesmo trace e métricas; execução seguinte começa com estado virtual limpo.",
+  "cases": [
+    {
+      "name": "deterministic-clean-state",
+      "endpoint": "/api/v1/simulations",
+      "replay": true,
+      "replayCount": 3,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "service",
+              "type": "SERVICE",
+              "displayName": "Service",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "insert",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "unique"
+                    },
+                    {
+                      "id": "bulk",
+                      "kind": "DB_BULK_INSERT",
+                      "connectionId": "data",
+                      "recordCount": 50,
+                      "dependsOn": [
+                        "insert"
+                      ]
+                    },
+                    {
+                      "id": "count",
+                      "kind": "DB_SELECT",
+                      "connectionId": "data",
+                      "collection": "default",
+                      "dependsOn": [
+                        "bulk"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 0,
+                "averageRecordBytes": 128,
+                "readLatencyMs": 2,
+                "writeLatencyMs": 3,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "service",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "service",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "insert",
+            "resultCode": "INSERTED"
+          },
+          {
+            "actionId": "bulk",
+            "resultCode": "INSERTED",
+            "writtenCount": 50
+          },
+          {
+            "actionId": "count",
+            "resultCode": "FOUND",
+            "readCount": 51
+          }
+        ]
+      }
+    }
+  ]
+}

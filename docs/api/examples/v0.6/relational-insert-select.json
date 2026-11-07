@@ -1,0 +1,96 @@
+{
+  "architecture": {
+    "components": [
+      {
+        "id": "browser",
+        "displayName": "Browser",
+        "type": "WEB_BROWSER"
+      },
+      {
+        "id": "service",
+        "displayName": "Orders Service",
+        "type": "SERVICE",
+        "behaviors": [
+          {
+            "id": "orders",
+            "trigger": "REQUEST_RECEIVED",
+            "match": {
+              "operation": "POST /orders"
+            },
+            "actions": [
+              {
+                "id": "insert",
+                "kind": "DB_INSERT",
+                "connectionId": "db-edge",
+                "key": "order-1",
+                "collection": "orders",
+                "recordCount": 1,
+                "outputRef": "inserted"
+              },
+              {
+                "id": "select",
+                "kind": "DB_SELECT",
+                "connectionId": "db-edge",
+                "collection": "orders",
+                "key": "order-1",
+                "dependsOn": [
+                  "insert"
+                ],
+                "outputRef": "selected"
+              },
+              {
+                "id": "response",
+                "kind": "RESPOND",
+                "dependsOn": [
+                  "select"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "orders-db",
+        "displayName": "Orders Database",
+        "type": "RELATIONAL_DATABASE",
+        "dataProperties": {
+          "initialRecordCount": 0,
+          "averageRecordBytes": 512,
+          "readLatencyMs": 2,
+          "writeLatencyMs": 4,
+          "maxConcurrentOperations": 2,
+          "connectionPoolSize": 2,
+          "queueCapacity": 10
+        }
+      }
+    ],
+    "connections": [
+      {
+        "id": "entry",
+        "sourceId": "browser",
+        "targetId": "service",
+        "integration": {
+          "kind": "HTTP_REST",
+          "request": {"method": "POST", "path": "/orders"}
+        },
+        "latencyMs": 1
+      },
+      {
+        "id": "db-edge",
+        "sourceId": "service",
+        "targetId": "orders-db",
+        "integration": {
+          "kind": "DATABASE_QUERY"
+        },
+        "latencyMs": 1
+      }
+    ]
+  },
+  "scenario": {
+    "entry": {
+      "componentId": "browser",
+      "connectionId": "entry",
+      "operation": "POST /orders"
+    }
+  }
+}

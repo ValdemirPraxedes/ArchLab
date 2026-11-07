@@ -32,4 +32,30 @@ describe('painel contextual de comportamentos',()=>{
     fireEvent.change(screen.getByRole('combobox',{name:'Tipo da ação 1.1'}),{target:{value:'PROCESS'}});
     expect(onChange).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({actions:[expect.objectContaining({kind:'PROCESS',durationMs:0})]})]));
   });
+  it('oferece DB_SELECT apenas para conexão relacional compatível',()=>{
+    const service=createArchitectureNode('SERVICE',{x:0,y:0});
+    const relational=createArchitectureNode('RELATIONAL_DATABASE',{x:0,y:0});
+    const kv=createArchitectureNode('KEY_VALUE_STORE',{x:0,y:0});
+    const first=createArchitectureEdge(service.id,relational.id,'TCP',1);
+    const second=createArchitectureEdge(service.id,kv.id,'TCP',1);
+    first.data!.integration={kind:'DATABASE_QUERY'};
+    second.data!.integration={kind:'DATABASE_QUERY'};
+    const behavior={id:'receive',trigger:'REQUEST_RECEIVED' as const,actions:[{id:'select',kind:'DB_SELECT' as const,connectionId:first.id,collection:'orders'}]};
+    render(<BehaviorEditorV41 node={service} nodes={[service,relational,kv]} edges={[first,second]} behaviors={[behavior]} onChange={vi.fn()} disabled={false}/>);
+    const connection=screen.getByRole('combobox',{name:'Conexão da ação 1.1'});
+    expect(connection).toHaveTextContent(first.id);
+    expect(connection).not.toHaveTextContent(second.id);
+  });
+  it('mostra contagem explícita somente para FILTER_VALID',()=>{
+    const etl=createArchitectureNode('ETL_PIPELINE',{x:0,y:0});
+    const behavior={id:'run',trigger:'REQUEST_RECEIVED' as const,actions:[
+      {id:'transform',kind:'ETL_TRANSFORM' as const,inputRef:'raw',transform:'FILTER_VALID' as const,
+        invalidRecordCount:1,simulateFailure:false,outputRef:'clean'}]};
+    const onChange=vi.fn();
+    render(<BehaviorEditorV41 node={etl} nodes={[etl]} edges={[]} behaviors={[behavior]} onChange={onChange} disabled={false}/>);
+    expect(screen.getByRole('spinbutton',{name:'invalidRecordCount 1.1'})).toHaveValue(1);
+    fireEvent.change(screen.getByRole('combobox',{name:'Transformação 1.1'}),{target:{value:'NORMALIZE_METADATA'}});
+    expect(onChange).toHaveBeenCalledWith(expect.arrayContaining([expect.objectContaining({actions:[
+      expect.objectContaining({transform:'NORMALIZE_METADATA',invalidRecordCount:undefined})]})]));
+  });
 });

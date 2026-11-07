@@ -1,6 +1,6 @@
 import type { ArchitectureV1, SimulationRequestV1 } from '../../api/archlabV1Client';
 import type { ArchitectureNode, ArchitectureEdge } from './model';
-import { isProcessorType, isV5ServiceType } from './model';
+import { isProcessorType, isV5ServiceType, isV6DataType } from './model';
 import type { ScenarioDraft } from './scenario';
 import { allowedIntegrationKinds, defaultIntegration, integrationError } from './integration';
 
@@ -11,7 +11,13 @@ export function toArchitectureV1(nodes: ArchitectureNode[], edges: ArchitectureE
       case 'API': return {...base,type:'API' as const,preProcessingMs:node.data.preProcessingMs ?? 0,postProcessingMs:node.data.postProcessingMs ?? 0,behaviors:node.data.behaviors ?? []};
       case 'DATABASE': return {...base,type:'DATABASE' as const,processingMs:node.data.processingMs ?? 0};
       case 'BROKER': return {...base,type:'BROKER' as const,destinations:node.data.destinations ?? [],subscriptions:node.data.subscriptions ?? []};
+      case 'ETL_PIPELINE': return {...base,type:'ETL_PIPELINE' as const,batchSize:node.data.batchSize ?? 100,
+        maxBatches:node.data.maxBatches ?? 1,behaviors:node.data.behaviors ?? []};
+      case 'DATA_TRANSFORMER': return {...base,type:'DATA_TRANSFORMER' as const,
+        transformCostPerRecordMs:node.data.transformCostPerRecordMs ?? 0,behaviors:node.data.behaviors ?? []};
       default:
+        if (isV6DataType(node.data.componentType)) return {...base,type:node.data.componentType,
+          dataProperties:node.data.dataProperties!};
         if (isV5ServiceType(node.data.componentType)) return {
           ...base,type:node.data.componentType,
           ...(isProcessorType(node.data.componentType) ? {behaviors:node.data.behaviors ?? [],

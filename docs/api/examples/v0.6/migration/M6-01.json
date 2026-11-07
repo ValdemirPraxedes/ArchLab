@@ -1,0 +1,88 @@
+{
+  "id": "M6-01",
+  "title": "Chamada síncrona única: Service → DATABASE.",
+  "legacy": {
+    "architecture": {
+      "components": [
+        {
+          "id": "client",
+          "type": "WEB_BROWSER",
+          "displayName": "Client"
+        },
+        {
+          "id": "service",
+          "type": "SERVICE",
+          "displayName": "service",
+          "behaviors": [
+            {
+              "id": "handle",
+              "trigger": "REQUEST_RECEIVED",
+              "actions": [
+                {
+                  "id": "read",
+                  "kind": "CALL",
+                  "connectionId": "data"
+                },
+                {
+                  "id": "respond",
+                  "kind": "RESPOND",
+                  "dependsOn": [
+                    "read"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "orders",
+          "type": "DATABASE",
+          "displayName": "orders",
+          "processingMs": 7
+        }
+      ],
+      "connections": [
+        {
+          "id": "entry",
+          "sourceId": "client",
+          "targetId": "service",
+          "latencyMs": 1,
+          "integration": {
+            "kind": "HTTP_REST"
+          }
+        },
+        {
+          "id": "data",
+          "sourceId": "service",
+          "targetId": "orders",
+          "latencyMs": 2,
+          "integration": {
+            "kind": "DATABASE_QUERY"
+          }
+        }
+      ]
+    },
+    "scenario": {
+      "entry": {
+        "componentId": "client",
+        "connectionId": "entry"
+      }
+    }
+  },
+  "expectedReport": {
+    "databaseIds": [
+      "orders"
+    ],
+    "notesContain": [
+      "service/handle/read CALL -> DB_SELECT",
+      "orders: processingMs 7"
+    ]
+  },
+  "equivalence": [
+    "execution.status",
+    "execution.mainStatus",
+    "execution.totalDurationMs",
+    "execution.responseStatusCode",
+    "timeline: kind, componentId, connectionId, startMs, endMs (phase name excluded)"
+  ]
+}

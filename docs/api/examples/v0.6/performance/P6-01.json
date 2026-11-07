@@ -1,0 +1,108 @@
+{
+  "id": "P6-01",
+  "title": "Pior caso de registros: 1.000.000 registros lógicos num recurso; o próximo é rejeitado de forma controlada.",
+  "cases": [
+    {
+      "name": "fill-to-one-million",
+      "endpoint": "/api/v1/simulations",
+      "maxWallMs": 2000,
+      "replay": true,
+      "request": {
+        "architecture": {
+          "schemaVersion": "0.6",
+          "components": [
+            {
+              "id": "client",
+              "type": "WEB_BROWSER",
+              "displayName": "Client"
+            },
+            {
+              "id": "svc",
+              "type": "SERVICE",
+              "displayName": "svc",
+              "behaviors": [
+                {
+                  "id": "handle",
+                  "trigger": "REQUEST_RECEIVED",
+                  "actions": [
+                    {
+                      "id": "bulk",
+                      "kind": "DB_BULK_INSERT",
+                      "connectionId": "data",
+                      "recordCount": 100000
+                    },
+                    {
+                      "id": "over",
+                      "kind": "DB_INSERT",
+                      "connectionId": "data",
+                      "key": "k",
+                      "dependsOn": [
+                        "bulk"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            },
+            {
+              "id": "db",
+              "type": "RELATIONAL_DATABASE",
+              "displayName": "db",
+              "dataProperties": {
+                "initialRecordCount": 900000,
+                "averageRecordBytes": 1,
+                "readLatencyMs": 0,
+                "writeLatencyMs": 0,
+                "maxConcurrentOperations": 1,
+                "connectionPoolSize": 1,
+                "queueCapacity": 2
+              }
+            }
+          ],
+          "connections": [
+            {
+              "id": "entry",
+              "sourceId": "client",
+              "targetId": "svc",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "HTTP_REST"
+              }
+            },
+            {
+              "id": "data",
+              "sourceId": "svc",
+              "targetId": "db",
+              "latencyMs": 1,
+              "integration": {
+                "kind": "DATABASE_QUERY"
+              }
+            }
+          ]
+        },
+        "scenario": {
+          "entry": {
+            "componentId": "client",
+            "connectionId": "entry"
+          }
+        }
+      },
+      "expect": {
+        "status": 200,
+        "dataOutcomes": [
+          {
+            "actionId": "bulk",
+            "resultCode": "INSERTED",
+            "writtenCount": 100000
+          },
+          {
+            "actionId": "over",
+            "resultCode": "LIMIT_EXCEEDED",
+            "errorCode": "DATA_LIMIT_EXCEEDED",
+            "writtenCount": 0
+          }
+        ]
+      }
+    }
+  ]
+}

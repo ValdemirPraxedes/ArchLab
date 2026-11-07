@@ -1,0 +1,126 @@
+{
+  "id": "M6-03",
+  "title": "Chamada aninhada (Service → Service → DATABASE) com queryText/responseText históricos e API legada (v0.5 → SERVICE).",
+  "legacy": {
+    "architecture": {
+      "components": [
+        {
+          "id": "client",
+          "type": "WEB_BROWSER",
+          "displayName": "Client"
+        },
+        {
+          "id": "gateway",
+          "type": "API",
+          "displayName": "gateway",
+          "behaviors": [
+            {
+              "id": "handle",
+              "trigger": "REQUEST_RECEIVED",
+              "actions": [
+                {
+                  "id": "forward",
+                  "kind": "CALL",
+                  "connectionId": "inner"
+                },
+                {
+                  "id": "respond",
+                  "kind": "RESPOND",
+                  "dependsOn": [
+                    "forward"
+                  ]
+                }
+              ]
+            }
+          ],
+          "preProcessingMs": 1,
+          "postProcessingMs": 2
+        },
+        {
+          "id": "orders-svc",
+          "type": "SERVICE",
+          "displayName": "orders-svc",
+          "behaviors": [
+            {
+              "id": "handle",
+              "trigger": "REQUEST_RECEIVED",
+              "actions": [
+                {
+                  "id": "query",
+                  "kind": "CALL",
+                  "connectionId": "data"
+                },
+                {
+                  "id": "respond",
+                  "kind": "RESPOND",
+                  "dependsOn": [
+                    "query"
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "orders",
+          "type": "DATABASE",
+          "displayName": "orders",
+          "processingMs": 4
+        }
+      ],
+      "connections": [
+        {
+          "id": "entry",
+          "sourceId": "client",
+          "targetId": "gateway",
+          "latencyMs": 1,
+          "integration": {
+            "kind": "HTTP_REST"
+          }
+        },
+        {
+          "id": "inner",
+          "sourceId": "gateway",
+          "targetId": "orders-svc",
+          "latencyMs": 3,
+          "integration": {
+            "kind": "HTTP_REST"
+          }
+        },
+        {
+          "id": "data",
+          "sourceId": "orders-svc",
+          "targetId": "orders",
+          "latencyMs": 2,
+          "integration": {
+            "kind": "DATABASE_QUERY",
+            "queryText": "SELECT * FROM orders",
+            "responseText": "3 rows"
+          }
+        }
+      ]
+    },
+    "scenario": {
+      "entry": {
+        "componentId": "client",
+        "connectionId": "entry"
+      }
+    }
+  },
+  "expectedReport": {
+    "databaseIds": [
+      "orders"
+    ],
+    "notesContain": [
+      "orders-svc/handle/query CALL -> DB_SELECT",
+      "keeps queryText/responseText"
+    ]
+  },
+  "equivalence": [
+    "execution.status",
+    "execution.mainStatus",
+    "execution.totalDurationMs",
+    "execution.responseStatusCode",
+    "timeline: kind, componentId, connectionId, startMs, endMs (phase name excluded)"
+  ]
+}
