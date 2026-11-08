@@ -44,7 +44,7 @@ describe('reprodução mista v0.4.1',()=>{
     expect(toggle).toHaveAttribute('aria-expanded','true');
     const list=screen.getByRole('list',{name:'Eventos do fluxo correlacionado'});
     expect(list).toHaveAttribute('id','playback-flow-events');
-    expect(list).toHaveClass('playback-flow__events');
+    expect(list).toHaveClass('playback-collapsible__list');
     expect(list).toHaveAttribute('tabindex','0');
     fireEvent.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded','false');
@@ -70,10 +70,10 @@ describe('reprodução mista v0.4.1',()=>{
   });
   it('o CSS limita a lista expandida a 160 px com rolagem interna e usa as variáveis de tema',async()=>{
     const {default:css}=await import('../../style.css?raw');
-    const rule=/\.playback-flow__events\{([^}]*)\}/.exec(css.replace(/\s+/g,''))?.[1] ?? '';
+    const rule=/\.playback-collapsible__list\{([^}]*)\}/.exec(css.replace(/\s+/g,''))?.[1] ?? '';
     expect(rule).toContain('max-height:160px');
     expect(rule).toContain('overflow-y:auto');
     expect(rule).toContain('var(--border)');
-    expect(css).toMatch(/\.playback-flow__title button:focus-visible/);
+    expect(css).toMatch(/\.playback-collapsible__title button:focus-visible/);
   });
 });
