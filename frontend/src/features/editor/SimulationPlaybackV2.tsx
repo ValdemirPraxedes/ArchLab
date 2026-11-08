@@ -1,4 +1,5 @@
 import { ChevronDown, ChevronRight, Pause, Play, SkipBack, SkipForward, StepForward } from 'lucide-react';
+import { CollapsiblePlaybackSection } from './CollapsiblePlaybackSection';
 import { useEffect, useRef, useState } from 'react';
 import type { PointerEvent as ReactPointerEvent } from 'react';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
@@ -19,7 +20,6 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
   const [speed, setSpeed] = useState(1);
   const [step, setStep] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
-  const [flowOpen, setFlowOpen] = useState(false);
   const [inspectorHeight, setInspectorHeight] = useState(260);
   const resizeStart = useRef<{ y: number; height: number } | null>(null);
   const onResizeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -77,18 +77,15 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
     <p>Eventos até o instante: {events.length} / {result.trace.length}. Atividades iniciadas: {activities.length} / {result.timeline.length}.</p>
     <p>Estado no relógio: operação {state.requests[canonical.execution?.requestId ?? ''] ?? 'CREATED'} · global {time >= total && (cursor.sequence === Number.POSITIVE_INFINITY || events.length === result.trace.length) ? result.execution.status : 'EM ANDAMENTO'}</p>
     <p>Resultado final — Operação principal: <strong>{canonical.execution?.mainStatus ?? result.execution.status}</strong> · Conclusão global: <strong>{result.execution.status}</strong></p>
-    {unified && <section aria-label="Fluxo correlacionado" className="playback-flow">
-      <h3 className="playback-flow__title"><button type="button" aria-expanded={flowOpen} aria-controls="playback-flow-events"
-        onClick={() => setFlowOpen(open => !open)}>{flowOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
-        Fluxo correlacionado <span className="playback-flow__count">({flowEvents.length} {flowEvents.length === 1 ? 'evento' : 'eventos'})</span></button></h3>
-      {canonical.execution?.responseStatusCode && <p>Resposta HTTP: {canonical.execution.responseStatusCode}</p>}
-      {flowOpen && <ol id="playback-flow-events" className="playback-flow__events" tabIndex={0} aria-label="Eventos do fluxo correlacionado">{flowEvents
-        .map(event => <li key={event.sequence}>#{event.sequence} · {event.timestampMs} ms · {event.type}
+    {unified && <CollapsiblePlaybackSection label="Fluxo correlacionado" title="Fluxo correlacionado" listId="playback-flow-events"
+      listLabel="Eventos do fluxo correlacionado" count={flowEvents.length} singular="evento" plural="eventos"
+      summary={canonical.execution?.responseStatusCode && <p>Resposta HTTP: {canonical.execution.responseStatusCode}</p>}>
+      {flowEvents.map(event => <li key={event.sequence}>#{event.sequence} · {event.timestampMs} ms · {event.type}
           {event.correlation?.operationId && ` · operação ${event.correlation.operationId}`}
           {event.correlation?.parentOperationId && ` ← ${event.correlation.parentOperationId}`}
           {event.correlation?.profile && ` · ${event.correlation.profile}`}
-          {event.correlation?.sessionId && ` · sessão ${event.correlation.sessionId}`}</li>)}</ol>}
-    </section>}
+          {event.correlation?.sessionId && ` · sessão ${event.correlation.sessionId}`}</li>)}
+    </CollapsiblePlaybackSection>}
     {canonical.resourceStates && canonical.resourceStates.length > 0 && <section aria-label="Recursos da execução">
       <h3>Recursos da execução</h3><ul>{canonical.resourceStates.map(resource => <li key={resource.id}>
         {resource.kind} {resource.id}: {state.resources[`${resource.kind}:${resource.id}`] ?? 'não iniciado'}
@@ -115,7 +112,10 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
         {outcome.errorCode && ` · ${outcome.errorCode}`}
       </li>)}</ol>
     </section>}
-    {actionEvents.length>0 && <section aria-label="Actions e ramos v0.5"><h3>Actions e ramos</h3><ol>{actionEvents.map(event=><li key={event.sequence}>{event.timestampMs} ms · {event.actionId} · <strong>{event.status}</strong>{event.status==='SKIPPED'?' (ramo descartado)':''}</li>)}</ol></section>}
+    {actionEvents.length>0 && <CollapsiblePlaybackSection label="Actions e ramos v0.5" title="Actions e ramos" listId="playback-action-events"
+      listLabel="Registros de Actions e ramos" count={actionEvents.length} singular="registro" plural="registros">
+      {actionEvents.map(event=><li key={event.sequence}>{event.timestampMs} ms · {event.actionId} · <strong>{event.status}</strong>{event.status==='SKIPPED'?' (ramo descartado)':''}</li>)}
+    </CollapsiblePlaybackSection>}
     <div className="inspector-toggle-row"><button type="button" aria-expanded={inspectorOpen} aria-controls="playback-inspector-content" onClick={() => setInspectorOpen(open => !open)}>{inspectorOpen ? <><ChevronDown size={16} aria-hidden="true" /> Recolher inspeção</> : <><ChevronRight size={16} aria-hidden="true" /> Abrir inspeção</>} ({events.length} eventos)</button></div>
     {inspectorOpen && <div className="playback-inspector-shell" id="playback-inspector-content" style={{ height: inspectorHeight }}>
       <div className="playback-inspector-resize" role="separator" aria-label="Redimensionar inspeção" aria-orientation="horizontal" aria-valuemin={100} aria-valuemax={600} aria-valuenow={inspectorHeight} tabIndex={0} onPointerDown={onResizeStart} onPointerMove={onResizeMove} onPointerUp={onResizeEnd} onPointerCancel={onResizeEnd} onKeyDown={event => { if (event.key === "ArrowDown" || event.key === "ArrowUp") { event.preventDefault(); setInspectorHeight(height => Math.max(100, Math.min(600, height + (event.key === "ArrowDown" ? 24 : -24)))); } }}><span className="playback-resize-grip" /></div>

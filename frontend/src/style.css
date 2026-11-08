@@ -228,14 +228,14 @@ body,.workspace,.editor-layout{background:var(--page);color:var(--text)}
 .field-hint { color: #475467; font-size: 0.8rem; margin: 4px 0; }
 input[aria-invalid="true"] { border-color: #b42318; outline-color: #b42318; }
 
-/* Playback: collapsible correlated flow (frees vertical space for the canvas) */
-.playback-flow{flex:1 1 100%;min-width:0}
-.playback-flow__title{margin:6px 0;font-size:.9rem}
-.playback-flow__title button{display:inline-flex;align-items:center;gap:7px;min-height:32px;font:inherit;font-weight:600;color:var(--text);background:var(--soft);border:1px solid var(--border);border-radius:7px;padding:4px 10px;cursor:pointer}
-.playback-flow__title button:hover{border-color:var(--accent)}
-.playback-flow__title button:focus-visible,.playback-flow__events:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.playback-flow__count{color:var(--muted);font-weight:500}
-.playback-flow__events{max-height:160px;overflow-y:auto;scrollbar-gutter:stable;margin:4px 0 8px;padding-left:1.4em;border:1px solid var(--border);border-radius:7px;background:var(--surface)}
+/* Playback: collapsible panels ("Fluxo correlacionado", "Actions e ramos") free vertical space for the canvas */
+.playback-collapsible{flex:1 1 100%;min-width:0}
+.playback-collapsible__title{margin:6px 0;font-size:.9rem}
+.playback-collapsible__title button{display:inline-flex;align-items:center;gap:7px;min-height:32px;font:inherit;font-weight:600;color:var(--text);background:var(--soft);border:1px solid var(--border);border-radius:7px;padding:4px 10px;cursor:pointer}
+.playback-collapsible__title button:hover{border-color:var(--accent)}
+.playback-collapsible__title button:focus-visible,.playback-collapsible__list:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.playback-collapsible__count{color:var(--muted);font-weight:500}
+.playback-collapsible__list{max-height:160px;overflow-y:auto;scrollbar-gutter:stable;margin:4px 0 8px;padding-left:1.4em;border:1px solid var(--border);border-radius:7px;background:var(--surface)}
 
 /* Playback: direction-aware dashes. The SVG path always runs edge.source -> edge.target, and the dash
    pattern travels toward the path end while stroke-dashoffset decreases. "forward" (REQUEST / message
