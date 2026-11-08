@@ -17,7 +17,8 @@ import { ServicePropertiesV5 } from './ServicePropertiesV5';
 import { emptyEntryV41, toUnifiedRequestV41 } from './unifiedScenarioV41';
 import type { EntryDraftV41, SessionDraftV41 } from './unifiedScenarioV41';
 import { SimulationPlaybackV2 } from './SimulationPlaybackV2';
-import { inFlightMessages, traceStateAt } from './traceV2';
+import { traceStateAt } from './traceV2';
+import { edgePlayback, playbackEdgeAppearance, type EdgePlayback } from './playbackEdges';
 import type { TraceCursor } from './traceV2';
 import type { SimulationResponseV2 } from '../../api/archlabV2Client';
 import { toArchitectureV1 } from './architectureV1';
@@ -96,8 +97,7 @@ function EditorCanvas() {
   const node = selection?.kind === 'node' ? nodes.find((n) => n.id === selection.id) : undefined;
   const edge = selection?.kind === 'edge' ? edges.find((e) => e.id === selection.id) : undefined;
   const traceState = simulationResultV2 ? traceStateAt(simulationResultV2,traceCursor) : null;
-  const flying = simulationResultV2 ? inFlightMessages(simulationResultV2.trace,traceCursor) : [];
-  const flyingConnections = new Set(flying.map(e => e.connectionId));
+  const edgeFlows = simulationResultV2 ? edgePlayback(simulationResultV2,traceCursor,edges) : new Map<string,EdgePlayback>();
   const initialEdge = edges.find(edge => edge.id === entry.connectionId && edge.source === entry.componentId);
   const path = {components: new Set(initialEdge ? [initialEdge.source,initialEdge.target] : []),
     connections: new Set(initialEdge ? [initialEdge.id] : [])};
@@ -116,11 +116,15 @@ function EditorCanvas() {
     ...n, className: invalidIds.has(n.id) ? 'validation-node--invalid' : traceState ? `trace-node--${(traceState.components[n.id] ?? 'IDLE').toLowerCase()}` : hasPath ? (path.components.has(n.id) ? 'scenario-node--active' : 'scenario-node--inactive') : '',
     data: { ...n.data, stateLabel: (['IDLE', 'PROCESSING', 'WAITING', 'COMPLETED'] as const).find(status => status === traceState?.components[n.id]) },
   }));
-  const shownEdges = edges.map((e) => ({
-    ...e, className: invalidEdgeIds.has(e.id) ? 'validation-edge--invalid' : flyingConnections.has(e.id) ? 'playback-edge-active' : hasPath ? (path.connections.has(e.id) ? 'scenario-edge--active' : 'scenario-edge--inactive') : '',
-    animated: flyingConnections.has(e.id),
-    style: flyingConnections.has(e.id) ? { stroke: '#329eff', strokeWidth: 3 } : hasPath && path.connections.has(e.id) ? { stroke: '#1ca879', strokeWidth: 3 } : undefined,
-  }));
+  const shownEdges = edges.map((e) => {
+    const flow = edgeFlows.get(e.id);
+    if (flow && !invalidEdgeIds.has(e.id)) return { ...e, ...playbackEdgeAppearance(flow) };
+    return {
+      ...e, className: invalidEdgeIds.has(e.id) ? 'validation-edge--invalid' : hasPath ? (path.connections.has(e.id) ? 'scenario-edge--active' : 'scenario-edge--inactive') : '',
+      animated: false,
+      style: hasPath && path.connections.has(e.id) ? { stroke: '#1ca879', strokeWidth: 3 } : undefined,
+    };
+  });
   const destination = nodes.find((n) => n.id === targetId);
   const compatibleProtocols = node && destination ? allowedProtocols(node.data.componentType, destination.data.componentType) : [];
   const possibleTargets = node ? nodes.filter((n) => n.id !== node.id && allowedProtocols(node.data.componentType, n.data.componentType).length > 0) : [];
