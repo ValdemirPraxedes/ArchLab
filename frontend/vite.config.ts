@@ -8,5 +8,6 @@ export default defineConfig({
     // Tests read the shared contract (openapi.yaml) and fixtures; nothing else outside the app is served.
     fs: { allow: ['.', '../docs/api'] },
   },
-  test: { environment: 'jsdom', setupFiles: ['./src/test/setup.ts'], clearMocks: true },
+  // css: true lets tests read style.css (?raw) to check the direction-aware edge animation contract.
+  test: { environment: 'jsdom', setupFiles: ['./src/test/setup.ts'], clearMocks: true, css: true },
 });
