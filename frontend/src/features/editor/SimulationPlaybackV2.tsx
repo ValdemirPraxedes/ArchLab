@@ -19,6 +19,7 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
   const [speed, setSpeed] = useState(1);
   const [step, setStep] = useState(false);
   const [inspectorOpen, setInspectorOpen] = useState(false);
+  const [flowOpen, setFlowOpen] = useState(false);
   const [inspectorHeight, setInspectorHeight] = useState(260);
   const resizeStart = useRef<{ y: number; height: number } | null>(null);
   const onResizeStart = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -38,6 +39,7 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
   const unified = canonical.execution?.mode === 'UNIFIED';
   const visibleOutcomes=(canonical.resourceOutcomes ?? []).filter(outcome => (outcome.timestampMs ?? 0)<=cursor.time);
   const visibleData=(canonical.dataOutcomes ?? []).filter(outcome => outcome.timestampMs<=cursor.time);
+  const flowEvents=(canonical.trace ?? []).filter(event => event.timestampMs < cursor.time || event.timestampMs === cursor.time && event.sequence <= cursor.sequence);
   const actionEvents=(canonical.trace ?? []).filter((event):event is Extract<SimulationResponseV1['trace'][number],{type:'ACTION_EVENT'}>=>event.type==='ACTION_EVENT' && (event.timestampMs<cursor.time || event.timestampMs===cursor.time && event.sequence<=cursor.sequence));
   const sorted = orderedTrace(result.trace);
   useEffect(() => {
@@ -75,15 +77,17 @@ export function SimulationPlaybackV2({ result, onStatus, onCursor }: Props) {
     <p>Eventos até o instante: {events.length} / {result.trace.length}. Atividades iniciadas: {activities.length} / {result.timeline.length}.</p>
     <p>Estado no relógio: operação {state.requests[canonical.execution?.requestId ?? ''] ?? 'CREATED'} · global {time >= total && (cursor.sequence === Number.POSITIVE_INFINITY || events.length === result.trace.length) ? result.execution.status : 'EM ANDAMENTO'}</p>
     <p>Resultado final — Operação principal: <strong>{canonical.execution?.mainStatus ?? result.execution.status}</strong> · Conclusão global: <strong>{result.execution.status}</strong></p>
-    {unified && <section aria-label="Fluxo correlacionado">
-      <h3>Fluxo correlacionado</h3>
+    {unified && <section aria-label="Fluxo correlacionado" className="playback-flow">
+      <h3 className="playback-flow__title"><button type="button" aria-expanded={flowOpen} aria-controls="playback-flow-events"
+        onClick={() => setFlowOpen(open => !open)}>{flowOpen ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" />}
+        Fluxo correlacionado <span className="playback-flow__count">({flowEvents.length} {flowEvents.length === 1 ? 'evento' : 'eventos'})</span></button></h3>
       {canonical.execution?.responseStatusCode && <p>Resposta HTTP: {canonical.execution.responseStatusCode}</p>}
-      <ol>{canonical.trace?.filter(event => event.timestampMs < cursor.time || event.timestampMs === cursor.time && event.sequence <= cursor.sequence)
+      {flowOpen && <ol id="playback-flow-events" className="playback-flow__events" tabIndex={0} aria-label="Eventos do fluxo correlacionado">{flowEvents
         .map(event => <li key={event.sequence}>#{event.sequence} · {event.timestampMs} ms · {event.type}
           {event.correlation?.operationId && ` · operação ${event.correlation.operationId}`}
           {event.correlation?.parentOperationId && ` ← ${event.correlation.parentOperationId}`}
           {event.correlation?.profile && ` · ${event.correlation.profile}`}
-          {event.correlation?.sessionId && ` · sessão ${event.correlation.sessionId}`}</li>)}</ol>
+          {event.correlation?.sessionId && ` · sessão ${event.correlation.sessionId}`}</li>)}</ol>}
     </section>}
     {canonical.resourceStates && canonical.resourceStates.length > 0 && <section aria-label="Recursos da execução">
       <h3>Recursos da execução</h3><ul>{canonical.resourceStates.map(resource => <li key={resource.id}>
